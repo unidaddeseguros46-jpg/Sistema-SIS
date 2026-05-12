@@ -75,30 +75,34 @@
 
             <div class="modal-error" id="modal-error"></div>
 
-            <form id="form-usuario" autocomplete="off">
+            <form id="form-usuario" autocomplete="off" novalidate>
                 <div class="modal-form-group">
                     <label for="input-nombre">Nombre Completo</label>
-                    <input type="text" id="input-nombre" placeholder="Ej: Juan Pérez García" required>
+                    <input type="text" id="input-nombre" placeholder="Nombre y Apellidos (Máx. 100 caracteres)" maxlength="100" required>
+                    <span class="field-error" id="error-nombre"></span>
                 </div>
 
                 <div class="modal-form-group">
                     <label for="input-username">Nombre de Usuario</label>
-                    <input type="text" id="input-username" placeholder="Ej: jperez" required>
+                    <input type="text" id="input-username" placeholder="Usuario (5-50 caracteres, sin espacios)" maxlength="50" minlength="5" pattern="[a-zA-Z0-9_.-]{5,50}" title="Debe tener entre 5 y 50 caracteres. Solo letras, números, puntos, guiones y guiones bajos." required>
+                    <span class="field-error" id="error-username"></span>
                 </div>
 
                 <div class="modal-form-group" id="group-email">
                     <label for="input-email">Correo Electrónico</label>
-                    <input type="email" id="input-email" placeholder="usuario@hospital.gob.pe" required>
+                    <input type="email" id="input-email" placeholder="ejemplo@gmail.com" maxlength="150" required>
+                    <span class="field-error" id="error-email"></span>
                 </div>
 
                 <div class="modal-form-group" id="group-password">
                     <label for="input-password">Contraseña</label>
                     <div class="password-field-wrapper">
-                        <input type="password" id="input-password" placeholder="Mínimo 6 caracteres" minlength="6" required>
+                        <input type="password" id="input-password" placeholder="Mínimo 6 caracteres" minlength="6" maxlength="50" required>
                         <button type="button" class="password-toggle-modal" id="toggle-pass">
                             <i class="fa-solid fa-eye"></i>
                         </button>
                     </div>
+                    <span class="field-error" id="error-password"></span>
                 </div>
 
                 <div class="modal-form-group">

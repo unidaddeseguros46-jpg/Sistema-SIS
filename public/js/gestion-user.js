@@ -231,38 +231,91 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
     };
+    const showFieldError = (field, msg) => {
+        const input = document.getElementById(`input-${field}`);
+        const errorSpan = document.getElementById(`error-${field}`);
+        if (input) input.classList.add('input-error');
+        if (errorSpan) {
+            errorSpan.textContent = msg;
+            errorSpan.classList.add('show');
+        }
+    };
 
+    const clearFieldErrors = () => {
+        modalError.classList.remove('show');
+        modalError.textContent = '';
+        document.querySelectorAll('.field-error').forEach(s => {
+            s.classList.remove('show');
+            s.textContent = '';
+        });
+        document.querySelectorAll('.modal-form-group input').forEach(i => {
+            i.classList.remove('input-error');
+        });
+    };
     // â”€â”€ Form submit â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        modalError.classList.remove('show');
-
-        // Utilidad de sanitizaciÃ³n local
-        const escapeHTML = (str) => str.replace(/[&<>'"]/g, 
-            tag => ({
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                "'": '&#39;',
-                '"': '&quot;'
-            }[tag]));
-
+        clearFieldErrors();
+        
         let nombre = inputNombre.value.trim();
         const username = inputUsername.value.trim();
 
-        if (!nombre) { showModalError('El nombre es obligatorio.'); return; }
-        if (!username) { showModalError('El nombre de usuario es obligatorio.'); return; }
+        // Validaciones Locales
+        let hasError = false;
 
-        // Validaciones de seguridad
-        if (nombre.length > 100) { showModalError('El nombre no puede exceder 100 caracteres.'); return; }
-        if (username.length > 50) { showModalError('El nombre de usuario no puede exceder 50 caracteres.'); return; }
-
+        // Nombre (3-100)
+        if (!nombre) {
+            showFieldError('nombre', 'El nombre completo es obligatorio.');
+            hasError = true;
+        } else if (nombre.length < 3 || nombre.length > 100) {
+            showFieldError('nombre', 'El nombre debe tener entre 3 y 100 caracteres.');
+            hasError = true;
+        }
+        
+        // Usuario (5-50)
         const usernameRegex = /^[a-zA-Z0-9_.-]+$/;
-        if (!usernameRegex.test(username)) {
-            showModalError('El nombre de usuario contiene caracteres no permitidos.');
+        if (!username) {
+            showFieldError('username', 'El nombre de usuario es obligatorio.');
+            hasError = true;
+        } else if (username.length < 5 || username.length > 50) {
+            showFieldError('username', 'El usuario debe tener entre 5 y 50 caracteres.');
+            hasError = true;
+        } else if (!usernameRegex.test(username)) {
+            showFieldError('username', 'Solo se permiten letras, números, puntos y guiones.');
+            hasError = true;
+        }
+
+        const email = inputEmail.value.trim();
+        const password = inputPassword.value;
+
+        if (!editingUserId) {
+            // Email
+            const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+            if (!email) {
+                showFieldError('email', 'El correo es obligatorio.');
+                hasError = true;
+            } else if (!emailRegex.test(email)) {
+                showFieldError('email', 'Ingrese un correo válido (ejemplo@gmail.com).');
+                hasError = true;
+            }
+
+            // Password
+            if (!password) {
+                showFieldError('password', 'La contraseña es obligatoria.');
+                hasError = true;
+            } else if (password.length < 6 || password.length > 50) {
+                showFieldError('password', 'La contraseña debe tener entre 6 y 50 caracteres.');
+                hasError = true;
+            }
+        }
+
+        if (hasError) {
+            btnSubmit.disabled = false;
             return;
         }
 
+        // Sanitización
+        const escapeHTML = (str) => str.replace(/[&<>'"]/g, tag => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[tag]));
         nombre = escapeHTML(nombre);
 
         btnSubmit.disabled = true;
@@ -270,7 +323,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         btnSubmitText.style.visibility = 'hidden';
 
         try {
-            // Check duplicados de nombre de usuario
             const { data: existingUser } = await supabaseClient
                 .from('perfiles')
                 .select('id_usuario')
@@ -278,106 +330,82 @@ document.addEventListener('DOMContentLoaded', async () => {
                 .maybeSingle();
 
             if (existingUser && (!editingUserId || existingUser.id_usuario !== editingUserId)) {
-                showModalError('Este nombre de usuario ya estÃ¡ en uso. Elige otro.');
-                resetSubmitBtn();
+                showFieldError('username', 'Este nombre de usuario ya est en uso.');
+                resetBtn();
                 return;
             }
 
             if (editingUserId) {
-                // â”€â”€ EDIT MODE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
                 const { error } = await supabaseClient
                     .from('perfiles')
                     .update({ nombre_completo: nombre, nombre_usuario: username })
                     .eq('id_usuario', editingUserId);
-
                 if (error) throw error;
-                showToast('Usuario actualizado correctamente');
+                showToast(`Usuario actualizado correctamente`);
             } else {
-                // â”€â”€ CREATE MODE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-                const email = inputEmail.value.trim();
-                const password = inputPassword.value;
+                // AUTO-SINCRONIZACIN
+                const { data: { user: authUser }, error: authErr } = await supabaseClient.auth.getUser();
+                const { data: { session: s } } = await supabaseClient.auth.getSession();
 
-                if (!email || !password) { showModalError('Email y contraseÃ±a son obligatorios.'); resetSubmitBtn(); return; }
-                
-                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                if (email.length > 150 || !emailRegex.test(email)) {
-                    showModalError('El correo electrÃ³nico no es vÃ¡lido o es demasiado largo.');
-                    resetSubmitBtn();
+                if (authErr || !s) {
+                    showModalError('Tu sesin ha expirado. Reingresa al sistema.');
+                    resetBtn();
                     return;
                 }
-                
-                if (password.length < 6 || password.length > 50) { 
-                    showModalError('La contraseÃ±a debe tener entre 6 y 50 caracteres.'); 
-                    resetSubmitBtn(); 
-                    return; 
-                }
 
-                // Call Edge Function
-                const { data: { session: currentSession } } = await supabaseClient.auth.getSession();
                 const response = await fetch(`${supabaseUrl}/functions/v1/create-user`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${currentSession.access_token}`,
+                        'Authorization': `Bearer ${s.access_token}`,
                     },
-                    body: JSON.stringify({
-                        email,
-                        password,
-                        nombre_completo: nombre,
-                        id_rol: 3 // Usuario
-                    })
+                    body: JSON.stringify({ email, password, nombre_completo: nombre, id_rol: 3 })
                 });
 
-                const result = await response.json();
-                if (!response.ok) {
-                    const errMsg = result.error || 'Error al crear usuario';
-                    if (errMsg.includes('already been registered')) {
-                        showModalError('Este correo electrÃ³nico ya estÃ¡ registrado.');
-                    } else {
-                        showModalError(errMsg);
-                    }
-                    resetSubmitBtn();
+                const contentType = response.headers.get("content-type");
+                let result;
+                if (contentType && contentType.includes("application/json")) {
+                    result = await response.json();
+                } else {
+                    const textError = await response.text();
+                    showModalError(`Error del servidor (${response.status}): ${textError}`);
+                    resetBtn();
                     return;
                 }
 
-                // Actualizar el nombre de usuario post-creaciÃ³n
-                const { data: newUser } = await supabaseClient
-                    .from('perfiles')
-                    .select('id_usuario')
-                    .eq('email', email)
-                    .single();
-
-                if (newUser) {
-                    await supabaseClient
-                        .from('perfiles')
-                        .update({ nombre_usuario: username })
-                        .eq('id_usuario', newUser.id_usuario);
+                if (!response.ok) {
+                    const errMsg = result.error || 'Error al crear';
+                    if (errMsg.includes('already exists')) showFieldError('email', 'Este correo ya est registrado.');
+                    else showModalError(errMsg);
+                    resetBtn();
+                    return;
                 }
 
-                showToast('Usuario creado exitosamente');
+                const { data: newUser } = await supabaseClient.from('perfiles').select('id_usuario').eq('email', email).single();
+                if (newUser) {
+                    await supabaseClient.from('perfiles').update({ nombre_usuario: username }).eq('id_usuario', newUser.id_usuario);
+                }
+                showToast(`Usuario creado exitosamente`);
             }
-
             closeModal();
             await fetchUsers();
         } catch (err) {
-
             showModalError('Error inesperado. Intente nuevamente.');
         }
-
-        resetSubmitBtn();
+        resetBtn();
     });
+
+    const resetBtn = () => {
+        btnSubmit.disabled = false;
+        btnSubmitSpinner.style.display = 'none';
+        btnSubmitText.style.visibility = 'visible';
+    };
 
     const showModalError = (msg) => {
         modalError.textContent = msg;
         modalError.classList.add('show');
     };
 
-    const resetSubmitBtn = () => {
-        btnSubmit.disabled = false;
-        btnSubmitSpinner.style.display = 'none';
-        btnSubmitText.style.visibility = 'visible';
-    };
-
-    // â”€â”€ Init â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Init
     await fetchUsers();
 });

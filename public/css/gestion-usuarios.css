@@ -41,6 +41,13 @@
 .modal-form-group label {
     display: block; font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 6px;
 }
+.help-text {
+    display: block;
+    font-size: 11px;
+    color: #94a3b8;
+    margin-top: 5px;
+    font-weight: 400;
+}
 .modal-form-group input,
 .modal-form-group select {
     width: 100%; padding: 11px 14px; font-size: 14px;
@@ -53,6 +60,18 @@
     border-color: #3b82f6;
     box-shadow: 0 0 0 3px rgba(59,130,246,0.1);
     background: #fff;
+}
+.field-error {
+    display: none;
+    color: #ef4444;
+    font-size: 11px;
+    margin-top: 4px;
+    font-weight: 500;
+}
+.field-error.show { display: block; }
+.input-error {
+    border-color: #ef4444 !important;
+    background-color: #fef2f2 !important;
 }
 
 .modal-actions {
