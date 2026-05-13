@@ -397,21 +397,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             const pacientesParaValidar = selectedDNIs.map(dni => {
                 return accumulatedResults.find(p => p.dni === dni);
             }).filter(p => p && (!p.condicion || p.condicion.toUpperCase() !== 'FALLECIDO'))
-              .map(paciente => ({
-                  dni: paciente.dni,
-                  fecha_nacimiento: paciente.fecha_nacimiento || '',
-                  codigo_verificacion: paciente.codigo_verificacion || ''
-              }));
-              
+                .map(paciente => ({
+                    dni: paciente.dni,
+                    fecha_nacimiento: paciente.fecha_nacimiento || '',
+                    codigo_verificacion: paciente.codigo_verificacion || ''
+                }));
+
             if (pacientesParaValidar.length === 0) {
                 showToast('Ningún paciente válido seleccionado.', true);
+
                 btnValidar.disabled = false;
                 blockingOverlay.style.display = 'none';
                 hideProgresoBanner();
                 return;
             }
 
-            const response = await fetch('https://hospital-san-jos-production.up.railway.app/validate-batch', {
+            const response = await fetch('https://sistema-sis-production-5b60.up.railway.app/validate-batch', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ pacientes: pacientesParaValidar })
@@ -616,7 +617,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (autoTrigger) {
                 // 1. Ejecutar b&#250;squeda
                 await loadPacientes();
-                
+
                 // 2. Seleccionar el registro (el b&#250;squeda ya renderiz&#243; la tabla)
                 const pac = accumulatedResults.find(p => p.dni === autoDNI);
                 if (pac && (!pac.condicion || pac.condicion.toUpperCase() !== 'FALLECIDO')) {
@@ -625,7 +626,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         updateActionsBar();
                         renderTable(); // Re-render para marcar el checkbox visualmente
                     }
-                    
+
                     // 3. Ejecutar validaci&#243;n
                     setTimeout(() => {
                         btnValidar.click();

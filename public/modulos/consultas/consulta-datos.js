@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', async () => {
     const supabase = typeof supabaseClient !== 'undefined' ? supabaseClient : null;
-    
+
     // Referencias DOM
     const inputDNI = document.getElementById('filter-dni');
     const btnConsultar = document.getElementById('btn-consultar');
@@ -12,7 +12,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // URLs Servicios
     const WORKER_URL = 'https://dni-lookup-api.seguimientohospitalario5.workers.dev/';
-    const RAILWAY_URL = 'https://hospital-san-jos-production.up.railway.app';
+    const RAILWAY_URL = 'https://sistema-sis-production-5b60.up.railway.app';
 
     // Función Toast (reutilizando de layout si existe)
     const showToast = (msg, isError = false) => {
@@ -64,7 +64,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 body: JSON.stringify({ dni })
             });
             const dniResult = await resDni.json();
-            
+
             if (dniResult.success) {
                 dataConsolidada.nombres = dniResult.nombres || '';
                 dataConsolidada.apellidos = `${dniResult.apellido_paterno || ''} ${dniResult.apellido_materno || ''}`.trim();
@@ -72,7 +72,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             // 2. SCRIPT DV (Railway)
-            updateOverlay('Obteniendo Dígito Verificador...');
+            updateOverlay('Obteniendo Dígito Verificador y Datos...');
             const resDV = await fetch(`${RAILWAY_URL}/get-dv`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -81,6 +81,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             const dvData = await resDV.json();
             if (dvData.success) {
                 dataConsolidada.codigo_verificacion = dvData.codigo_verificacion;
+                // Si el Worker no trajo nombres, los tomamos de aquí
+                if (!dataConsolidada.nombres) dataConsolidada.nombres = dvData.nombres || '';
+                if (!dataConsolidada.apellidos) dataConsolidada.apellidos = `${dvData.apellido_paterno || ''} ${dvData.apellido_materno || ''}`.trim();
             }
 
             // 3. SCRIPT SEGURO (Railway)
@@ -139,8 +142,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const renderResult = (data) => {
         const tr = document.createElement('tr');
-        
-        const fechaHora = new Date().toLocaleString('es-PE', { 
+
+        const fechaHora = new Date().toLocaleString('es-PE', {
             day: '2-digit', month: '2-digit', year: 'numeric',
             hour: '2-digit', minute: '2-digit'
         });

@@ -259,14 +259,29 @@ async function scrapeDV(dni, browser) {
             return document.querySelector('textarea.js-cc-copy-source').value;
         });
 
-        // Extraer el código usando regex: "Codigo de Verificacion: X"
-        const match = resultText.match(/Codigo de Verificacion:\s*(\d+)/i);
-        const dv = match ? match[1] : null;
+        // Extraer datos usando regex
+        const matchDV = resultText.match(/Codigo de Verificacion:\s*(\d+)/i);
+        const matchNombres = resultText.match(/Nombres:\s*([^,]+)/i);
+        const matchPaterno = resultText.match(/Apellido Paterno:\s*([^,]+)/i);
+        const matchMaterno = resultText.match(/Apellido Materno:\s*([^,]+)/i);
+
+        const dv = matchDV ? matchDV[1] : null;
+        const nombres = matchNombres ? matchNombres[1].trim() : '';
+        const paterno = matchPaterno ? matchPaterno[1].trim() : '';
+        const materno = matchMaterno ? matchMaterno[1].trim() : '';
 
         if (dv === null) throw new Error('No se pudo extraer el código de verificación del texto');
 
-        console.log(`[DV] DNI ${dni} → Código: ${dv}`);
-        return { dni, success: true, codigo_verificacion: dv };
+        console.log(`[DV] DNI ${dni} → Código: ${dv} | Paciente: ${paterno} ${materno}, ${nombres}`);
+        
+        return { 
+            dni, 
+            success: true, 
+            codigo_verificacion: dv,
+            nombres: nombres,
+            apellido_paterno: paterno,
+            apellido_materno: materno
+        };
 
     } catch (error) {
         console.error(`[DV] Error DNI ${dni}:`, error.message);
