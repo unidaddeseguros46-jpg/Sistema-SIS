@@ -64,13 +64,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 </a>
             </div>
 
-            <div class="nav-item has-sub ${currentPage.includes('consulta-rapida') ? 'active' : ''}">
+            <div class="nav-item has-sub ${currentPage.includes('consulta-') ? 'active' : ''}">
                 <div class="nav-link">
                     <i class="fa-solid fa-robot"></i>
                     <span>Consultas</span>
                 </div>
                 <div class="sub-menu">
-                    <a href="${bp}modulos/consultas/consulta-rapida.html" class="${currentPage.includes('consulta-rapida') ? 'selected' : ''}">Consulta Rápida</a>
+                    <a href="${bp}modulos/consultas/consulta-rapida.html" class="${currentPage === 'consulta-rapida.html' ? 'selected' : ''}">Consulta Rápida</a>
+                    <a href="${bp}modulos/consultas/consulta-datos.html" class="${currentPage === 'consulta-datos.html' ? 'selected' : ''}">Consulta de Datos</a>
                 </div>
             </div>
 
@@ -124,6 +125,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         return '<span class="welcome-dark">BÚSQUEDA / VERIFICACIÓN / </span><span class="welcome-celeste">ACTUALIZACIÓN</span>';
                     } else if (currentPage === 'consulta-rapida.html') {
                         return '<span class="welcome-dark">CONSULTA A WEB </span><span class="welcome-celeste">DONDE ME ATIENDO</span>';
+                    } else if (currentPage === 'consulta-datos.html') {
+                        return '<span class="welcome-dark">CONSULTA DE </span><span class="welcome-celeste">DATOS</span>';
                     } else if (currentPage === 'reportes.html') {
                         return '<span class="welcome-dark">EXCEL / </span><span class="welcome-celeste">PDF</span>';
                     }

@@ -109,36 +109,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     let filterQuery = ''; // Variable para almacenar el filtro de Servicio
 
     // ============================================
-    // CARGA DINÁMICA DE SERVICIOS
+    // CARGA DE FILTRO PREVIO
     // ============================================
     const loadServicios = async () => {
-        try {
-            const predefinedServicios = [
-                "Shock trauma", "Salud mental", "UVI", "Medicina",
-                "Cirugía", "Pediatría", "Neonatología", "Ginecología", "Puerperio"
-            ];
-
-            // Limpiar opciones previas (excepto la primera)
-            while (filterServicio.options.length > 1) {
-                filterServicio.remove(1);
-            }
-
-            // Agregar opciones predefinidas
-            predefinedServicios.forEach(servicio => {
-                const option = document.createElement('option');
-                option.value = servicio;
-                option.textContent = servicio;
-                filterServicio.appendChild(option);
-            });
-
-            if (sessionStorage.getItem('rp_filter_servicio')) {
-                filterServicio.value = sessionStorage.getItem('rp_filter_servicio');
-                filterQuery = filterServicio.value;
-                filterServicio.style.color = "#1e293b";
-            } else {
-                filterServicio.style.color = "#94a3b8";
-            }
-        } catch (error) {
+        if (sessionStorage.getItem('rp_filter_servicio')) {
+            filterServicio.value = sessionStorage.getItem('rp_filter_servicio');
+            filterQuery = filterServicio.value;
+            filterServicio.style.color = "#1e293b";
+        } else {
+            filterServicio.style.color = "#94a3b8";
+        }
+        if (filterServicio.customDropdownUpdate) {
+            filterServicio.customDropdownUpdate();
         }
     };
 
@@ -435,6 +417,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         filterServicio.value = '';
         filterServicio.style.color = "#94a3b8"; // Reset color
         sessionStorage.removeItem('rp_filter_servicio');
+        if (filterServicio.customDropdownUpdate) {
+            filterServicio.customDropdownUpdate();
+        }
 
         // Limpiar Buscador DNI
         searchQuery = '';

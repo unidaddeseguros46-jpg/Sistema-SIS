@@ -217,7 +217,107 @@ async function scrapePaciente(paciente, browser) {
     }
 }
 
+/**
+ * Scraping de Código de Verificación en dniperu.com
+ * URL: https://dniperu.com/digito-verificador-dni/
+ */
+async function scrapeDV(dni, browser) {
+    const page = await browser.newPage();
+    await page.setUserAgent(getRandomUA());
+
+    try {
+        console.log(`[DV] Iniciando consulta DNI: ${dni}`);
+        await page.goto('https://dniperu.com/digito-verificador-dni/', {
+            waitUntil: 'networkidle2',
+            timeout: 30000
+        });
+
+        // Esperar a que el input sea visible
+        await page.waitForSelector('input#cc_nombres_1dni', { timeout: 15000 });
+        
+        // Scroll hasta el input para evitar interferencia de publicidad
+        await page.evaluate(() => {
+            const el = document.querySelector('input#cc_nombres_1dni');
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+        await delay(1000);
+
+        await page.type('input#cc_nombres_1dni', dni, { delay: 100 });
+        
+        // Click en buscar (usamos evaluate para evitar que un banner de publicidad bloquee el click)
+        await page.evaluate(() => {
+            const btn = document.querySelector('button.js-cc-submit');
+            if (btn) btn.click();
+        });
+        console.log(`[DV] Búsqueda iniciada`);
+
+        // Esperar el resultado en el textarea
+        await page.waitForSelector('textarea.js-cc-copy-source', { timeout: 15000 });
+        await delay(500);
+
+        const resultText = await page.evaluate(() => {
+            return document.querySelector('textarea.js-cc-copy-source').value;
+        });
+
+        // Extraer el código usando regex: "Codigo de Verificacion: X"
+        const match = resultText.match(/Codigo de Verificacion:\s*(\d+)/i);
+        const dv = match ? match[1] : null;
+
+        if (dv === null) throw new Error('No se pudo extraer el código de verificación del texto');
+
+        console.log(`[DV] DNI ${dni} → Código: ${dv}`);
+        return { dni, success: true, codigo_verificacion: dv };
+
+    } catch (error) {
+        console.error(`[DV] Error DNI ${dni}:`, error.message);
+        return { dni, success: false, error: error.message };
+    } finally {
+        await page.close();
+    }
+}
+
 // ==================== ENDPOINTS ====================
+
+// Obtener Dígito Verificador (Individual)
+app.post('/get-dv', async (req, res) => {
+    const { dni } = req.body;
+    if (!dni) return res.status(400).json({ error: 'DNI requerido' });
+
+    let browser;
+    try {
+        browser = await launchBrowser();
+        const result = await scrapeDV(dni, browser);
+        res.json(result);
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    } finally {
+        if (browser) await browser.close();
+    }
+});
+
+// Obtener Dígito Verificador (Lote)
+app.post('/get-dv-batch', async (req, res) => {
+    const { dnis } = req.body;
+    if (!Array.isArray(dnis) || dnis.length === 0) {
+        return res.status(400).json({ error: 'Lista de DNIs requerida' });
+    }
+
+    let browser;
+    try {
+        browser = await launchBrowser();
+        const results = [];
+        for (let i = 0; i < dnis.length; i++) {
+            const result = await scrapeDV(dnis[i], browser);
+            results.push(result);
+            if (i < dnis.length - 1) await delay(1500);
+        }
+        res.json({ success: true, results });
+    } catch (err) {
+        res.status(500).json({ success: false, error: err.message });
+    } finally {
+        if (browser) await browser.close();
+    }
+});
 
 // Validación individual
 app.post('/validate', async (req, res) => {

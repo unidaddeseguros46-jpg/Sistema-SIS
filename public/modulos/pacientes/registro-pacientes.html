@@ -18,30 +18,44 @@
 
             <!-- BARRA DE OPERACIONES ESPECÍFICA DEL MÓDULO -->
             <div class="module-commands">
-                <div style="display: flex; gap: 10px; align-items: center;">
-                    <div class="global-search-box"
-                        style="width: 320px; display: flex; align-items: center; background: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; padding: 0 15px;">
-                        <i class="fa-solid fa-magnifying-glass" style="color: #64748b;"></i>
-                        <input type="text" id="btn-search-dni" placeholder="Buscar registros por DNI..."
-                            class="global-search-input"
-                            style="border: none; padding: 12px 10px; outline: none; flex: 1; min-width: 0;">
-                        <button id="execute-search" style="display: none;"></button>
+                <div style="display: flex; gap: 15px; align-items: flex-end;">
+                    <div class="filter-group">
+                        <label style="font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 5px; display: block;">Buscador</label>
+                        <div class="global-search-box"
+                            style="width: 320px; display: flex; align-items: center; background: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; padding: 0 15px; height: 42px;">
+                            <i class="fa-solid fa-magnifying-glass" style="color: #64748b;"></i>
+                            <input type="text" id="btn-search-dni" placeholder="Buscar registros por DNI..."
+                                class="global-search-input"
+                                style="border: none; padding: 12px 10px; outline: none; flex: 1; min-width: 0;">
+                            <button id="execute-search" style="display: none;"></button>
+                        </div>
                     </div>
  
                      <!-- FILTRO POR SERVICIO -->
-                     <div class="global-search-box"
-                         style="width: 250px; display: flex; align-items: center; background: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; padding: 0 15px; position: relative;">
-                         <i class="fa-solid fa-filter" style="color: #64748b; margin-right: 10px;"></i>
-                         <select id="filter-servicio" class="global-search-input"
-                             style="border: none; padding: 12px 0; outline: none; flex: 1; min-width: 0; appearance: none; -webkit-appearance: none; cursor: pointer; color: #94a3b8; background: transparent;">
-                             <option value="" style="color: #94a3b8;">Filtrar por Servicio</option>
-                         </select>
-                         <i class="fa-solid fa-chevron-down"
-                             style="position: absolute; right: 15px; color: #64748b; font-size: 12px; pointer-events: none;"></i>
+                     <div class="filter-group">
+                         <label style="font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 5px; display: block;">Servicio</label>
+                         <div class="global-search-box"
+                             style="width: 250px; display: flex; align-items: center; background: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; padding: 0 15px; position: relative; height: 42px;">
+                             <i class="fa-solid fa-filter" style="color: #64748b; margin-right: 10px;"></i>
+                             <select id="filter-servicio" class="global-search-input custom-select-source"
+                                 style="border: none; padding: 0; outline: none; flex: 1; min-width: 0; appearance: none; -webkit-appearance: none; cursor: pointer; color: #94a3b8; background: transparent;">
+                                 <option value="" style="color: #94a3b8;">TODOS</option>
+                                <option value="Shock trauma">Shock trauma</option>
+                                <option value="Salud mental">Salud mental</option>
+                                <option value="UVI">UVI</option>
+                                <option value="Medicina">Medicina</option>
+                                <option value="Cirugía">Cirugía</option>
+                                <option value="Pediatría">Pediatría</option>
+                                <option value="Neonatología">Neonatología</option>
+                                <option value="Ginecología">Ginecología</option>
+                                <option value="Puerperio">Puerperio</option>
+                             </select>
+                             <i class="fa-solid fa-chevron-down"
+                                 style="position: absolute; right: 15px; color: #64748b; font-size: 12px; pointer-events: none;"></i>
+                         </div>
                      </div>
                      <button class="btn-module btn-clear-hover" id="clear-filter-servicio"
-                         style="background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; padding: 8px 15px; font-weight: 500;">Limpiar
-                         Filtro</button>
+                         style="background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; padding: 0 15px; font-weight: 500; height: 42px; display: flex; align-items: center; border-radius: 8px;">Limpiar Filtro</button>
                 </div>
                 <button class="btn-module primary action-btn" id="local-new-patient-btn" style="padding: 12px 20px;"><i
                         class="fa-solid fa-plus"></i> Nuevo Paciente</button>
@@ -216,6 +230,7 @@
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://npmcdn.com/flatpickr/dist/l10n/es.js"></script>
     <script src="../../js/supabase-config.js"></script>
+    <script src="../../js/custom-select.js"></script>
     <script src="../../js/layout.js"></script>
     <script src="../../js/dynamic-table.js"></script>
     <script src="../../js/registro-pacientes.js"></script>

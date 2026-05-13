@@ -223,7 +223,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <i class="fa-solid fa-rotate-right"></i>
                 </button>`;
             }
-
             tr.innerHTML = `
                 <td style="text-align:center;">
                     <input type="checkbox" class="patient-checkbox" data-dni="${p.dni}" ${selectedDNIs.includes(p.dni) ? 'checked' : ''} ${isFallecido ? 'disabled' : ''}>

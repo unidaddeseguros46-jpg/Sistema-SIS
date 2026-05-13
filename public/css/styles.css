@@ -1554,3 +1554,123 @@ tr.row-alerta:hover {
         padding: 20px;
     }
 }
+
+/* =========================================================
+   CUSTOM SELECT (Dropdown Modernizado)
+   ========================================================= */
+.custom-select-wrapper {
+    position: relative;
+    user-select: none;
+    width: 100%;
+}
+
+.custom-select-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 100%;
+    width: 100%;
+    cursor: pointer;
+    background: transparent;
+    text-transform: uppercase;
+}
+
+.custom-select-text {
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.custom-select-options {
+    position: absolute;
+    display: block;
+    top: calc(100% + 5px);
+    left: -15px; /* Ajuste por el padding del parent */
+    right: -15px;
+    background: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e2e8f0;
+    list-style: none;
+    padding: 8px 0;
+    margin: 0;
+    z-index: 9999;
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+/* Custom Scrollbar para el Dropdown */
+.custom-select-options::-webkit-scrollbar {
+    width: 6px;
+}
+.custom-select-options::-webkit-scrollbar-track {
+    background: #f8fafc;
+    border-radius: 10px;
+}
+.custom-select-options::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+}
+.custom-select-options::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+.custom-select-wrapper.open .custom-select-options {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0);
+}
+
+.custom-select-option {
+    padding: 10px 15px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    font-size: 13px;
+    color: #475569;
+    text-transform: uppercase;
+}
+
+.custom-select-option:hover {
+    background: #f1f5f9;
+    color: #3b82f6;
+}
+
+.custom-select-option.selected {
+    color: #3b82f6;
+    font-weight: 600;
+    background: #eff6ff;
+}
+
+.custom-select-option .option-check {
+    opacity: 0;
+    color: #3b82f6;
+    font-size: 12px;
+    transition: opacity 0.2s;
+}
+
+.custom-select-option.selected .option-check {
+    opacity: 1;
+}
+
+/* Ocultar la flecha si usamos wrapper porque global-search-box ya tiene una (ver HTML) */
+/* La flecha rotará con un hack si está en global-search-box */
+.global-search-box:has(.custom-select-wrapper) {
+    overflow: visible !important;
+}
+
+.global-search-box:has(.custom-select-wrapper.open) > .fa-chevron-down {
+    transform: rotate(180deg);
+    transition: transform 0.2s ease;
+}
+.global-search-box > .fa-chevron-down {
+    transition: transform 0.2s ease;
+}

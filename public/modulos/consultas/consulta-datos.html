@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consulta de Datos - Hospital San José</title>
+    <link rel="stylesheet" href="../../css/styles.css">
+    <link rel="stylesheet" href="../../css/registro-pacientes.css">
+    <link rel="stylesheet" href="../../css/seguimiento-pacientes.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div class="main-wrapper">
+        <main class="page-content" id="page-content">
+
+            <!-- SECCION DE FILTROS -->
+            <div class="search-filters-container" id="search-filters">
+                <div class="filter-group" style="flex: 1;">
+                    <label>DNI del Paciente</label>
+                    <input type="text" id="filter-dni" class="filter-input" placeholder="Ingrese número de DNI..." oninput="this.value = this.value.replace(/[^0-9]/g, '')" maxlength="8">
+                </div>
+                <div style="display: flex; gap: 10px; align-items: flex-end;">
+                    <button class="btn-module primary" id="btn-consultar" style="padding: 10px 20px;"><i class="fa-solid fa-magnifying-glass"></i> Consultar Datos</button>
+                    <button class="btn-module btn-clear-hover" id="btn-clear" style="padding: 8px 15px; background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; font-weight: 500;">Limpiar</button>
+                </div>
+            </div>
+
+            <!-- SECCION DE RESULTADOS -->
+            <div id="view-resultados" style="margin-top: 20px; display: none;">
+                <div class="data-table-container" style="background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); padding: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h3 style="margin: 0; color: #0f172a; font-size: 16px; font-weight: 700;">
+                            <i class="fa-solid fa-square-poll-vertical" style="color: #3b82f6; margin-right: 8px;"></i>Resultados de la Consulta
+                        </h3>
+                    </div>
+                    <table class="data-table" id="table-pacientes">
+                        <thead>
+                            <tr>
+                                <th>DNI</th>
+                                <th>Paciente</th>
+                                <th>F. Nacimiento</th>
+                                <th>CUI / DV</th>
+                                <th>Seguro Validado</th>
+                                <th>Cobertura</th>
+                                <th>Estado</th>
+                                <th>Fecha/Hora</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-pacientes"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Overlay de carga -->
+            <div id="blocking-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.7); backdrop-filter:blur(2px); z-index:10000; justify-content:center; align-items:center; flex-direction:column; gap:15px;">
+                <div class="spinner-rpa"></div>
+                <div style="text-align:center;">
+                    <p id="overlay-msg" style="margin:0; font-weight:700; color:#0f172a; font-size:16px;">Consultando fuentes...</p>
+                    <p style="margin:5px 0 0; color:#64748b; font-size:13px;">Esto puede tardar unos segundos</p>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script src="../../js/supabase-config.js"></script>
+    <script src="../../js/layout.js"></script>
+    <script src="consulta-datos.js"></script>
+</body>
+</html>

@@ -378,26 +378,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     function showIngresoPopover(dayEl, dateStr) {
         pendingIngresoDate = dateStr;
         const rect = dayEl.getBoundingClientRect();
+        const parentEl = dayEl.closest('.calendar-section');
+        const parentRect = parentEl.getBoundingClientRect();
 
-        // Posicionar con fixed para que flote sobre todo el layout
+        // Posicionar con absolute relativo al contenedor .calendar-section (que tiene position: relative)
         ingresoPopover.style.display = 'block';
-        ingresoPopover.style.position = 'fixed';
-        // Esquina superior derecha del día seleccionado
-        ingresoPopover.style.top = (rect.top - 10) + 'px';
-        ingresoPopover.style.left = (rect.right + 8) + 'px';
+        ingresoPopover.style.position = 'absolute';
+        
+        // Calcular posición relativa al padre
+        const topPos = rect.top - parentRect.top;
+        const leftPos = rect.right - parentRect.left;
+
+        ingresoPopover.style.top = (topPos - 10) + 'px';
+        ingresoPopover.style.left = (leftPos + 12) + 'px';
 
         // Ajustar si sale de pantalla
         requestAnimationFrame(() => {
             const popRect = ingresoPopover.getBoundingClientRect();
             if (popRect.right > window.innerWidth - 20) {
                 // Posicionar a la izquierda del día
-                ingresoPopover.style.left = (rect.left - popRect.width - 8) + 'px';
-            }
-            if (popRect.top < 10) {
-                ingresoPopover.style.top = (rect.bottom + 8) + 'px';
-            }
-            if (popRect.bottom > window.innerHeight - 10) {
-                ingresoPopover.style.top = (rect.top - popRect.height - 8) + 'px';
+                ingresoPopover.style.left = (rect.left - parentRect.left - popRect.width - 12) + 'px';
             }
         });
 

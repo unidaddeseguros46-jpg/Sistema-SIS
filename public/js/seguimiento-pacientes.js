@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const filterDniHc = document.getElementById('filter-dni-hc');
     const filterApellidos = document.getElementById('filter-apellidos');
     const filterSeguro = document.getElementById('filter-seguro');
+    const filterServicio = document.getElementById('filter-servicio');
     const btnSearch = document.getElementById('btn-search');
     const btnClear = document.getElementById('btn-clear');
     
@@ -67,6 +68,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const dniHcVal = filterDniHc.value.trim();
             const apeVal = filterApellidos.value.trim();
             const seguroVal = filterSeguro.value;
+            const servicioVal = filterServicio.value;
 
             if (dniHcVal) {
                 queryObj = queryObj.or(`dni.ilike.%${dniHcVal}%,historia_clinica.ilike.%${dniHcVal}%`);
@@ -76,6 +78,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             if (seguroVal) {
                 queryObj = queryObj.eq('tipo_seguro', seguroVal.toUpperCase());
+            }
+            if (servicioVal) {
+                queryObj = queryObj.eq('servicio', servicioVal);
             }
 
             const { data: pacientes, count, error } = await queryObj;
@@ -157,7 +162,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    const inputs = [filterDniHc, filterApellidos, filterSeguro];
+    const inputs = [filterDniHc, filterApellidos, filterSeguro, filterServicio];
     inputs.forEach(input => {
         input.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
@@ -172,6 +177,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         searchPacientes();
     });
 
+    filterServicio.addEventListener('change', () => {
+        currentPage = 1;
+        searchPacientes();
+    });
+
     btnSearch.addEventListener('click', () => {
         currentPage = 1;
         searchPacientes();
@@ -181,6 +191,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         filterDniHc.value = '';
         filterApellidos.value = '';
         filterSeguro.value = '';
+        filterServicio.value = '';
+        
+        // Actualizar el texto del custom dropdown si existe
+        if (filterServicio.customDropdownUpdate) filterServicio.customDropdownUpdate();
+        if (filterSeguro.customDropdownUpdate) filterSeguro.customDropdownUpdate();
+        
         currentPage = 1;
         searchPacientes();
     });

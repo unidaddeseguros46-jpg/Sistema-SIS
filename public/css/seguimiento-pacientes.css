@@ -31,6 +31,7 @@
     outline: none;
     font-size: 14px;
     transition: border-color 0.2s;
+    height: 42px;
 }
 
 .filter-input:focus {
@@ -446,4 +447,21 @@
 
 .btn-table-action.quick-query:hover {
     color: #2563eb;
+}
+
+/* ============================================
+   RESPONSIVE FILTER BUTTONS
+   ============================================ */
+@media (max-width: 768px) {
+    .btn-text-resp {
+        display: none;
+    }
+    .btn-icon-resp {
+        display: inline-block !important;
+    }
+    .search-filters-container .btn-module {
+        padding: 10px !important;
+        width: 42px;
+        justify-content: center;
+    }
 }
