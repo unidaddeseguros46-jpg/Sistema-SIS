@@ -83,7 +83,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 dataConsolidada.codigo_verificacion = dvData.codigo_verificacion;
                 // Si el Worker no trajo nombres, los tomamos de aquí
                 if (!dataConsolidada.nombres) dataConsolidada.nombres = dvData.nombres || '';
-                if (!dataConsolidada.apellidos) dataConsolidada.apellidos = `${dvData.apellido_paterno || ''} ${dvData.apellido_materno || ''}`.trim();
+                if (!dataConsolidada.apellidos) {
+                    const paterno = dvData.apellido_paterno || '';
+                    const materno = dvData.apellido_materno || '';
+                    dataConsolidada.apellidos = `${paterno} ${materno}`.trim();
+                }
             }
 
             // 3. SCRIPT SEGURO (Railway)
