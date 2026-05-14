@@ -33,6 +33,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         tbody.innerHTML = '';
     };
 
+    // Evento Enter en input DNI
+    inputDNI.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') btnConsultar.click();
+    });
+
     btnConsultar.addEventListener('click', async () => {
         const dni = inputDNI.value.trim();
         if (dni.length !== 8) {
@@ -44,18 +49,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         tbody.innerHTML = '';
         viewResultados.style.display = 'none';
 
-        let dataConsolidada = {
-            dni: dni,
-            nombres: '',
-            apellidos: '',
-            fecha_nacimiento: '',
-            codigo_verificacion: '',
-            seguro_validado: 'ERROR',
-            cobertura: '',
-            estado_consulta: 'PENDIENTE'
-        };
-
         try {
+            let dataConsolidada = {
+                dni: dni,
+                nombres: '',
+                apellidos: '',
+                fecha_nacimiento: '',
+                codigo_verificacion: '',
+                seguro_validado: 'NO ENCONTRADO',
+                cobertura: '',
+                estado_consulta: 'PROCESANDO'
+            };
+
             // 1. SCRIPT DNI (Cloudflare Worker)
             updateOverlay('Consultando datos de identidad...');
             const resDni = await fetch(WORKER_URL, {
@@ -63,55 +68,62 @@ document.addEventListener('DOMContentLoaded', async () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ dni })
             });
+            
+            if (!resDni.ok) throw new Error('El servicio de identidad no responde');
             const dniResult = await resDni.json();
 
             if (dniResult.success) {
                 dataConsolidada.nombres = dniResult.nombres || '';
                 dataConsolidada.apellidos = `${dniResult.apellido_paterno || ''} ${dniResult.apellido_materno || ''}`.trim();
-                dataConsolidada.fecha_nacimiento = dniResult.fecha_iso || ''; // yyyy-mm-dd
+                dataConsolidada.fecha_nacimiento = dniResult.fecha_iso || '';
+            } else {
+                // Si falla el worker, no podemos seguir porque falta la fecha de nacimiento
+                throw new Error('No se pudo obtener la fecha de nacimiento (Servicio DNI)');
             }
 
             // 2. SCRIPT DV (Railway)
-            updateOverlay('Obteniendo Dígito Verificador y Datos...');
+            updateOverlay('Obteniendo Dígito Verificador...');
             const resDV = await fetch(`${RAILWAY_URL}/get-dv`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ dni })
             });
+            
+            if (!resDV.ok) throw new Error('El servicio de DV no responde');
             const dvData = await resDV.json();
+            
             if (dvData.success) {
                 dataConsolidada.codigo_verificacion = dvData.codigo_verificacion;
-                // Si el Worker no trajo nombres, los tomamos de aquí
                 if (!dataConsolidada.nombres) dataConsolidada.nombres = dvData.nombres || '';
                 if (!dataConsolidada.apellidos) {
-                    const paterno = dvData.apellido_paterno || '';
-                    const materno = dvData.apellido_materno || '';
-                    dataConsolidada.apellidos = `${paterno} ${materno}`.trim();
+                    dataConsolidada.apellidos = `${dvData.apellido_paterno || ''} ${dvData.apellido_materno || ''}`.trim();
                 }
+            } else {
+                throw new Error('No se pudo obtener el Código de Verificación (Servicio DV)');
             }
 
             // 3. SCRIPT SEGURO (Railway)
-            if (dataConsolidada.fecha_nacimiento && dataConsolidada.codigo_verificacion) {
-                updateOverlay('Validando seguro en EsSalud...');
-                const resSeguro = await fetch(`${RAILWAY_URL}/validate`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        dni: dni,
-                        fecha_nacimiento: dataConsolidada.fecha_nacimiento,
-                        codigo_verificacion: dataConsolidada.codigo_verificacion
-                    })
-                });
-                const seguroData = await resSeguro.json();
-                if (seguroData.success) {
-                    dataConsolidada.seguro_validado = seguroData.result.seguro;
-                    dataConsolidada.cobertura = seguroData.result.cobertura;
-                    dataConsolidada.estado_consulta = 'ÉXITO';
-                } else {
-                    dataConsolidada.estado_consulta = 'ERROR EN SEGURO';
-                }
+            updateOverlay('Validando seguro en EsSalud...');
+            const resSeguro = await fetch(`${RAILWAY_URL}/validate`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    dni: dni,
+                    fecha_nacimiento: dataConsolidada.fecha_nacimiento,
+                    codigo_verificacion: dataConsolidada.codigo_verificacion
+                })
+            });
+            
+            if (!resSeguro.ok) throw new Error('El servicio de EsSalud no responde');
+            const seguroData = await resSeguro.json();
+            
+            if (seguroData.success) {
+                dataConsolidada.seguro_validado = seguroData.result.seguro;
+                dataConsolidada.cobertura = seguroData.result.cobertura;
+                dataConsolidada.estado_consulta = 'ÉXITO';
             } else {
-                dataConsolidada.estado_consulta = 'DATOS INCOMPLETOS';
+                dataConsolidada.estado_consulta = 'SIN SEGURO';
+                dataConsolidada.seguro_validado = 'NO ENCONTRADO';
             }
 
             // 4. GUARDAR EN SUPABASE (Tabla consultas_datos)
@@ -144,13 +156,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
+    const modalRegistro = document.getElementById('modal-registro');
+    const iframeRegistro = document.getElementById('iframe-registro');
+    const btnCloseModal = document.getElementById('close-modal');
+
+    btnCloseModal.addEventListener('click', () => {
+        modalRegistro.style.display = 'none';
+        iframeRegistro.src = ''; // Limpiar iframe
+    });
+
     const renderResult = (data) => {
         const tr = document.createElement('tr');
 
-        const fechaHora = new Date().toLocaleString('es-PE', {
-            day: '2-digit', month: '2-digit', year: 'numeric',
-            hour: '2-digit', minute: '2-digit'
-        });
+        // Obtener hora de Perú para mostrar en la tabla
+        const options = { timeZone: 'America/Lima', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' };
+        const fechaHora = new Intl.DateTimeFormat('es-PE', options).format(new Date());
 
         const fnacFormateada = data.fecha_nacimiento ? data.fecha_nacimiento.split('-').reverse().join('/') : '—';
 
@@ -163,7 +183,32 @@ document.addEventListener('DOMContentLoaded', async () => {
             <td style="font-size:12px; color:#64748b;">${data.cobertura || '—'}</td>
             <td><span class="condicion-badge ${data.estado_consulta === 'ÉXITO' ? 'cond-alta' : 'cond-fallecido'}">${data.estado_consulta}</span></td>
             <td style="font-size:12px; color:#94a3b8;">${fechaHora}</td>
+            <td style="text-align:center;">
+                <button class="btn-agregar-paciente" title="Agregar a mis pacientes" 
+                        style="background:#3b82f6; color:white; border:none; border-radius:8px; padding:6px 12px; cursor:pointer; font-weight:600; transition:all 0.2s;">
+                    <i class="fa-solid fa-user-plus"></i> Agregar
+                </button>
+            </td>
         `;
+
+        // Evento para el botón Agregar
+        tr.querySelector('.btn-agregar-paciente').addEventListener('click', () => {
+            const autoFillData = {
+                dni: data.dni,
+                nombres: data.nombres,
+                apellidos: data.apellidos,
+                fecha_nacimiento: data.fecha_nacimiento, // yyyy-mm-dd
+                codigo_verificacion: data.codigo_verificacion,
+                tipo_seguro: data.seguro_validado
+            };
+            
+            sessionStorage.setItem('cd_auto_fill', JSON.stringify(autoFillData));
+            
+            // Abrir modal con el iframe apuntando al registro con un parámetro especial
+            iframeRegistro.src = '../pacientes/registro-pacientes.html?view=modal';
+            modalRegistro.style.display = 'flex';
+        });
+
         tbody.appendChild(tr);
     };
 

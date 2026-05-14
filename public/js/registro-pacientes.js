@@ -56,6 +56,60 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
+    // ============================================
+    // AUTOCOMPLETADO Y MODO MODAL
+    // ============================================
+    const isModal = new URLSearchParams(window.location.search).get('view') === 'modal';
+
+    const checkAutoFill = () => {
+        const dataStr = sessionStorage.getItem('cd_auto_fill');
+        
+        // 1. Mostrar formulario inmediatamente si es modal para evitar parpadeo
+        if (isModal) {
+            viewLista.style.display = 'none';
+            viewForm.style.display = 'block';
+            const tempStyle = document.getElementById('temp-modal-hide');
+            if (tempStyle) tempStyle.remove();
+            document.body.style.display = 'block';
+        }
+
+        if (dataStr) {
+            const data = JSON.parse(dataStr);
+            sessionStorage.removeItem('cd_auto_fill');
+
+            // 2. Rellenar campos de texto (Inmediato)
+            document.getElementById('paciente-dni').value = data.dni || '';
+            document.getElementById('paciente-nombres').value = data.nombres || '';
+            document.getElementById('paciente-apellidos').value = data.apellidos || '';
+            document.getElementById('paciente-codigo-ver').value = data.codigo_verificacion || '';
+            
+            if (data.tipo_seguro) {
+                setSelectValueCaseInsensitive(selectSeguro, data.tipo_seguro);
+            }
+
+            // 3. Rellenar Fecha (Con pequeño retardo para asegurar que Flatpickr cargue)
+            setTimeout(() => {
+                if (data.fecha_nacimiento) {
+                    const fp = document.getElementById('paciente-fecha-nac')._flatpickr;
+                    if (fp) {
+                        const parts = data.fecha_nacimiento.split('-');
+                        if (parts.length === 3) {
+                            const formatted = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                            fp.setDate(formatted, true, "d/m/Y");
+                        }
+                    }
+                }
+            }, 300);
+
+            if (window.showSystemTooltip) {
+                window.showSystemTooltip('Datos importados desde Consulta de Datos');
+            }
+        }
+    };
+
+    // checkAutoFill() se ejecutará al final de la inicialización
+
+
     // Inicializar Flatpickr con m\u00e1scara autom\u00e1tica dd/mm/yyyy
     const fpInstance = flatpickr("#paciente-fecha-nac", {
         locale: "es",
@@ -671,4 +725,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (btnObtenerFnac) btnObtenerFnac.click();
         }, 500);
     }
+
+    // ============================================
+    // EJECUCIÓN FINAL DE AUTOCOMPLETADO
+    // ============================================
+    // checkAutoFill se ejecuta al final para asegurar que todo el DOM y componentes estén listos
+    checkAutoFill();
 });

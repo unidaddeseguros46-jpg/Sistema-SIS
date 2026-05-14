@@ -10,6 +10,30 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        /* Estilos para cuando se abre como modal */
+        body.is-modal .sidebar, 
+        body.is-modal header, 
+        body.is-modal .module-commands,
+        body.is-modal #view-lista {
+            display: none !important;
+        }
+        body.is-modal .page-content {
+            margin-left: 0 !important;
+            padding: 10px !important;
+        }
+        body.is-modal .main-wrapper {
+            background: white !important;
+        }
+    </style>
+    <script>
+        if (new URLSearchParams(window.location.search).get('view') === 'modal') {
+            document.documentElement.classList.add('is-modal');
+            // Ocultar body inmediatamente para evitar parpadeo
+            document.write('<style id="temp-modal-hide">body { display: none !important; }</style>');
+            window.addEventListener('DOMContentLoaded', () => document.body.classList.add('is-modal'));
+        }
+    </script>
 </head>
 
 <body>

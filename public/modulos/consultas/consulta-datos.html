@@ -15,10 +15,16 @@
         <main class="page-content" id="page-content">
 
             <!-- SECCION DE FILTROS -->
-            <div class="search-filters-container" id="search-filters">
-                <div class="filter-group" style="flex: 1;">
+            <div class="search-filters-container" id="search-filters" style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
+                <div class="filter-group" style="width: 180px; flex: none;">
                     <label>DNI del Paciente</label>
-                    <input type="text" id="filter-dni" class="filter-input" placeholder="Ingrese número de DNI..." oninput="this.value = this.value.replace(/[^0-9]/g, '')" maxlength="8">
+                    <input type="text" id="filter-dni" class="filter-input" placeholder="DNI (8 dígitos)" oninput="this.value = this.value.replace(/[^0-9]/g, '')" maxlength="8">
+                </div>
+                <div class="filter-group" style="width: 150px; flex: none;">
+                    <label>Web SUSALUD</label>
+                    <a href="https://app1.susalud.gob.pe/registro/Account/LogOn" target="_blank" class="filter-input" style="display: flex; align-items: center; justify-content: center; text-decoration: none; color: #475569; background: #f8fafc; border: 1px solid #e2e8f0; font-weight: 600; gap: 8px; transition: all 0.2s ease;">
+                        <i class="fa-solid fa-external-link-alt" style="color: #64748b;"></i> SUSALUD
+                    </a>
                 </div>
                 <div style="display: flex; gap: 10px; align-items: flex-end;">
                     <button class="btn-module primary" id="btn-consultar" style="padding: 10px 20px;"><i class="fa-solid fa-magnifying-glass"></i> Consultar Datos</button>
@@ -45,6 +51,7 @@
                                 <th>Cobertura</th>
                                 <th>Estado</th>
                                 <th>Fecha/Hora</th>
+                                <th style="text-align:center;">Acción</th>
                             </tr>
                         </thead>
                         <tbody id="tbody-pacientes"></tbody>
@@ -58,6 +65,17 @@
                 <div style="text-align:center;">
                     <p id="overlay-msg" style="margin:0; font-weight:700; color:#0f172a; font-size:16px;">Consultando fuentes...</p>
                     <p style="margin:5px 0 0; color:#64748b; font-size:13px;">Esto puede tardar unos segundos</p>
+                </div>
+            </div>
+
+            <!-- MODAL DE REGISTRO (IFRAME) -->
+            <div id="modal-registro" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); z-index:20000; justify-content:center; align-items:center;">
+                <div style="background:white; width:90%; max-width:1000px; height:90%; border-radius:15px; position:relative; overflow:hidden; display:flex; flex-direction:column; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);">
+                    <div style="padding:15px 25px; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; background:#f8fafc;">
+                        <h3 style="margin:0; font-size:18px; color:#0f172a; font-weight:700;"><i class="fa-solid fa-user-plus" style="margin-right:10px; color:#3b82f6;"></i>Completar Registro de Paciente</h3>
+                        <button id="close-modal" style="background:none; border:none; font-size:24px; cursor:pointer; color:#94a3b8; transition:color 0.2s;">&times;</button>
+                    </div>
+                    <iframe id="iframe-registro" src="" style="flex:1; border:none; width:100%; height:100%;"></iframe>
                 </div>
             </div>
 
