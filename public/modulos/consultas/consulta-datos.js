@@ -205,7 +205,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             <td><span class="condicion-badge ${data.estado_consulta === 'ÉXITO' ? 'cond-alta' : 'cond-fallecido'}">${data.estado_consulta}</span></td>
             <td style="font-size:12px; color:#94a3b8;">${fechaHora}</td>
             <td style="text-align:center;">
-                <button class="btn-agregar-paciente" title="Agregar a mis pacientes" 
+                <button class="btn-agregar-paciente" data-dni="${data.dni}" title="Agregar a mis pacientes" 
                         style="background:#3b82f6; color:white; border:none; border-radius:8px; padding:6px 12px; cursor:pointer; font-weight:600; transition:all 0.2s;">
                     <i class="fa-solid fa-user-plus"></i> Agregar
                 </button>
@@ -234,4 +234,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     btnClear.addEventListener('click', resetView);
+
+    // ========== LISTENER: PACIENTE REGISTRADO DESDE MODAL ==========
+    window.addEventListener('message', (event) => {
+        if (!event.data || event.data.type !== 'paciente-registrado') return;
+
+        const { dni, pacienteId } = event.data;
+
+        // 1. Cerrar el modal
+        modalRegistro.style.display = 'none';
+        iframeRegistro.src = '';
+
+        // 2. Tooltip de éxito
+        showToast('Paciente Guardado Exitosamente');
+
+        // 3. Transformar botón "Agregar" → "Ver"
+        if (dni) {
+            const btn = document.querySelector(`.btn-agregar-paciente[data-dni="${dni}"]`);
+            if (btn) {
+                btn.outerHTML = `
+                    <a href="../seguimiento/detalle-paciente.html?id=${pacienteId}" 
+                       title="Ver detalle del paciente"
+                       style="display:inline-flex; align-items:center; gap:5px; background:#10b981; color:white; border:none; border-radius:8px; padding:6px 12px; cursor:pointer; font-weight:600; text-decoration:none; font-size:14px; transition:all 0.2s;">
+                        <i class="fa-solid fa-eye"></i> Ver
+                    </a>`;
+            }
+        }
+    });
 });

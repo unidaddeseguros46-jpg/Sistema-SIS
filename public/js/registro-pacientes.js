@@ -653,12 +653,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         try {
             let errorResp;
+            let newPacienteId = null;
             if (objectId) {
                 const { error } = await client.from('pacientes').update(payload).eq('id', objectId);
                 errorResp = error;
             } else {
-                const { error } = await client.from('pacientes').insert([payload]).select().single();
+                const { data: insertedData, error } = await client.from('pacientes').insert([payload]).select().single();
                 errorResp = error;
+                if (insertedData) newPacienteId = insertedData.id;
                 // El evento 'Hospitalizado' se creará automáticamente al asignar
                 // fecha de ingreso desde el módulo detalle-paciente (trigger en BD)
             }
@@ -668,7 +670,17 @@ document.addEventListener('DOMContentLoaded', async () => {
                 throw errorResp;
             }
 
-            // Éxito:
+            // Si estamos en modo modal (iframe desde consulta-datos), notificar al padre y salir
+            if (isModal && window.parent !== window) {
+                window.parent.postMessage({
+                    type: 'paciente-registrado',
+                    dni: payload.dni || '',
+                    pacienteId: newPacienteId || objectId
+                }, '*');
+                return; // El padre se encarga de cerrar el modal y mostrar el tooltip
+            }
+
+            // Éxito (flujo normal, no modal):
             currentPage = 1;
             await loadPacientes();
 

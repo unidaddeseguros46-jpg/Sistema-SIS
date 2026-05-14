@@ -497,7 +497,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const modalGuardar = document.getElementById('modal-guardar');
     const modalNuevoSeguro = document.getElementById('modal-nuevo-seguro');
 
-    const openModalCambioCobertura = (paciente) => {
+    // Variable para almacenar la hospitalización activa del paciente actual
+    let hospActiva = null;
+
+    // Abrir directamente el modal de Cambio Cobertura (sin verificación)
+    const showModalCobertura = (paciente) => {
         modalPacienteActual = paciente;
 
         document.getElementById('modal-paciente-nombre').textContent = `${paciente.apellidos}, ${paciente.nombres}`;
@@ -518,6 +522,32 @@ document.addEventListener('DOMContentLoaded', async () => {
         modalOverlay.style.display = 'flex';
     };
 
+    // Punto de entrada principal: verifica hospitalización activa antes de cambio de cobertura
+    const openModalCambioCobertura = async (paciente) => {
+        // Consultar si el paciente tiene una hospitalización activa
+        const { data: hospData, error: hospError } = await supabaseClient
+            .from('hospitalizaciones')
+            .select('*')
+            .eq('paciente_id', paciente.id)
+            .eq('activa', true)
+            .limit(1);
+
+        if (hospError) {
+            showToast('Error al verificar hospitalización: ' + hospError.message, true);
+            return;
+        }
+
+        if (hospData && hospData.length > 0) {
+            // Tiene hospitalización activa → abrir directamente Cambio de Cobertura
+            hospActiva = hospData[0];
+            showModalCobertura(paciente);
+        } else {
+            // No tiene hospitalización activa → solicitar Fecha de Ingreso primero
+            hospActiva = null;
+            openModalIngresoRapido(paciente);
+        }
+    };
+
     const closeModal = () => {
         modalOverlay.style.display = 'none';
         modalPacienteActual = null;
@@ -526,6 +556,112 @@ document.addEventListener('DOMContentLoaded', async () => {
     modalClose.addEventListener('click', closeModal);
     modalOverlay.addEventListener('click', (e) => {
         if (e.target === modalOverlay) closeModal();
+    });
+
+    // ========== MODAL INGRESO RÁPIDO ==========
+    const modalIngresoOverlay = document.getElementById('modal-ingreso-overlay');
+    const modalIngresoClose = document.getElementById('modal-ingreso-close');
+    const modalIngresoGuardar = document.getElementById('modal-ingreso-guardar');
+    let pendingIngresoPaciente = null; // Paciente pendiente de ingreso antes de cobertura
+
+    const openModalIngresoRapido = (paciente) => {
+        pendingIngresoPaciente = paciente;
+
+        document.getElementById('modal-ingreso-nombre').textContent = `${paciente.apellidos}, ${paciente.nombres}`;
+        document.getElementById('modal-ingreso-info').textContent = `DNI: ${paciente.dni} | HC: ${paciente.historia_clinica || 'N/A'}`;
+
+        // Fecha actual de Perú como valor por defecto
+        const peruNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Lima' }));
+        const isoDate = `${peruNow.getFullYear()}-${String(peruNow.getMonth() + 1).padStart(2, '0')}-${String(peruNow.getDate()).padStart(2, '0')}`;
+        const horaActual = peruNow.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+
+        document.getElementById('modal-ingreso-fecha').value = isoDate;
+        document.getElementById('modal-ingreso-hora').value = horaActual;
+
+        modalIngresoOverlay.style.display = 'flex';
+    };
+
+    const closeModalIngreso = () => {
+        modalIngresoOverlay.style.display = 'none';
+        pendingIngresoPaciente = null;
+    };
+
+    modalIngresoClose.addEventListener('click', closeModalIngreso);
+    modalIngresoOverlay.addEventListener('click', (e) => {
+        if (e.target === modalIngresoOverlay) closeModalIngreso();
+    });
+
+    modalIngresoGuardar.addEventListener('click', async () => {
+        if (!pendingIngresoPaciente) return;
+
+        const fechaIngreso = document.getElementById('modal-ingreso-fecha').value;
+        const horaIngreso = document.getElementById('modal-ingreso-hora').value || '08:00';
+
+        if (!fechaIngreso) {
+            showToast('Seleccione una fecha de ingreso', true);
+            return;
+        }
+
+        const spinner = document.getElementById('modal-ingreso-spinner');
+        const guardarText = document.getElementById('modal-ingreso-guardar-text');
+        modalIngresoGuardar.disabled = true;
+        spinner.style.display = 'inline-block';
+        guardarText.textContent = 'Registrando...';
+
+        try {
+            const paciente = pendingIngresoPaciente;
+
+            // Obtener el siguiente número de registro
+            const { data: hospExistentes } = await supabaseClient
+                .from('hospitalizaciones')
+                .select('numero_registro')
+                .eq('paciente_id', paciente.id)
+                .order('numero_registro', { ascending: false })
+                .limit(1);
+
+            const nextNum = (hospExistentes && hospExistentes.length > 0) ? hospExistentes[0].numero_registro + 1 : 1;
+
+            // Obtener usuario actual
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            const userId = session ? session.user.id : null;
+
+            // Crear la hospitalización
+            const { data: newHosp, error: hospError } = await supabaseClient.from('hospitalizaciones').insert([{
+                paciente_id: paciente.id,
+                fecha_ingreso: fechaIngreso,
+                hora_ingreso: horaIngreso,
+                servicio: paciente.servicio || 'No especificado',
+                activa: true,
+                creado_por: userId,
+                numero_registro: nextNum
+            }]).select().single();
+
+            if (hospError) throw hospError;
+
+            // Actualizar condición del paciente si no está 'Hospitalizado'
+            if (!paciente.condicion || paciente.condicion.toUpperCase() !== 'HOSPITALIZADO') {
+                await supabaseClient.from('pacientes').update({ condicion: 'Hospitalizado' }).eq('id', paciente.id);
+                paciente.condicion = 'Hospitalizado';
+            }
+
+            // Guardar la hospitalización activa recién creada
+            hospActiva = newHosp;
+
+            showToast('Registro de hospitalización creado');
+
+            // Cerrar modal de ingreso
+            closeModalIngreso();
+
+            // Abrir automáticamente el modal de Cambio de Cobertura
+            showModalCobertura(paciente);
+
+        } catch (err) {
+            showToast('Error al registrar ingreso: ' + (err.message || err), true);
+        } finally {
+            modalIngresoGuardar.disabled = false;
+            spinner.style.display = 'none';
+            guardarText.textContent = 'Registrar Ingreso';
+        }
     });
 
     modalGuardar.addEventListener('click', async () => {
@@ -547,14 +683,21 @@ document.addEventListener('DOMContentLoaded', async () => {
             const ahora = new Date().toISOString();
             const seguroExtraido = getSeguroExtraido(paciente) || '';
 
-            // 1. Registrar evento de Cambio Cobertura en historial
-            await supabaseClient.from('historial_eventos').insert({
+            // 1. Registrar evento de Cambio Cobertura en historial (vinculado a hospitalización)
+            const eventoPayload = {
                 paciente_id: paciente.id,
                 tipo_evento: 'Cambio Cobertura',
                 detalle: document.getElementById('modal-observacion').value || `Cambio por validación RPA: ${paciente.tipo_seguro} → ${nuevoSeguro}`,
                 nuevo_seguro: nuevoSeguro,
                 fecha_evento: ahora
-            });
+            };
+
+            // Vincular a la hospitalización activa si existe
+            if (hospActiva && hospActiva.id) {
+                eventoPayload.hospitalizacion_id = hospActiva.id;
+            }
+
+            await supabaseClient.from('historial_eventos').insert(eventoPayload);
 
             // 2. Comparar nuevo seguro con extraído
             const nuevoUpper = nuevoSeguro.toUpperCase();
