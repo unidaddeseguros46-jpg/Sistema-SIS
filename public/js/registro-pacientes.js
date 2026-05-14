@@ -155,7 +155,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 e.target.value = masked;
 
                 // Si ya tiene 10 caracteres (dd/mm/yyyy), forzar parseo en Flatpickr
-                if (masked.length === 10) {
+                if (masked.length === 10 && e.isTrusted) {
                     instance.setDate(masked, true, 'd/m/Y');
                 }
             });
@@ -590,9 +590,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     btnCancelar.addEventListener('click', () => {
-        viewForm.style.display = 'none';
-        viewLista.style.display = 'block';
-        moduleCommands.style.display = 'flex';
+        if (isModal) {
+            // Si está dentro de un iframe (modal), enviamos un mensaje al padre para cerrar
+            window.parent.postMessage({ action: 'closeModal' }, '*');
+        } else {
+            viewForm.style.display = 'none';
+            viewLista.style.display = 'block';
+            moduleCommands.style.display = 'flex';
+        }
     });
 
     selectSeguro.addEventListener('change', (e) => {

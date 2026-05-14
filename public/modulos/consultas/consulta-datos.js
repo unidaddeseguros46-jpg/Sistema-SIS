@@ -294,9 +294,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     btnClear.addEventListener('click', resetView);
 
-    // ========== LISTENER: PACIENTE REGISTRADO DESDE MODAL ==========
+    // ========== LISTENER: MENSAJES DESDE MODAL ==========
     window.addEventListener('message', (event) => {
-        if (!event.data || event.data.type !== 'paciente-registrado') return;
+        if (!event.data) return;
+
+        // Si el modal manda la orden de cerrar (ej. clic en Cancelar)
+        if (event.data.action === 'closeModal') {
+            modalRegistro.style.display = 'none';
+            iframeRegistro.src = '';
+            return;
+        }
+
+        if (event.data.type !== 'paciente-registrado') return;
 
         const { dni, pacienteId } = event.data;
 
