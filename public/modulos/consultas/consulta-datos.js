@@ -125,7 +125,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 fecha_nacimiento: '',
                 codigo_verificacion: '',
                 seguro_validado: 'NO ENCONTRADO',
-                cobertura: '',
                 estado_consulta: 'PROCESANDO'
             };
 
@@ -180,7 +179,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             if (seguroData.success) {
                 dataConsolidada.seguro_validado = seguroData.result.seguro;
-                dataConsolidada.cobertura = seguroData.result.cobertura;
                 dataConsolidada.estado_consulta = 'ÉXITO';
             } else {
                 dataConsolidada.estado_consulta = 'SIN SEGURO';
@@ -199,7 +197,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 fecha_nacimiento: dataConsolidada.fecha_nacimiento || null,
                 codigo_verificacion: dataConsolidada.codigo_verificacion,
                 seguro_validado: dataConsolidada.seguro_validado,
-                cobertura: dataConsolidada.cobertura,
                 estado_consulta: dataConsolidada.estado_consulta,
                 creado_por: userId
             }]);
@@ -246,7 +243,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             <td>${fnacFormateada}</td>
             <td style="font-weight:700; color:#3b82f6;">${data.codigo_verificacion || '—'}</td>
             <td><span class="seguro-badge" style="color: #0f172a;">${data.seguro_validado}</span></td>
-            <td style="font-size:12px; color:#64748b;">${data.cobertura || '—'}</td>
             <td><span class="condicion-badge ${data.estado_consulta === 'ÉXITO' ? 'cond-alta' : 'cond-fallecido'}">${data.estado_consulta}</span></td>
             <td style="font-size:12px; color:#94a3b8;">${fechaHora}</td>
             <td style="text-align:center;">

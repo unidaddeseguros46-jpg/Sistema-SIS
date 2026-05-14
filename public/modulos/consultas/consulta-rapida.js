@@ -462,7 +462,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                             dni: res.dni,
                             seguro_declarado: paciente.tipo_seguro,
                             seguro_extraido: res.seguro,
-                            cobertura_extraida: res.cobertura || '',
                             estado_validacion: estado,
                             fecha_validacion: ahora
                         });

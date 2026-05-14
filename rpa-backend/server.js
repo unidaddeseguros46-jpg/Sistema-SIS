@@ -73,6 +73,17 @@ async function scrapePaciente(paciente, browser) {
     const page = await browser.newPage();
     await page.setUserAgent(getRandomUA());
 
+    // Bloqueo de recursos innecesarios para optimizar velocidad
+    await page.setRequestInterception(true);
+    page.on('request', (req) => {
+        const type = req.resourceType();
+        if (['image', 'font', 'stylesheet', 'media'].includes(type)) {
+            req.abort();
+        } else {
+            req.continue();
+        }
+    });
+
     try {
         console.log(`[RPA] Iniciando consulta DNI: ${dni}`);
 
@@ -81,18 +92,17 @@ async function scrapePaciente(paciente, browser) {
             waitUntil: 'networkidle2',
             timeout: 30000
         });
-        await delay(2000);
+        await delay(1000);
 
         // ========== 1. NÚMERO DE DOCUMENTO (DNI) ==========
         await page.waitForSelector('input#mat-input-0', { timeout: 12000 });
         await page.click('input#mat-input-0');
-        await page.type('input#mat-input-0', dni, { delay: 80 });
+        await page.type('input#mat-input-0', dni, { delay: 60 });
         console.log(`[RPA] DNI ${dni} ingresado`);
-        await delay(500);
+        await delay(200);
 
         // ========== 2. FECHA DE NACIMIENTO ==========
         if (fecha_nacimiento) {
-            // Formatear fecha: si viene como YYYY-MM-DD → DD/MM/YYYY
             let fechaFormateada = fecha_nacimiento;
             if (fecha_nacimiento.includes('-')) {
                 const parts = fecha_nacimiento.split('-');
@@ -101,31 +111,25 @@ async function scrapePaciente(paciente, browser) {
             await page.click('input#mat-input-1');
             await page.type('input#mat-input-1', fechaFormateada, { delay: 60 });
             console.log(`[RPA] Fecha ingresada: ${fechaFormateada}`);
-            await delay(500);
+            await delay(200);
         }
 
         // ========== 3. CUI (DÍGITO VERIFICADOR) ==========
         if (codigo_verificacion) {
             await page.click('input#mat-input-2');
-            await page.type('input#mat-input-2', codigo_verificacion, { delay: 80 });
+            await page.type('input#mat-input-2', codigo_verificacion, { delay: 60 });
             console.log(`[RPA] CUI ingresado: ${codigo_verificacion}`);
-            await delay(500);
+            await delay(200);
         }
 
         // ========== 4. CHECKBOX DE CLÁUSULA ==========
-        // Scrollear la página para que Angular renderice el checkbox
         await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-        await delay(2000);
+        await delay(1000);
 
-        // Intentar múltiples selectores para el checkbox
         let checkboxClicked = false;
         const checkboxSelectors = [
-            'mat-checkbox',
-            '.mat-mdc-checkbox',
-            '.mat-checkbox',
-            'input[type="checkbox"]',
-            '.mdc-checkbox',
-            '.mdc-checkbox__native-control'
+            'mat-checkbox', '.mat-mdc-checkbox', '.mat-checkbox',
+            'input[type="checkbox"]', '.mdc-checkbox', '.mdc-checkbox__native-control'
         ];
 
         for (const sel of checkboxSelectors) {
@@ -137,10 +141,9 @@ async function scrapePaciente(paciente, browser) {
                     console.log(`[RPA] Checkbox clickeado con selector: ${sel}`);
                     break;
                 }
-            } catch (e) { /* intentar siguiente */ }
+            } catch (e) { }
         }
 
-        // Fallback: buscar por texto
         if (!checkboxClicked) {
             console.log(`[RPA] Intentando click por texto...`);
             await page.evaluate(() => {
@@ -155,13 +158,12 @@ async function scrapePaciente(paciente, browser) {
         if (!checkboxClicked) {
             throw new Error('No se pudo encontrar el checkbox de cláusula');
         }
-        await delay(1500);
+        await delay(800);
 
         // ========== 5. SCROLLEAR MODAL HASTA ABAJO ==========
         await page.waitForSelector('mat-dialog-container', { timeout: 8000 });
         console.log(`[RPA] Modal de cláusula abierto`);
 
-        // Scrollear el contenedor del modal hasta el final
         await page.evaluate(() => {
             const dialog = document.querySelector('mat-dialog-container');
             if (dialog) dialog.scrollTop = dialog.scrollHeight;
@@ -169,49 +171,53 @@ async function scrapePaciente(paciente, browser) {
                            dialog?.querySelector('[mat-dialog-content]');
             if (content) content.scrollTop = content.scrollHeight;
         });
-        await delay(1000);
+        await delay(500);
 
         // ========== 6. CLICK EN "ACEPTAR" DEL MODAL ==========
         await page.click('mat-dialog-container button.mat-primary');
         console.log(`[RPA] Botón "Aceptar" clickeado`);
-        await delay(1500);
+        await delay(800);
 
         // ========== 7. CLICK EN "CONSULTAR" ==========
         await page.click('button.ess-btn-primary');
         console.log(`[RPA] Botón "Consultar" clickeado`);
 
-        // ========== 8. ESPERAR Y EXTRAER RESULTADO ==========
-        await delay(5000);
+        // ========== 8. ESPERAR Y EXTRAER RESULTADO (OPTIMIZADO) ==========
+        console.log(`[RPA] Esperando resultado dinámicamente...`);
+        try {
+            await Promise.race([
+                page.waitForFunction(() => {
+                    const txt = document.body.innerText;
+                    return txt.includes('Afiliado a:') || 
+                           txt.includes('NO TIENE DERECHO DE COBERTURA') ||
+                           txt.includes('No se encontraron resultados');
+                }, { timeout: 15000 }),
+                delay(12000) // Fallback
+            ]);
+        } catch (waitErr) {
+            console.warn(`[RPA] Timeout esperando resultado dinámico, intentando extraer lo que haya...`);
+        }
 
         const data = await page.evaluate(() => {
-            const body = document.body.innerText.toUpperCase();
-
-            let seguro = 'NO ENCONTRADO';
-            let cobertura = 'DESCONOCIDO';
+            const body = document.body.innerText;
 
             if (body.includes('NO TIENE DERECHO DE COBERTURA') || 
-                body.includes('NO SE ENCONTRARON RESULTADOS') ||
-                body.includes('NO ACREDITADO')) {
-                seguro = 'SIN COBERTURA';
-                cobertura = 'NO TIENE DERECHO DE COBERTURA';
-            } else if (body.includes('REGULAR') || body.includes('ESSALUD') || body.includes('ACTIVO')) {
-                seguro = 'ESSALUD';
-                // Intentar extraer el tipo específico
-                if (body.includes('REGULAR')) cobertura = 'REGULAR';
-                else if (body.includes('POTESTATIVO')) cobertura = 'POTESTATIVO';
-                else cobertura = 'ACTIVO';
+                body.includes('No se encontraron resultados')) {
+                return { seguro: 'SIN COBERTURA' };
             }
 
-            // Capturar texto visible para debug
-            return { seguro, cobertura, textoVisible: body.substring(0, 800) };
+            const matchAfiliado = body.match(/Afiliado a:\s*\n?\s*(.+)/i);
+            const seguro = matchAfiliado ? matchAfiliado[1].trim().toUpperCase() : 'NO ENCONTRADO';
+
+            return { seguro, textoVisible: body.substring(0, 500) };
         });
 
-        console.log(`[RPA] DNI ${dni} → Seguro: ${data.seguro} | Cobertura: ${data.cobertura}`);
-        return { dni, success: true, seguro: data.seguro, cobertura: data.cobertura };
+        console.log(`[RPA] DNI ${dni} → Seguro: ${data.seguro}`);
+        return { dni, success: true, seguro: data.seguro };
 
     } catch (error) {
         console.error(`[RPA] Error DNI ${dni}:`, error.message);
-        return { dni, success: false, seguro: 'ERROR', cobertura: error.message };
+        return { dni, success: false, seguro: 'ERROR' };
     } finally {
         await page.close();
     }
