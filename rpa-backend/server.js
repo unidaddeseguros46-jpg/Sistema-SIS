@@ -231,35 +231,49 @@ async function scrapeDV(dni, browser) {
     const page = await browser.newPage();
     await page.setUserAgent(getRandomUA());
 
+    // Bloqueo de recursos innecesarios (Imágenes, CSS, Fuentes) para dniperu.com
+    await page.setRequestInterception(true);
+    page.on('request', (req) => {
+        const type = req.resourceType();
+        // Permitimos scripts y document, bloqueamos lo demás para aligerar la carga publicitaria
+        if (['image', 'font', 'stylesheet', 'media'].includes(type)) {
+            req.abort();
+        } else {
+            req.continue();
+        }
+    });
+
     try {
         console.log(`[DV] Iniciando consulta DNI: ${dni}`);
         await page.goto('https://dniperu.com/digito-verificador-dni/', {
-            waitUntil: 'networkidle2',
+            waitUntil: 'domcontentloaded', // Más rápido que networkidle2
             timeout: 30000
         });
 
         // Esperar a que el input sea visible
         await page.waitForSelector('input#cc_nombres_1dni', { timeout: 15000 });
         
-        // Scroll hasta el input para evitar interferencia de publicidad
+        // Scroll hasta el input para evitar interferencia visual
         await page.evaluate(() => {
             const el = document.querySelector('input#cc_nombres_1dni');
             if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
         });
-        await delay(1000);
 
-        await page.type('input#cc_nombres_1dni', dni, { delay: 100 });
+        // Reducir delay de tipeo de 100ms a 20ms por tecla
+        await page.type('input#cc_nombres_1dni', dni, { delay: 20 });
         
-        // Click en buscar (usamos evaluate para evitar que un banner de publicidad bloquee el click)
+        // Click en buscar
         await page.evaluate(() => {
             const btn = document.querySelector('button.js-cc-submit');
             if (btn) btn.click();
         });
         console.log(`[DV] Búsqueda iniciada`);
 
-        // Esperar el resultado en el textarea
-        await page.waitForSelector('textarea.js-cc-copy-source', { timeout: 15000 });
-        await delay(500);
+        // Esperar el resultado en el textarea dinámicamente (que tenga contenido útil)
+        await page.waitForFunction(() => {
+            const textarea = document.querySelector('textarea.js-cc-copy-source');
+            return textarea && textarea.value && textarea.value.length > 20;
+        }, { timeout: 15000 });
 
         const resultText = await page.evaluate(() => {
             return document.querySelector('textarea.js-cc-copy-source').value;
