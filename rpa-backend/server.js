@@ -293,20 +293,34 @@ async function scrapeDV(dni, browser) {
 
 // ==================== ENDPOINTS ====================
 
-// Obtener Dígito Verificador (Individual)
+// Obtener Dígito Verificador (Individual) — con reintentos
 app.post('/get-dv', async (req, res) => {
     const { dni } = req.body;
     if (!dni) return res.status(400).json({ error: 'DNI requerido' });
 
-    let browser;
-    try {
-        browser = await launchBrowser();
-        const result = await scrapeDV(dni, browser);
-        res.json(result);
-    } catch (err) {
-        res.status(500).json({ success: false, error: err.message });
-    } finally {
-        if (browser) await browser.close();
+    const MAX_RETRIES = 3;
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        let browser;
+        try {
+            console.log(`[DV] Intento ${attempt}/${MAX_RETRIES} para DNI ${dni}`);
+            browser = await launchBrowser();
+            const result = await scrapeDV(dni, browser);
+            if (result.success) {
+                return res.json(result);
+            }
+            // Si no fue exitoso pero no lanzó excepción, reintentar
+            console.warn(`[DV] Intento ${attempt} falló: ${result.error || 'sin datos'}`);
+            if (attempt === MAX_RETRIES) return res.json(result);
+            await delay(2000);
+        } catch (err) {
+            console.error(`[DV] Intento ${attempt} error: ${err.message}`);
+            if (attempt === MAX_RETRIES) {
+                return res.status(500).json({ success: false, error: err.message });
+            }
+            await delay(2000);
+        } finally {
+            if (browser) await browser.close();
+        }
     }
 });
 
@@ -334,21 +348,34 @@ app.post('/get-dv-batch', async (req, res) => {
     }
 });
 
-// Validación individual
+// Validación individual — con reintentos
 app.post('/validate', async (req, res) => {
     const { dni, fecha_nacimiento, codigo_verificacion } = req.body;
     if (!dni) return res.status(400).json({ error: 'DNI requerido' });
 
-    let browser;
-    try {
-        browser = await launchBrowser();
-        const result = await scrapePaciente({ dni, fecha_nacimiento, codigo_verificacion }, browser);
-        res.json({ success: true, result });
-    } catch (err) {
-        console.error('[API] Error:', err.message);
-        res.status(500).json({ success: false, error: err.message });
-    } finally {
-        if (browser) await browser.close();
+    const MAX_RETRIES = 3;
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        let browser;
+        try {
+            console.log(`[RPA] Intento ${attempt}/${MAX_RETRIES} para DNI ${dni}`);
+            browser = await launchBrowser();
+            const result = await scrapePaciente({ dni, fecha_nacimiento, codigo_verificacion }, browser);
+            if (result.success) {
+                return res.json({ success: true, result });
+            }
+            // Si el scraping devolvió success:false, reintentar
+            console.warn(`[RPA] Intento ${attempt} falló: ${result.cobertura || 'error desconocido'}`);
+            if (attempt === MAX_RETRIES) return res.json({ success: true, result });
+            await delay(3000);
+        } catch (err) {
+            console.error(`[RPA] Intento ${attempt} error: ${err.message}`);
+            if (attempt === MAX_RETRIES) {
+                return res.status(500).json({ success: false, error: err.message });
+            }
+            await delay(3000);
+        } finally {
+            if (browser) await browser.close();
+        }
     }
 });
 

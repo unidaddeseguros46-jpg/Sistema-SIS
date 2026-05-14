@@ -27,6 +27,37 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (overlayMsg) overlayMsg.textContent = msg;
     };
 
+    // Fetch con reintentos automáticos y timeout
+    const fetchWithRetry = async (url, options, retries = 2, timeoutMs = 120000) => {
+        for (let attempt = 0; attempt <= retries; attempt++) {
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+                
+                const response = await fetch(url, { ...options, signal: controller.signal });
+                clearTimeout(timeoutId);
+                
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                
+                const data = await response.json();
+                
+                // Si el servicio respondió pero el scraping falló, reintentar
+                if (!data.success && attempt < retries) {
+                    console.warn(`[Retry] Intento ${attempt + 1} falló, reintentando en 3s...`);
+                    await new Promise(r => setTimeout(r, 3000));
+                    continue;
+                }
+                
+                return data;
+            } catch (err) {
+                console.error(`[Fetch] Intento ${attempt + 1} error: ${err.message}`);
+                if (attempt === retries) throw err;
+                // Espera progresiva: 3s, 5s
+                await new Promise(r => setTimeout(r, 3000 + (attempt * 2000)));
+            }
+        }
+    };
+
     const resetView = () => {
         inputDNI.value = '';
         viewResultados.style.display = 'none';
@@ -63,34 +94,27 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // 1. SCRIPT DNI (Cloudflare Worker)
             updateOverlay('Consultando datos de identidad...');
-            const resDni = await fetch(WORKER_URL, {
+            const dniResult = await fetchWithRetry(WORKER_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ dni })
             });
-            
-            if (!resDni.ok) throw new Error('El servicio de identidad no responde');
-            const dniResult = await resDni.json();
 
             if (dniResult.success) {
                 dataConsolidada.nombres = dniResult.nombres || '';
                 dataConsolidada.apellidos = `${dniResult.apellido_paterno || ''} ${dniResult.apellido_materno || ''}`.trim();
                 dataConsolidada.fecha_nacimiento = dniResult.fecha_iso || '';
             } else {
-                // Si falla el worker, no podemos seguir porque falta la fecha de nacimiento
                 throw new Error('No se pudo obtener la fecha de nacimiento (Servicio DNI)');
             }
 
             // 2. SCRIPT DV (Railway)
             updateOverlay('Obteniendo Dígito Verificador...');
-            const resDV = await fetch(`${RAILWAY_URL}/get-dv`, {
+            const dvData = await fetchWithRetry(`${RAILWAY_URL}/get-dv`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ dni })
             });
-            
-            if (!resDV.ok) throw new Error('El servicio de DV no responde');
-            const dvData = await resDV.json();
             
             if (dvData.success) {
                 dataConsolidada.codigo_verificacion = dvData.codigo_verificacion;
@@ -104,7 +128,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // 3. SCRIPT SEGURO (Railway)
             updateOverlay('Validando seguro en EsSalud...');
-            const resSeguro = await fetch(`${RAILWAY_URL}/validate`, {
+            const seguroData = await fetchWithRetry(`${RAILWAY_URL}/validate`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -113,9 +137,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     codigo_verificacion: dataConsolidada.codigo_verificacion
                 })
             });
-            
-            if (!resSeguro.ok) throw new Error('El servicio de EsSalud no responde');
-            const seguroData = await resSeguro.json();
             
             if (seguroData.success) {
                 dataConsolidada.seguro_validado = seguroData.result.seguro;
