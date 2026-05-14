@@ -28,31 +28,51 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     // Fetch con reintentos automáticos y timeout
-    const fetchWithRetry = async (url, options, retries = 2, timeoutMs = 120000) => {
+    const fetchWithRetry = async (url, options = {}, retries = 2, timeoutMs = 120000) => {
+        const externalSignal = options.signal;
+        
         for (let attempt = 0; attempt <= retries; attempt++) {
+            if (externalSignal && externalSignal.aborted) {
+                throw new Error('AbortError');
+            }
+
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+            // Escuchar el abort externo para abortar el fetch actual
+            const abortHandler = () => controller.abort();
+            if (externalSignal) {
+                externalSignal.addEventListener('abort', abortHandler);
+            }
+            
             try {
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-                
                 const response = await fetch(url, { ...options, signal: controller.signal });
                 clearTimeout(timeoutId);
                 
+                if (externalSignal) {
+                    externalSignal.removeEventListener('abort', abortHandler);
+                }
+
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                
                 const data = await response.json();
                 
-                // Si el servicio respondió pero el scraping falló, reintentar
                 if (!data.success && attempt < retries) {
-                    console.warn(`[Retry] Intento ${attempt + 1} falló, reintentando en 3s...`);
                     await new Promise(r => setTimeout(r, 3000));
                     continue;
                 }
-                
                 return data;
             } catch (err) {
-                console.error(`[Fetch] Intento ${attempt + 1} error: ${err.message}`);
+                clearTimeout(timeoutId);
+                if (externalSignal) {
+                    externalSignal.removeEventListener('abort', abortHandler);
+                }
+
+                if (err.name === 'AbortError') {
+                    if (externalSignal && externalSignal.aborted) throw err; // Cancelación manual
+                    // Si fue por timeout interno, reintentar si quedan intentos
+                }
+
                 if (attempt === retries) throw err;
-                // Espera progresiva: 3s, 5s
                 await new Promise(r => setTimeout(r, 3000 + (attempt * 2000)));
             }
         }
@@ -64,10 +84,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         tbody.innerHTML = '';
     };
 
+    // Control de cancelación de consultas
+    let currentSearchController = null;
+
     // Evento Enter en input DNI
     inputDNI.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') btnConsultar.click();
     });
+
+    const btnCancelSearch = document.getElementById('btn-cancel-search');
+    if (btnCancelSearch) {
+        btnCancelSearch.addEventListener('click', () => {
+            if (currentSearchController) {
+                currentSearchController.abort();
+            }
+        });
+    }
 
     btnConsultar.addEventListener('click', async () => {
         const dni = inputDNI.value.trim();
@@ -79,6 +111,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         blockingOverlay.style.display = 'flex';
         tbody.innerHTML = '';
         viewResultados.style.display = 'none';
+        updateOverlay('Consultando fuentes...');
+
+        // Iniciar nuevo controlador de cancelación
+        currentSearchController = new AbortController();
+        const signal = currentSearchController.signal;
 
         try {
             let dataConsolidada = {
@@ -97,7 +134,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             const dniResult = await fetchWithRetry(WORKER_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ dni })
+                body: JSON.stringify({ dni }),
+                signal: signal
             });
 
             if (dniResult.success) {
@@ -113,7 +151,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             const dvData = await fetchWithRetry(`${RAILWAY_URL}/get-dv`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ dni })
+                body: JSON.stringify({ dni }),
+                signal: signal
             });
             
             if (dvData.success) {
@@ -135,7 +174,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     dni: dni,
                     fecha_nacimiento: dataConsolidada.fecha_nacimiento,
                     codigo_verificacion: dataConsolidada.codigo_verificacion
-                })
+                }),
+                signal: signal
             });
             
             if (seguroData.success) {
@@ -170,10 +210,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             showToast('Consulta completada exitosamente');
 
         } catch (err) {
-            console.error(err);
-            showToast('Error en la consulta consolidada: ' + err.message, true);
+            if (err.name === 'AbortError' || err.message === 'AbortError') {
+                showToast('Consulta cancelada por el usuario', false);
+            } else {
+                console.error(err);
+                showToast('Error en la consulta consolidada: ' + err.message, true);
+            }
         } finally {
             blockingOverlay.style.display = 'none';
+            currentSearchController = null;
         }
     });
 

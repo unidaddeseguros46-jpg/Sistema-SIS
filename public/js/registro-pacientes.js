@@ -71,6 +71,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             const tempStyle = document.getElementById('temp-modal-hide');
             if (tempStyle) tempStyle.remove();
             document.body.style.display = 'block';
+
+            // Forzar Condición "Hospitalizado" y bloquear al ser registro nuevo vía modal
+            const condField = document.getElementById('paciente-condicion');
+            if (condField) {
+                condField.value = 'Hospitalizado';
+                condField.disabled = true;
+            }
         }
 
         if (dataStr) {
