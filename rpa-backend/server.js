@@ -384,7 +384,7 @@ app.post('/validate', async (req, res) => {
                 return res.json({ success: true, result });
             }
             // Si el scraping devolvió success:false, reintentar
-            console.warn(`[RPA] Intento ${attempt} falló: ${result.cobertura || 'error desconocido'}`);
+            console.warn(`[RPA] Intento ${attempt} falló: ${result.seguro || 'error desconocido'}`);
             if (attempt === MAX_RETRIES) return res.json({ success: true, result });
             await delay(3000);
         } catch (err) {
