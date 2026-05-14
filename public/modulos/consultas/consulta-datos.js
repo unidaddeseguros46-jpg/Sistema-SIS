@@ -72,7 +72,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     // Si fue por timeout interno, reintentar si quedan intentos
                 }
 
-                if (attempt === retries) throw err;
+                if (attempt === retries) {
+                    if (err instanceof TypeError && err.message === 'Failed to fetch') {
+                        throw new Error('NETWORK_OFFLINE: No hay conexión al servidor o su internet está inestable.');
+                    }
+                    throw err;
+                }
                 await new Promise(r => setTimeout(r, 3000 + (attempt * 2000)));
             }
         }
@@ -102,6 +107,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     btnConsultar.addEventListener('click', async () => {
+        if (!navigator.onLine) {
+            showToast('No hay conexión a internet. Verifique su red e intente nuevamente.', true);
+            return;
+        }
+
         const dni = inputDNI.value.trim();
         if (dni.length !== 8) {
             showToast('Ingrese un DNI válido de 8 dígitos', true);
@@ -142,7 +152,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 dataConsolidada.apellidos = `${dniResult.apellido_paterno || ''} ${dniResult.apellido_materno || ''}`.trim();
                 dataConsolidada.fecha_nacimiento = dniResult.fecha_iso || '';
             } else {
-                throw new Error('No se pudo obtener la fecha de nacimiento (Servicio DNI)');
+                throw new Error(dniResult.error || 'No se pudo obtener la información de identidad (Servicio DNI)');
             }
 
             // 2. SCRIPT DV (Railway)
@@ -161,12 +171,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                     dataConsolidada.apellidos = `${dvData.apellido_paterno || ''} ${dvData.apellido_materno || ''}`.trim();
                 }
             } else {
-                throw new Error('No se pudo obtener el Código de Verificación (Servicio DV)');
+                throw new Error(dvData.error || 'No se pudo obtener el Código de Verificación (Servicio DV)');
             }
 
             // 3. SCRIPT SEGURO (Railway)
             updateOverlay('Validando seguro en EsSalud...');
-            const seguroData = await fetchWithRetry(`${RAILWAY_URL}/validate`, {
+            const seguroResponse = await fetchWithRetry(`${RAILWAY_URL}/validate`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -177,12 +187,20 @@ document.addEventListener('DOMContentLoaded', async () => {
                 signal: signal
             });
             
+            // El backend devuelve { success: true, result: { success: true/false, seguro, errorType, error } }
+            // O un error 500 que es capturado por fetchWithRetry
+            const seguroData = seguroResponse.result || seguroResponse;
+
             if (seguroData.success) {
-                dataConsolidada.seguro_validado = seguroData.result.seguro;
-                dataConsolidada.estado_consulta = 'ÉXITO';
+                dataConsolidada.seguro_validado = seguroData.seguro;
+                if (seguroData.seguro === 'SIN COBERTURA') {
+                    dataConsolidada.estado_consulta = 'SIN SEGURO';
+                } else {
+                    dataConsolidada.estado_consulta = 'ÉXITO';
+                }
             } else {
-                dataConsolidada.estado_consulta = 'SIN SEGURO';
-                dataConsolidada.seguro_validado = 'NO ENCONTRADO';
+                // Hay un error real (ej. servidor caído, cloudflare challenge, etc)
+                throw new Error(seguroData.error || 'Error desconocido al consultar el seguro en EsSalud.');
             }
 
             // 4. GUARDAR EN SUPABASE (Tabla consultas_datos)

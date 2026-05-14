@@ -43,6 +43,9 @@ export default {
       formData.append("action", "consulta_dni_api");
       formData.append("tipo", "dni");
 
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s timeout
+
       const response = await fetch("https://buscardniperu.com/wp-admin/admin-ajax.php", {
         method: "POST",
         headers: {
@@ -51,11 +54,18 @@ export default {
           "Referer": "https://buscardniperu.com/como-saber-la-edad-por-dni/",
         },
         body: formData.toString(),
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         return new Response(
-          JSON.stringify({ success: false, error: "Error al consultar el servicio externo" }),
+          JSON.stringify({ 
+            success: false, 
+            errorType: 'SOURCE_DOWN',
+            error: "El servicio de DNI Perú se encuentra temporalmente inaccesible (Error " + response.status + ")" 
+          }),
           { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -77,13 +87,24 @@ export default {
         );
       } else {
         return new Response(
-          JSON.stringify({ success: false, error: "No se encontró información para el DNI proporcionado" }),
+          JSON.stringify({ 
+            success: false, 
+            errorType: 'NOT_FOUND',
+            error: "No se encontró información para el DNI proporcionado." 
+          }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
     } catch (error) {
+      const isNetworkError = error.name === 'AbortError' || error.message.includes('fetch failed');
       return new Response(
-        JSON.stringify({ success: false, error: "Error interno: " + error.message }),
+        JSON.stringify({ 
+          success: false, 
+          errorType: isNetworkError ? 'NETWORK_TIMEOUT' : 'INTERNAL_ERROR',
+          error: isNetworkError 
+            ? "Tiempo de espera agotado al conectar con el servidor de DNI." 
+            : "Error interno: " + error.message 
+        }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

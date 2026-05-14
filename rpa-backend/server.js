@@ -217,7 +217,14 @@ async function scrapePaciente(paciente, browser) {
 
     } catch (error) {
         console.error(`[RPA] Error DNI ${dni}:`, error.message);
-        return { dni, success: false, seguro: 'ERROR' };
+        const isNetworkErr = error.message.includes('ERR_') || error.message.includes('Timeout');
+        return { 
+            dni, 
+            success: false, 
+            seguro: 'ERROR',
+            errorType: isNetworkErr ? 'SOURCE_DOWN' : 'INTERNAL_ERROR',
+            error: isNetworkErr ? 'El portal de EsSalud está inactivo o la conexión falló.' : error.message
+        };
     } finally {
         await page.close();
     }
@@ -305,7 +312,13 @@ async function scrapeDV(dni, browser) {
 
     } catch (error) {
         console.error(`[DV] Error DNI ${dni}:`, error.message);
-        return { dni, success: false, error: error.message };
+        const isNetworkErr = error.message.includes('ERR_') || error.message.includes('Timeout');
+        return { 
+            dni, 
+            success: false, 
+            errorType: isNetworkErr ? 'SOURCE_DOWN' : 'INTERNAL_ERROR',
+            error: isNetworkErr ? 'El portal DNIPeru está inactivo o la conexión falló.' : error.message 
+        };
     } finally {
         await page.close();
     }
