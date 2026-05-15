@@ -23,6 +23,51 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
+    let susaludCreds = null;
+
+    const loadSusaludCreds = async () => {
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) return;
+            const { data, error } = await supabase
+                .from('perfiles')
+                .select('susalud_usuario, susalud_clave')
+                .eq('id_usuario', session.user.id)
+                .maybeSingle();
+            if (error) throw error;
+            if (data && (data.susalud_usuario || data.susalud_clave)) {
+                susaludCreds = data;
+                const bar = document.querySelector('.susalud-creds-bar');
+                if (bar) bar.style.display = 'flex';
+            }
+        } catch (e) {}
+    };
+
+    const initSusaludCopy = () => {
+        document.querySelectorAll('.susalud-copy-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const field = btn.dataset.creds;
+                const text = field === 'usuario' ? susaludCreds?.susalud_usuario : susaludCreds?.susalud_clave;
+                if (!text) return;
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.position = 'fixed';
+                ta.style.left = '-9999px';
+                ta.style.top = '-9999px';
+                document.body.appendChild(ta);
+                ta.select();
+                try {
+                    document.execCommand('copy');
+                    showToast(field === 'usuario' ? 'Usuario SUSALUD copiado' : 'Clave SUSALUD copiada');
+                } catch {
+                    showToast('No se pudo copiar. Seleccione manualmente.', true);
+                }
+                document.body.removeChild(ta);
+            });
+        });
+    };
+
     const updateOverlay = (msg) => {
         if (overlayMsg) overlayMsg.textContent = msg;
     };
@@ -293,6 +338,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     btnClear.addEventListener('click', resetView);
+
+    loadSusaludCreds();
+    initSusaludCopy();
 
     // ========== LISTENER: MENSAJES DESDE MODAL ==========
     window.addEventListener('message', (event) => {

@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const templateAlerta = document.getElementById('template-alerta');
     const templateProgreso = document.getElementById('template-progreso');
 
-    let isValidating = false; // Bandera para pausar alerta roja durante RPA
+    let isValidating = false;
     let countdownInterval = null;
 
     let accumulatedResults = [];
@@ -21,6 +21,50 @@ document.addEventListener('DOMContentLoaded', async () => {
     let crCurrentPage = 1;
     let crRowsPerPage = 10;
     let modalPacienteActual = null;
+    let susaludCreds = null;
+
+    const loadSusaludCreds = async () => {
+        try {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (!session) return;
+            const { data, error } = await supabaseClient
+                .from('perfiles')
+                .select('susalud_usuario, susalud_clave')
+                .eq('id_usuario', session.user.id)
+                .maybeSingle();
+            if (error) throw error;
+            if (data && (data.susalud_usuario || data.susalud_clave)) {
+                susaludCreds = data;
+                const bar = document.querySelector('.susalud-creds-bar');
+                if (bar) bar.style.display = 'flex';
+            }
+        } catch (e) {}
+    };
+
+    const initSusaludCopy = () => {
+        document.querySelectorAll('.susalud-copy-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const field = btn.dataset.creds;
+                const text = field === 'usuario' ? susaludCreds?.susalud_usuario : susaludCreds?.susalud_clave;
+                if (!text) return;
+                const ta = document.createElement('textarea');
+                ta.value = text;
+                ta.style.position = 'fixed';
+                ta.style.left = '-9999px';
+                ta.style.top = '-9999px';
+                document.body.appendChild(ta);
+                ta.select();
+                try {
+                    document.execCommand('copy');
+                    showToast(field === 'usuario' ? 'Usuario SUSALUD copiado' : 'Clave SUSALUD copiada');
+                } catch {
+                    showToast('No se pudo copiar. Seleccione manualmente.', true);
+                }
+                document.body.removeChild(ta);
+            });
+        });
+    };
 
     const normalizeText = (text) => {
         if (!text) return '';
@@ -778,6 +822,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
+    loadSusaludCreds();
+    initSusaludCopy();
     restoreState();
     handleAutoExecute();
 });

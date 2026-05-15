@@ -9,21 +9,34 @@
     <link rel="stylesheet" href="../../css/seguimiento-pacientes.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        #search-filters { grid-template-columns: repeat(auto-fill, minmax(200px, 260px)); }
+        .susalud-copy-btn[data-creds="usuario"]:hover { color: #3b82f6 !important; }
+        .susalud-copy-btn[data-creds="clave"]:hover { color: #10b981 !important; }
+    </style>
 </head>
 <body>
     <div class="main-wrapper">
         <main class="page-content" id="page-content">
 
             <!-- SECCION DE FILTROS -->
-            <div class="search-filters-container" id="search-filters" style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap;">
-                <div class="filter-group" style="width: 180px; flex: none;">
+            <div class="search-filters-container" id="search-filters">
+                <div class="filter-group">
                     <label>DNI del Paciente</label>
                     <input type="text" id="filter-dni" class="filter-input" placeholder="DNI (8 dígitos)" oninput="this.value = this.value.replace(/[^0-9]/g, '')" maxlength="8">
                 </div>
-                <div class="filter-group" style="width: 150px; flex: none;">
+                <div class="filter-group" style="position: relative;">
                     <label>Web SUSALUD</label>
+                    <span class="susalud-creds-bar" style="display: none; gap: 6px; position: absolute; top: 0; right: 0;">
+                        <button class="susalud-copy-btn" data-creds="usuario" title="Copiar usuario SUSALUD" style="background: none; border: none; cursor: pointer; color: #94a3b8; font-size: 12px; padding: 0 3px; transition: color 0.2s; line-height: 1;">
+                            <i class="fa-solid fa-user"></i>
+                        </button>
+                        <button class="susalud-copy-btn" data-creds="clave" title="Copiar clave SUSALUD" style="background: none; border: none; cursor: pointer; color: #94a3b8; font-size: 12px; padding: 0 3px; transition: color 0.2s; line-height: 1;">
+                            <i class="fa-solid fa-lock"></i>
+                        </button>
+                    </span>
                     <a href="https://app1.susalud.gob.pe/registro/Account/LogOn" target="_blank" class="filter-input" style="display: flex; align-items: center; justify-content: center; text-decoration: none; color: #475569; background: #f8fafc; border: 1px solid #e2e8f0; font-weight: 600; gap: 8px; transition: all 0.2s ease;">
-                        <i class="fa-solid fa-external-link-alt" style="color: #64748b;"></i> SUSALUD
+                        <i class="fa-solid fa-external-link-alt" style="color: #64748b;"></i> Ir a SUSALUD
                     </a>
                 </div>
                 <div style="display: flex; gap: 10px; align-items: flex-end;">
