@@ -53,6 +53,13 @@
             <div class="modal-error" id="modal-error"></div>
             <form id="form-admin" autocomplete="off" novalidate>
                 <div class="modal-form-group">
+                    <label for="input-rol">Rol</label>
+                    <select id="input-rol" required>
+                        <option value="2">Administrador</option>
+                        <option value="3">Usuario Normal</option>
+                    </select>
+                </div>
+                <div class="modal-form-group">
                     <label for="input-nombre">Nombre Completo</label>
                     <input type="text" id="input-nombre" placeholder="Nombre y Apellidos (Máx. 100 caracteres)" maxlength="100" required>
                     <span class="field-error" id="error-nombre"></span>
@@ -76,17 +83,22 @@
                     <span class="field-error" id="error-password"></span>
                 </div>
                 <div class="modal-form-group">
-                    <label for="input-rol">Rol</label>
-                    <select id="input-rol" required>
-                        <option value="2">Administrador</option>
-                        <option value="3">Usuario Normal</option>
-                    </select>
+                    <label for="input-susalud-usuario">Usuario SUSALUD <span style="color:#94a3b8;font-weight:400;">(opcional)</span></label>
+                    <input type="text" id="input-susalud-usuario" placeholder="Usuario de SUSALUD" maxlength="100">
+                </div>
+                <div class="modal-form-group">
+                    <label for="input-susalud-clave">Clave SUSALUD <span style="color:#94a3b8;font-weight:400;">(opcional)</span></label>
+                    <div class="password-field-wrapper">
+                        <input type="password" id="input-susalud-clave" placeholder="Clave de SUSALUD" maxlength="100">
+                        <button type="button" class="password-toggle-modal" id="toggle-susalud-pass">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                    </div>
                 </div>
                 <div class="modal-actions">
                     <button type="button" class="btn-cancel" id="btn-modal-cancel">Cancelar</button>
                     <button type="submit" class="btn-submit" id="btn-modal-submit" style="background:#3b82f6;">
-                        <i class="fa-solid fa-save"></i>
-                        <span id="btn-submit-text">Crear Registro</span>
+                        <span id="btn-submit-text">Guardar</span>
                         <i class="fa-solid fa-circle-notch fa-spin" id="btn-submit-spinner" style="display:none;"></i>
                     </button>
                 </div>

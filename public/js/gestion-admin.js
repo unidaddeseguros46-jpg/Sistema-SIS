@@ -36,6 +36,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const btnSubmit = document.getElementById('btn-modal-submit');
     const togglePass = document.getElementById('toggle-pass');
     const inputRol = document.getElementById('input-rol');
+    const inputSusaludUsuario = document.getElementById('input-susalud-usuario');
+    const inputSusaludClave = document.getElementById('input-susalud-clave');
+    const toggleSusaludPass = document.getElementById('toggle-susalud-pass');
 
     let allAdmins = [];
     let currentPage = 1;
@@ -54,6 +57,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         togglePass.querySelector('i').className = isHidden ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
     });
 
+    toggleSusaludPass.addEventListener('click', () => {
+        const isHidden = inputSusaludClave.type === 'password';
+        inputSusaludClave.type = isHidden ? 'text' : 'password';
+        toggleSusaludPass.querySelector('i').className = isHidden ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
+    });
+
     const openModal = (mode = 'create', user = null) => {
         form.reset();
         modalError.classList.remove('show');
@@ -67,6 +76,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             inputEmail.required = true;
             inputPassword.required = true;
             inputUsername.value = '';
+            inputSusaludUsuario.value = '';
+            inputSusaludClave.value = '';
         } else {
             inputRol.value = user.id_rol;
             updateModalLabels(user.id_rol);
@@ -77,6 +88,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             editingUserId = user.id_usuario;
             inputNombre.value = user.nombre_completo || '';
             inputUsername.value = user.nombre_usuario || '';
+            inputSusaludUsuario.value = user.susalud_usuario || '';
+            inputSusaludClave.value = user.susalud_clave || '';
         }
         modalOverlay.classList.add('show');
     };
@@ -86,7 +99,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         modalTitle.innerHTML = isAdmin 
             ? '<i class="fa-solid fa-user-shield"></i> Nuevo Administrador' 
             : '<i class="fa-solid fa-user-plus"></i> Nuevo Usuario';
-        btnSubmitText.textContent = isAdmin ? 'Crear Administrador' : 'Crear Usuario';
+        btnSubmitText.textContent = 'Guardar';
     };
 
     inputRol.addEventListener('change', () => {
@@ -108,7 +121,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             const { data, error } = await supabaseClient
                 .from('perfiles')
-                .select('id_usuario, nombre_completo, nombre_usuario, email, id_rol, fecha_creacion, activo, roles(nombre)')
+                .select('id_usuario, nombre_completo, nombre_usuario, email, id_rol, fecha_creacion, activo, susalud_usuario, susalud_clave, roles(nombre)')
                 .eq('id_rol', 2)
                 .order('fecha_creacion', { ascending: false });
 
@@ -321,6 +334,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         btnSubmitSpinner.style.display = 'inline-block';
         btnSubmitText.style.visibility = 'hidden';
 
+        const susaludUsuario = inputSusaludUsuario.value.trim();
+        const susaludClave = inputSusaludClave.value.trim();
+
         try {
             const { data: existingUser } = await supabaseClient
                 .from('perfiles')
@@ -337,10 +353,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (editingUserId) {
                 const { error } = await supabaseClient
                     .from('perfiles')
-                    .update({ nombre_completo: nombre, id_rol: rolVal, nombre_usuario: username })
+                    .update({ nombre_completo: nombre, id_rol: rolVal, nombre_usuario: username, susalud_usuario: susaludUsuario || null, susalud_clave: susaludClave || null })
                     .eq('id_usuario', editingUserId);
                 if (error) throw error;
-                showToast(`Administrador actualizado correctamente`);
+                showToast(`${rolVal === 2 ? 'Administrador' : 'Usuario'} actualizado correctamente`);
             } else {
                 // AUTO-SINCRONIZACIN
                 const { data: { user: authUser }, error: authErr } = await supabaseClient.auth.getUser();
@@ -382,9 +398,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 const { data: newUser } = await supabaseClient.from('perfiles').select('id_usuario').eq('email', email).single();
                 if (newUser) {
-                    await supabaseClient.from('perfiles').update({ nombre_usuario: username }).eq('id_usuario', newUser.id_usuario);
+                    await supabaseClient.from('perfiles').update({ nombre_usuario: username, susalud_usuario: susaludUsuario || null, susalud_clave: susaludClave || null }).eq('id_usuario', newUser.id_usuario);
                 }
-                showToast(`Administrador creado exitosamente`);
+                showToast(`${rolVal === 2 ? 'Administrador' : 'Usuario'} creado exitosamente`);
             }
             closeModal();
             await fetchAdmins();

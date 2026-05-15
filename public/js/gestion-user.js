@@ -37,6 +37,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const btnSubmitSpinner = document.getElementById('btn-submit-spinner');
     const btnSubmit = document.getElementById('btn-modal-submit');
     const togglePass = document.getElementById('toggle-pass');
+    const inputSusaludUsuario = document.getElementById('input-susalud-usuario');
+    const inputSusaludClave = document.getElementById('input-susalud-clave');
+    const toggleSusaludPass = document.getElementById('toggle-susalud-pass');
 
     let allUsers = [];
     let currentPage = 1;
@@ -57,6 +60,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         togglePass.querySelector('i').className = isHidden ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
     });
 
+    toggleSusaludPass.addEventListener('click', () => {
+        const isHidden = inputSusaludClave.type === 'password';
+        inputSusaludClave.type = isHidden ? 'text' : 'password';
+        toggleSusaludPass.querySelector('i').className = isHidden ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
+    });
+
     // â”€â”€ Modal logic â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const openModal = (mode = 'create', user = null) => {
         form.reset();
@@ -65,15 +74,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (mode === 'create') {
             modalTitle.innerHTML = '<i class="fa-solid fa-user-plus"></i> Nuevo Usuario';
-            btnSubmitText.textContent = 'Crear Usuario';
+            btnSubmitText.textContent = 'Guardar';
             groupEmail.style.display = 'block';
             groupPassword.style.display = 'block';
             inputEmail.required = true;
             inputPassword.required = true;
             inputUsername.value = '';
+            inputSusaludUsuario.value = '';
+            inputSusaludClave.value = '';
         } else {
             modalTitle.innerHTML = '<i class="fa-solid fa-user-pen"></i> Editar Usuario';
-            btnSubmitText.textContent = 'Guardar Cambios';
+            btnSubmitText.textContent = 'Guardar';
             groupEmail.style.display = 'none';
             groupPassword.style.display = 'none';
             inputEmail.required = false;
@@ -81,6 +92,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             editingUserId = user.id_usuario;
             inputNombre.value = user.nombre_completo || '';
             inputUsername.value = user.nombre_usuario || '';
+            inputSusaludUsuario.value = user.susalud_usuario || '';
+            inputSusaludClave.value = user.susalud_clave || '';
         }
 
         modalOverlay.classList.add('show');
@@ -105,7 +118,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             const { data, error } = await supabaseClient
                 .from('perfiles')
-                .select('id_usuario, nombre_completo, nombre_usuario, email, id_rol, fecha_creacion, activo, roles(nombre)')
+                .select('id_usuario, nombre_completo, nombre_usuario, email, id_rol, fecha_creacion, activo, susalud_usuario, susalud_clave, roles(nombre)')
                 .in('id_rol', [3]) // Solo usuarios con rol=Usuario
                 .order('fecha_creacion', { ascending: false });
 
@@ -322,6 +335,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         btnSubmitSpinner.style.display = 'inline-block';
         btnSubmitText.style.visibility = 'hidden';
 
+        const susaludUsuario = inputSusaludUsuario.value.trim();
+        const susaludClave = inputSusaludClave.value.trim();
+
         try {
             const { data: existingUser } = await supabaseClient
                 .from('perfiles')
@@ -338,7 +354,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (editingUserId) {
                 const { error } = await supabaseClient
                     .from('perfiles')
-                    .update({ nombre_completo: nombre, nombre_usuario: username })
+                    .update({ nombre_completo: nombre, nombre_usuario: username, susalud_usuario: susaludUsuario || null, susalud_clave: susaludClave || null })
                     .eq('id_usuario', editingUserId);
                 if (error) throw error;
                 showToast(`Usuario actualizado correctamente`);
@@ -383,7 +399,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 const { data: newUser } = await supabaseClient.from('perfiles').select('id_usuario').eq('email', email).single();
                 if (newUser) {
-                    await supabaseClient.from('perfiles').update({ nombre_usuario: username }).eq('id_usuario', newUser.id_usuario);
+                    await supabaseClient.from('perfiles').update({ nombre_usuario: username, susalud_usuario: susaludUsuario || null, susalud_clave: susaludClave || null }).eq('id_usuario', newUser.id_usuario);
                 }
                 showToast(`Usuario creado exitosamente`);
             }
