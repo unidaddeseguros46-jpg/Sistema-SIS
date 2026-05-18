@@ -265,7 +265,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }]);
 
             // 5. RENDERIZAR EN TABLA
-            renderResult(dataConsolidada);
+            await renderResult(dataConsolidada);
             viewResultados.style.display = 'block';
             showToast('Consulta completada exitosamente');
 
@@ -291,14 +291,30 @@ document.addEventListener('DOMContentLoaded', async () => {
         iframeRegistro.src = ''; // Limpiar iframe
     });
 
-    const renderResult = (data) => {
+    const renderResult = async (data) => {
         const tr = document.createElement('tr');
 
-        // Obtener hora de Perú para mostrar en la tabla
         const options = { timeZone: 'America/Lima', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' };
         const fechaHora = new Intl.DateTimeFormat('es-PE', options).format(new Date());
 
         const fnacFormateada = data.fecha_nacimiento ? data.fecha_nacimiento.split('-').reverse().join('/') : '—';
+
+        let yaRegistrado = false;
+        try {
+            const { data: existente } = await supabase
+                .from('pacientes')
+                .select('id')
+                .eq('dni', data.dni)
+                .maybeSingle();
+            yaRegistrado = !!existente;
+        } catch (e) {}
+
+        const accionHtml = yaRegistrado
+            ? `<span style="font-size:12px; color:#94a3b8;">Paciente registrado</span>`
+            : `<button class="btn-agregar-paciente" data-dni="${data.dni}" title="Agregar a mis pacientes" 
+                    style="background:#3b82f6; color:white; border:none; border-radius:8px; padding:6px 12px; cursor:pointer; font-weight:600; transition:all 0.2s;">
+                 <i class="fa-solid fa-user-plus"></i> Agregar
+               </button>`;
 
         tr.innerHTML = `
             <td>${data.dni}</td>
@@ -308,31 +324,26 @@ document.addEventListener('DOMContentLoaded', async () => {
             <td><span class="seguro-badge" style="color: #0f172a;">${data.seguro_validado}</span></td>
             <td><span class="condicion-badge ${data.estado_consulta === 'ÉXITO' ? 'cond-alta' : 'cond-fallecido'}">${data.estado_consulta}</span></td>
             <td style="font-size:12px; color:#94a3b8;">${fechaHora}</td>
-            <td style="text-align:center;">
-                <button class="btn-agregar-paciente" data-dni="${data.dni}" title="Agregar a mis pacientes" 
-                        style="background:#3b82f6; color:white; border:none; border-radius:8px; padding:6px 12px; cursor:pointer; font-weight:600; transition:all 0.2s;">
-                    <i class="fa-solid fa-user-plus"></i> Agregar
-                </button>
-            </td>
+            <td style="text-align:center;">${accionHtml}</td>
         `;
 
-        // Evento para el botón Agregar
-        tr.querySelector('.btn-agregar-paciente').addEventListener('click', () => {
-            const autoFillData = {
-                dni: data.dni,
-                nombres: data.nombres,
-                apellidos: data.apellidos,
-                fecha_nacimiento: data.fecha_nacimiento, // yyyy-mm-dd
-                codigo_verificacion: data.codigo_verificacion,
-                tipo_seguro: data.seguro_validado
-            };
-            
-            sessionStorage.setItem('cd_auto_fill', JSON.stringify(autoFillData));
-            
-            // Abrir modal con el iframe apuntando al registro con un parámetro especial
-            iframeRegistro.src = '../pacientes/registro-pacientes.html?view=modal';
-            modalRegistro.style.display = 'flex';
-        });
+        const btn = tr.querySelector('.btn-agregar-paciente');
+        if (btn) {
+            btn.addEventListener('click', () => {
+                const autoFillData = {
+                    dni: data.dni,
+                    nombres: data.nombres,
+                    apellidos: data.apellidos,
+                    fecha_nacimiento: data.fecha_nacimiento,
+                    codigo_verificacion: data.codigo_verificacion,
+                    tipo_seguro: data.seguro_validado,
+                    tipo_documento: 'DNI'
+                };
+                sessionStorage.setItem('cd_auto_fill', JSON.stringify(autoFillData));
+                iframeRegistro.src = '../pacientes/registro-pacientes.html?view=modal';
+                modalRegistro.style.display = 'flex';
+            });
+        }
 
         tbody.appendChild(tr);
     };

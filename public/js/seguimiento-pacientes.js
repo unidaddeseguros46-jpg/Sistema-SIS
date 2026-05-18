@@ -80,7 +80,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 queryObj = queryObj.eq('tipo_seguro', seguroVal.toUpperCase());
             }
             if (servicioVal) {
-                queryObj = queryObj.eq('servicio', servicioVal);
+                queryObj = queryObj.eq('servicio', servicioVal.toUpperCase());
             }
 
             const { data: pacientes, count, error } = await queryObj;
@@ -105,23 +105,29 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
+        const formatDniDisplay = (dni, tipo) => {
+            const PREFIX_MAP = { DNI: '', DNI_TEMPORAL: 'E- ', CARNET_EXT: 'C.E ' };
+            const prefix = PREFIX_MAP[tipo] || '';
+            return prefix ? prefix + dni : dni;
+        };
+
         items.forEach(item => {
             const row = document.createElement('tr');
             row.style.cursor = 'pointer';
             
             const condValue = (item.condicion || '').toLowerCase();
-            const condClass = condValue === 'hospitalizado' ? 'cond-hospitalizado' : (condValue === 'fallecido' ? 'cond-fallecido' : 'cond-alta');
+            const condClass = !condValue ? '' : (condValue === 'hospitalizado' ? 'cond-hospitalizado' : (condValue === 'fallecido' ? 'cond-fallecido' : 'cond-alta'));
             const isFallecido = condValue === 'fallecido';
 
             row.innerHTML = `
-                <td>${item.dni}</td>
+                <td>${formatDniDisplay(item.dni, item.tipo_documento)}</td>
                 <td>${item.apellidos}, ${item.nombres}</td>
                 <td>${item.historia_clinica}</td>
                 <td><span class="seguro-badge">${item.tipo_seguro}</span></td>
                 <td>${item.servicio || '-'}</td>
-                <td><span class="condicion-badge ${condClass}">${item.condicion}</span></td>
+                <td><span class="condicion-badge ${condClass}">${item.condicion || '—'}</span></td>
                 <td style="text-align: center;">
-                    <button class="btn-table-action quick-query" title="Consulta R&#225;pida (DNI)" data-dni="${item.dni}">
+                    <button class="btn-table-action quick-query" title="${item.tipo_documento === 'DNI' ? 'Consulta R&#225;pida (DNI)' : 'No disponible para este tipo de documento'}" data-dni="${item.dni}" data-tipo-documento="${item.tipo_documento || 'DNI'}">
                         <i class="fa-solid fa-address-card"></i>
                     </button>
                 </td>
@@ -136,7 +142,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             // Acción específica para el botón de Consulta Rápida
             row.querySelector('.quick-query').addEventListener('click', (e) => {
                 e.stopPropagation();
+                const tipoDoc = e.currentTarget.dataset.tipoDocumento || 'DNI';
                 const dni = e.currentTarget.dataset.dni;
+                if (tipoDoc !== 'DNI') {
+                    if (window.showSystemTooltip) {
+                        window.showSystemTooltip('Este paciente no cuenta con\nC\u00f3digo de Verificaci\u00f3n\npara realizar la consulta', true);
+                    }
+                    return;
+                }
                 window.location.href = `../consultas/consulta-rapida.html?dni=${dni}&auto=true`;
             });
 

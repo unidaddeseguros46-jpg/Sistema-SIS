@@ -116,13 +116,22 @@
             </div>
 
             <!-- FORMULARIO -->
-            <div id="view-form" style="display: none; margin-top: 20px;">
-                <div class="standard-form-container blue-toptag-form">
+            <div id="view-form" style="display: none; margin-top: 5px;">
+                <div class="standard-form-container blue-toptag-form" style="padding: 20px;">
                     <div
-                        style="margin-bottom: 25px; border-bottom: 2px solid #e2e8f0; padding-bottom: 15px; display: flex; justify-content: space-between; align-items: center;">
-                        <h3 style="margin: 0; color: #0f172a; font-size: 20px; font-weight: 700;">
-                            Datos del Nuevo Paciente
-                        </h3>
+                        style="margin-bottom: 15px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: flex-end;">
+                        <div style="flex:1; max-width:280px;">
+                            <label style="font-size:13px; font-weight:600; color:#475569; margin-bottom:5px; display:block;">Elegir Tipo de Documento</label>
+                            <div class="global-search-box" style="width:100%; display:flex; align-items:center; background:#ffffff; border-radius:8px; border:1px solid #e2e8f0; padding:0 15px; position:relative; height:42px;">
+                                <i class="fa-solid fa-id-card" style="color:#64748b; margin-right:10px;"></i>
+                                <select id="tipo-documento" class="global-search-input custom-select-source" style="border:none; padding:0; outline:none; flex:1; min-width:0; appearance:none; -webkit-appearance:none; cursor:pointer; color:inherit; background:transparent; font-size:13px;">
+                                    <option value="DNI">DNI</option>
+                                    <option value="DNI_TEMPORAL">DNI Temporal</option>
+                                    <option value="CARNET_EXT">Carnet de Extranjería</option>
+                                </select>
+                                <i class="fa-solid fa-chevron-down" style="position:absolute; right:15px; color:#64748b; font-size:12px; pointer-events:none;"></i>
+                            </div>
+                        </div>
                         <button type="button" id="btn-obtener-fnac"
                             style="display: flex; align-items: center; gap: 8px; background: #eff6ff; color: #2563eb; border: 1.5px solid #bfdbfe; border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; white-space: nowrap;"
                             onmouseover="this.style.background='#dbeafe'; this.style.boxShadow='0 4px 12px rgba(59,130,246,0.15)'; this.style.transform='translateY(-1px)'"
@@ -133,18 +142,20 @@
                         </button>
                     </div>
 
-                    <form id="registro-form">
+                    <form id="registro-form" novalidate>
                         <input type="hidden" id="paciente-id">
 
                         <!-- FILA 1: DNI | CÓDIGO VER. | FECHA NAC (3+2+1 -> usamos 2+2+2) -->
                         <div class="input-stacked col-span-2">
                             <label>DNI del Paciente</label>
-                            <input type="text" id="paciente-dni" class="standard-input" maxlength="8"
-                                oninput="this.value = this.value.replace(/[^0-9]/g, '')" pattern="[0-9]{8}"
-                                title="El DNI debe contener exactamente 8 dígitos numéricos" required>
+                            <div style="display:flex; align-items:stretch;">
+                                <span id="dni-prefix" style="display:none; font-weight:700; color:#475569; background:#f1f5f9; padding:10px 10px; border:1px solid #e2e8f0; border-right:none; border-radius:8px 0 0 8px; font-size:14px; white-space:nowrap; line-height:1;"></span>
+                                <input type="text" id="paciente-dni" class="standard-input" required
+                                    style="border-radius:8px; flex:1; min-width:0;">
+                            </div>
                         </div>
 
-                        <div class="input-stacked col-span-2">
+                        <div id="dv-group" class="input-stacked col-span-2">
                             <label>Código de Verificación</label>
                             <input type="text" id="paciente-codigo-ver" class="standard-input"
                                 oninput="this.value = this.value.replace(/[^0-9]/g, '')">
@@ -171,16 +182,17 @@
                         </div>
 
                         <!-- FILA 3: HC | TIPO SEGURO (2+2) + GRUPO OTROS (2) -->
-                        <div class="input-stacked col-span-2">
+                        <div class="input-stacked col-span-2" id="field-hc">
                             <label>Nº Historia Clínica</label>
                             <input type="text" id="paciente-hc" class="standard-input hc-input"
-                                oninput="this.value = this.value.replace(/[^0-9]/g, '')" required>
+                                oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                         </div>
 
                         <div class="input-stacked col-span-2">
                             <label>Tipo de Seguro</label>
-                            <div class="standard-select-wrapper">
-                                <select id="paciente-seguro" class="standard-input" required>
+                            <div class="global-search-box" style="width:100%; display:flex; align-items:center; background:#ffffff; border-radius:8px; border:1px solid #e2e8f0; padding:0 15px; position:relative; height:42px;">
+                                <i class="fa-solid fa-shield-halved" style="color:#64748b; margin-right:10px;"></i>
+                                <select id="paciente-seguro" class="global-search-input custom-select-source" required style="border:none; padding:0; outline:none; flex:1; min-width:0; appearance:none; -webkit-appearance:none; cursor:pointer; color:inherit; background:transparent; font-size:13px;">
                                     <option value="" disabled selected hidden>Seleccione</option>
                                     <option value="EsSalud">EsSalud</option>
                                     <option value="SIS">SIS</option>
@@ -189,6 +201,7 @@
                                     <option value="Privado">Privado</option>
                                     <option value="Otros">Otros tipos</option>
                                 </select>
+                                <i class="fa-solid fa-chevron-down" style="position:absolute; right:15px; color:#64748b; font-size:12px; pointer-events:none;"></i>
                             </div>
                         </div>
 
@@ -201,8 +214,9 @@
                         <!-- SERVICIO -->
                         <div class="input-stacked col-span-3">
                             <label>Servicio</label>
-                            <div class="standard-select-wrapper">
-                                <select id="paciente-servicio" class="standard-input" required>
+                            <div class="global-search-box" style="width:100%; display:flex; align-items:center; background:#ffffff; border-radius:8px; border:1px solid #e2e8f0; padding:0 15px; position:relative; height:42px;">
+                                <i class="fa-solid fa-building" style="color:#64748b; margin-right:10px;"></i>
+                                <select id="paciente-servicio" class="global-search-input custom-select-source" required style="border:none; padding:0; outline:none; flex:1; min-width:0; appearance:none; -webkit-appearance:none; cursor:pointer; color:inherit; background:transparent; font-size:13px;">
                                     <option value="" disabled selected hidden>Seleccione Servicio</option>
                                     <option value="Shock trauma">Shock trauma</option>
                                     <option value="Salud mental">Salud mental</option>
@@ -214,23 +228,26 @@
                                     <option value="Ginecología">Ginecología</option>
                                     <option value="Puerperio">Puerperio</option>
                                 </select>
+                                <i class="fa-solid fa-chevron-down" style="position:absolute; right:15px; color:#64748b; font-size:12px; pointer-events:none;"></i>
                             </div>
                         </div>
 
                         <!-- CONDICION ACTUAL -->
-                        <div class="input-stacked col-span-3">
+                        <div class="input-stacked col-span-3" id="field-condicion">
                             <label>Condición Actual</label>
-                            <div class="material-select-wrapper">
-                                <select id="paciente-condicion" class="standard-input" required>
+                            <div class="global-search-box" style="width:100%; display:flex; align-items:center; background:#ffffff; border-radius:8px; border:1px solid #e2e8f0; padding:0 15px; position:relative; height:42px;">
+                                <i class="fa-solid fa-heart-pulse" style="color:#64748b; margin-right:10px;"></i>
+                                <select id="paciente-condicion" class="global-search-input custom-select-source" required style="border:none; padding:0; outline:none; flex:1; min-width:0; appearance:none; -webkit-appearance:none; cursor:pointer; color:inherit; background:transparent; font-size:13px;">
                                     <option value="Hospitalizado" selected>Hospitalizado</option>
                                     <option value="Salió de Alta">Alta</option>
                                     <option value="Fallecido">Fallecido</option>
                                 </select>
+                                <i class="fa-solid fa-chevron-down" style="position:absolute; right:15px; color:#64748b; font-size:12px; pointer-events:none;"></i>
                             </div>
                         </div>
 
                         <div class="form-actions"
-                            style="grid-column: 1 / -1; display: flex; gap: 15px; margin-top: 30px; border-top: 1px solid #e2e8f0; padding-top: 20px;">
+                            style="grid-column: 1 / -1; display: flex; gap: 15px; margin-top: 18px; border-top: 1px solid #e2e8f0; padding-top: 14px;">
                             <button type="button" class="btn-module" id="btn-cancelar"
                                 style="background: #f1f5f9; color: #64748b; padding: 12px 25px;">Cancelar</button>
                             <button type="submit" class="btn-module primary" id="btn-guardar"
@@ -250,6 +267,61 @@
         </main>
     </div>
 
+    <!-- PRE-LLENADO INMEDIATO (antes de que carguen scripts pesados y auth) -->
+    <script>
+        if (new URLSearchParams(window.location.search).get('view') === 'modal') {
+            (function() {
+                // Mostrar formulario inmediatamente
+                var vl = document.getElementById('view-lista');
+                if (vl) vl.style.display = 'none';
+                var vf = document.getElementById('view-form');
+                if (vf) vf.style.display = 'block';
+                var ts = document.getElementById('temp-modal-hide');
+                if (ts) ts.remove();
+                document.body.style.display = 'block';
+                document.body.classList.add('is-modal');
+
+                var data;
+                try {
+                    var raw = sessionStorage.getItem('cd_auto_fill');
+                    if (raw) data = JSON.parse(raw);
+                } catch(e) {}
+                if (!data) return;
+                sessionStorage.removeItem('cd_auto_fill');
+
+                var setVal = function(id, val) {
+                    var el = document.getElementById(id);
+                    if (el) el.value = val || '';
+                };
+                setVal('paciente-dni', data.dni);
+                setVal('paciente-nombres', data.nombres);
+                setVal('paciente-apellidos', data.apellidos);
+                setVal('paciente-codigo-ver', data.codigo_verificacion);
+
+                if (data.tipo_documento) {
+                    var td = document.getElementById('tipo-documento');
+                    if (td) td.value = data.tipo_documento;
+                }
+                if (data.tipo_seguro) {
+                    var seg = document.getElementById('paciente-seguro');
+                    if (seg) {
+                        for (var i = 0; i < seg.options.length; i++) {
+                            if (seg.options[i].value.toUpperCase() === data.tipo_seguro.toUpperCase()) {
+                                seg.value = seg.options[i].value;
+                                break;
+                            }
+                        }
+                    }
+                }
+                if (data.fecha_nacimiento) {
+                    var parts = data.fecha_nacimiento.split('-');
+                    if (parts.length === 3) {
+                        setVal('paciente-fecha-nac', parts[2] + '/' + parts[1] + '/' + parts[0]);
+                    }
+                }
+            })();
+        }
+    </script>
     <!-- SCRIPTS -->
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://npmcdn.com/flatpickr/dist/l10n/es.js"></script>

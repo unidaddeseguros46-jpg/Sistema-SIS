@@ -369,7 +369,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     return;
                 }
 
-                const response = await fetch(`${supabaseUrl}/functions/v1/create-user`, {
+                const response = await fetch(`${edgeFunctionUrl}/functions/v1/create-user`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

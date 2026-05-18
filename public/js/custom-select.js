@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Crear contenedor principal
         const wrapper = document.createElement('div');
         wrapper.className = 'custom-select-wrapper';
+        if (select.disabled) wrapper.classList.add('is-disabled');
         
         // Mantener las clases y estilos del padre original si era global-search-box
         const originalParent = select.closest('.global-search-box');
@@ -72,7 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 select.value = option.value;
                 
                 // Disparar evento change en el select original para que JS lo detecte
-                select.dispatchEvent(new Event('change'));
+                select.dispatchEvent(new Event('change', { bubbles: true }));
                 
                 // Actualizar texto seleccionado
                 selectedText.textContent = option.text;
@@ -112,14 +113,29 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Toggle dropdown
         trigger.addEventListener('click', (e) => {
+            if (select.disabled) return;
             e.stopPropagation();
             
             // Cerrar otros abiertos
             document.querySelectorAll('.custom-select-wrapper').forEach(w => {
                 if(w !== wrapper) w.classList.remove('open');
+                w.classList.remove('open-up');
             });
             
             wrapper.classList.toggle('open');
+
+            // Si se abrió, verificar espacio disponible
+            if (wrapper.classList.contains('open')) {
+                requestAnimationFrame(() => {
+                    const rect = wrapper.getBoundingClientRect();
+                    const spaceBelow = window.innerHeight - rect.bottom;
+                    const optionsHeight = optionsList.scrollHeight || 250;
+                    // Si no hay al menos 260px (options + gap) debajo, abrir hacia arriba
+                    if (spaceBelow < optionsHeight + 10) {
+                        wrapper.classList.add('open-up');
+                    }
+                });
+            }
         });
 
         // Click en la flecha de global-search-box si existe
@@ -148,6 +164,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     el.classList.remove('selected');
                 }
             });
+            // Sincronizar estado disabled
+            wrapper.classList.toggle('is-disabled', select.disabled);
         };
     });
     
@@ -155,7 +173,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('click', (e) => {
         if (!e.target.closest('.custom-select-wrapper')) {
             document.querySelectorAll('.custom-select-wrapper').forEach(w => {
-                w.classList.remove('open');
+                w.classList.remove('open', 'open-up');
             });
         }
     });

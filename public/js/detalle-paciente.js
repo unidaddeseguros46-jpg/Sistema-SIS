@@ -440,8 +440,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        // Actualizar condición si venía de Alta (re-hospitalización)
-        if (paciente.condicion && paciente.condicion.toUpperCase() !== 'HOSPITALIZADO') {
+        // Actualizar condición si venía de Alta o no tiene condición (re-hospitalización)
+        if (!paciente.condicion || paciente.condicion.toUpperCase() !== 'HOSPITALIZADO') {
             await client.from('pacientes').update({ condicion: 'Hospitalizado' }).eq('id', pacienteId);
         }
 
@@ -830,10 +830,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ═══════════════════════════════════════
     // FICHA DEL PACIENTE
     // ═══════════════════════════════════════
+    const formatDniDisplay = (dni, tipo) => {
+        const PREFIX_MAP = { DNI: '', DNI_TEMPORAL: 'E- ', CARNET_EXT: 'C.E ' };
+        const prefix = PREFIX_MAP[tipo] || '';
+        return prefix ? prefix + dni : dni;
+    };
+
     async function renderFichaPaciente() {
         if (!paciente) return;
         document.getElementById('ficha-hc').textContent = paciente.historia_clinica || '—';
-        document.getElementById('ficha-dni').textContent = paciente.dni || '—';
+        document.getElementById('ficha-dni').textContent = formatDniDisplay(paciente.dni, paciente.tipo_documento) || '—';
         document.getElementById('ficha-apellidos').textContent = paciente.apellidos || '—';
         document.getElementById('ficha-nombres').textContent = paciente.nombres || '—';
         document.getElementById('ficha-seguro').textContent = paciente.tipo_seguro || '—';

@@ -50,18 +50,74 @@
             </div>
             
             <!-- BARRA DE ACCIONES RPA -->
-            <div id="actions-bar" style="margin-top: 20px; background: white; padding: 15px 20px; border-radius: 10px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center;">
-                <span style="font-weight: 500; color: #64748b; font-size: 14px;">
-                    <span id="selected-count" style="font-weight: 700; color: #000;">0</span> PACIENTES SELECCIONADOS / M&#193;XIMO 2 REGISTROS
-                </span>
+            <div id="actions-bar" style="margin-top: 20px; background: white; padding: 15px 20px; border-radius: 10px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; gap: 15px; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                    <div class="cr-datepicker-wrapper" style="position: relative; min-width: 280px;">
+                        <div class="cr-date-trigger" id="cr-date-trigger" style="height:42px; display:flex; align-items:center; background:#ffffff; border-radius:8px; border:1px solid #e2e8f0; padding:0 15px; cursor:pointer; gap:8px; transition:border-color 0.2s;">
+                            <i class="fa-regular fa-calendar" style="color:#64748b;"></i>
+                            <span id="cr-date-display" style="flex:1; font-size:13px; color:#94a3b8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Seleccionar rango de fechas</span>
+                            <i class="fa-solid fa-chevron-down" style="color:#94a3b8; font-size:11px;"></i>
+                        </div>
+                        <div class="cr-date-popover" id="cr-date-popover" style="display:none; position:absolute; top:calc(100% + 6px); left:0; z-index:10002; background:#ffffff; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.12),0 2px 8px rgba(0,0,0,0.06); padding:16px 20px; width:320px; animation:popoverIn 0.2s cubic-bezier(0.16,1,0.3,1) forwards;">
+                            <div class="cal-filters" style="display:flex; gap:8px; align-items:flex-end; margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid #f1f5f9;">
+                                <div class="filter-group" style="display:flex; flex-direction:column; gap:3px; flex:1;">
+                                    <label style="font-size:10px; font-weight:600; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em;">Mes</label>
+                                    <select id="cr-filter-month" class="filter-select"></select>
+                                </div>
+                                <div class="filter-group" style="display:flex; flex-direction:column; gap:3px; flex:1;">
+                                    <label style="font-size:10px; font-weight:600; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em;">A&#241;o</label>
+                                    <select id="cr-filter-year" class="filter-select"></select>
+                                </div>
+                                <button id="cr-cal-today" class="btn-module btn-clear-hover" style="padding:5px 12px; font-size:11px; white-space:nowrap; height:fit-content;">Hoy</button>
+                            </div>
+                            <div class="calendar-header" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+                                <button class="cal-nav-btn" id="cr-cal-prev" style="width:30px; height:30px; border-radius:6px; border:1px solid #e2e8f0; background:#ffffff; color:#64748b; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; font-size:12px;">
+                                    <i class="fa-solid fa-chevron-left"></i>
+                                </button>
+                                <div class="cal-title" id="cr-cal-title" style="font-size:14px; font-weight:700; color:#0f172a;"></div>
+                                <button class="cal-nav-btn" id="cr-cal-next" style="width:30px; height:30px; border-radius:6px; border:1px solid #e2e8f0; background:#ffffff; color:#64748b; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; font-size:12px;">
+                                    <i class="fa-solid fa-chevron-right"></i>
+                                </button>
+                            </div>
+                            <div class="cal-weekdays" style="display:grid; grid-template-columns:repeat(7,1fr); gap:3px; margin-bottom:6px;">
+                                <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">D</span>
+                                <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">L</span>
+                                <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">M</span>
+                                <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">MI</span>
+                                <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">J</span>
+                                <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">V</span>
+                                <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">S</span>
+                            </div>
+                            <div class="cal-days-grid" id="cr-cal-days-grid" style="display:grid; grid-template-columns:repeat(7,1fr); gap:3px;"></div>
+                        </div>
+                    </div>
+                    <div class="global-search-box" style="width: 170px; display: flex; align-items: center; background: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; padding: 0 15px; position: relative; height: 42px;">
+                        <i class="fa-solid fa-filter" style="color: #64748b; margin-right: 10px;"></i>
+                        <select id="filter-condicion" class="global-search-input custom-select-source" style="border: none; padding: 0; outline: none; flex: 1; min-width: 0; appearance: none; -webkit-appearance: none; cursor: pointer; color: #94a3b8; background: transparent; font-size: 13px;">
+                            <option value="">TODOS</option>
+                            <option value="HOSPITALIZADO">HOSPITALIZADO</option>
+                            <option value="ALTA">ALTA</option>
+                            <option value="FALLECIDO">FALLECIDO</option>
+                        </select>
+                        <i class="fa-solid fa-chevron-down" style="position: absolute; right: 15px; color: #64748b; font-size: 12px; pointer-events: none;"></i>
+                    </div>
+                </div>
                 <button class="btn-module shadow btn-matte-black" id="btn-validar" disabled style="padding: 10px 20px; font-weight: 600; background: #404040 !important;">
                     Ejecutar Validaci&#243;n
                     <i id="validar-spinner" class="fa-solid fa-circle-notch fa-spin" style="display:none; margin-left:8px;"></i>
                 </button>
             </div>
 
-            <!-- BLOQUEO DE PANTALLA (Solo fondo y desenfoque) -->
-            <div id="blocking-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.4); backdrop-filter:blur(6px); z-index:9999; cursor:wait;">
+            <!-- Overlay de carga (diseño consulta-datos) -->
+            <div id="blocking-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(255,255,255,0.7); backdrop-filter:blur(2px); z-index:10000; justify-content:center; align-items:center; flex-direction:column; gap:15px;">
+                <div class="spinner-rpa"></div>
+                <div style="text-align:center;">
+                    <p id="overlay-msg" style="margin:0; font-weight:700; color:#0f172a; font-size:16px;">Iniciando validación...</p>
+                    <p style="margin:5px 0 0; color:#64748b; font-size:13px; margin-bottom:15px;">Esto puede tardar unos segundos</p>
+                    <button id="btn-cancel-validacion" style="padding:8px 18px; background:white; color:#ef4444; border:1px solid #fee2e2; border-radius:8px; font-weight:600; cursor:pointer; font-size:13px; transition:all 0.2s; display:flex; align-items:center; gap:8px; margin:0 auto;">
+                        <i class="fa-solid fa-xmark"></i> Cancelar Validación
+                    </button>
+                </div>
             </div>
 
             <!-- LISTA DE RESULTADOS -->
@@ -74,13 +130,14 @@
                     <table class="data-table" id="table-pacientes" style="display: none;">
                         <thead>
                             <tr>
-                                <th style="width: 50px; text-align: center;">&#10003;</th>
+                                <th style="width: 50px; text-align: center;"><input type="checkbox" id="checkbox-select-all" style="cursor: pointer;"></th>
                                 <th>DNI</th>
                                 <th>Paciente</th>
                                 <th>N&#186; HC</th>
                                 <th>Seguro Declarado</th>
                                 <th>Seguro Extra&#237;do</th>
                                 <th>Estado</th>
+                                <th>Condici&#243;n</th>
                                 <th>&#218;lt. Validaci&#243;n</th>
                                 <th style="width: 60px; text-align: center;">&#8635;</th>
                             </tr>
@@ -196,19 +253,7 @@
     </div>
 
     <!-- TEMPLATES PARA ENCABEZADO -->
-    <template id="template-alerta">
-        <div id="alerta-banner" style="display:flex; background:#fff5f5; border:1px solid #fee2e2; border-radius:30px; padding:6px 20px; align-items:center; gap:10px; box-shadow:0 10px 15px -3px rgba(239, 68, 68, 0.1), 0 4px 6px -4px rgba(239, 68, 68, 0.1); animation:fluidSlideDown 0.5s cubic-bezier(0.16, 1, 0.3, 1); pointer-events:auto; border: 1.5px solid #fecaca;">
-            <i class="fa-solid fa-circle-exclamation" style="color:#ef4444; font-size:14px;"></i>
-            <span style="font-weight:700; color:#b91c1c; font-size:12px; white-space:nowrap; text-transform:uppercase; letter-spacing:0.8px;">Realizar Alta Administrativa</span>
-        </div>
-    </template>
-
-    <template id="template-progreso">
-        <div id="progreso-banner" style="display:flex; background:#eff6ff; border:1px solid #dbeafe; border-radius:30px; padding:6px 20px; align-items:center; gap:10px; box-shadow:0 10px 15px -3px rgba(59, 130, 246, 0.1), 0 4px 6px -4px rgba(59, 130, 246, 0.1); animation:fluidSlideDown 0.5s cubic-bezier(0.16, 1, 0.3, 1); pointer-events:auto; border: 1.5px solid #bfdbfe;">
-            <i class="fa-solid fa-robot" style="color:#3b82f6; font-size:14px;"></i>
-            <span style="font-weight:700; color:#1d4ed8; font-size:12px; white-space:nowrap; text-transform:uppercase; letter-spacing:0.8px;">Validando: <span id="countdown-val">15</span> Segundos restantes</span>
-        </div>
-    </template>
+    <template id="template-alerta"></template>
 
     <style>
         @keyframes fluidSlideDown {
@@ -224,10 +269,51 @@
         .btn-revalidar:hover { background: #f1f5f9 !important; border-color: #3b82f6 !important; }
         .susalud-copy-btn[data-creds="usuario"]:hover { color: #3b82f6 !important; }
         .susalud-copy-btn[data-creds="clave"]:hover { color: #10b981 !important; }
+
+        /* ── Datepicker Calendar ── */
+        .cr-date-trigger:hover { border-color: #cbd5e1 !important; }
+        .cr-date-trigger.is-open { border-color: #3b82f6 !important; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+        .filter-select {
+            padding: 6px 10px; font-size: 13px; font-weight: 500; color: #1e293b;
+            background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;
+            outline: none; cursor: pointer; transition: border-color 0.2s ease, box-shadow 0.2s ease;
+            min-width: 0; width: 100%;
+        }
+        .filter-select:hover { border-color: #cbd5e1; }
+        .filter-select:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); background: #ffffff; }
+        .cal-nav-btn:hover { background: #f8fafc; color: #3b82f6; border-color: #cbd5e1; }
+        #cr-cal-today:hover { background: #e2e8f0 !important; }
+        .cal-days-grid .cal-day {
+            aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+            font-size: 13px; font-weight: 500; color: #1e293b; background: #ffffff;
+            border-radius: 6px; cursor: pointer; transition: background 0.12s;
+            position: relative;
+        }
+        .cal-days-grid .cal-day:hover:not(.cal-day-empty):not(.cal-day-other):not(.cal-day-disabled) { background: #f8fafc; color: #0284c7; }
+        .cal-days-grid .cal-day:active:not(.cal-day-empty):not(.cal-day-other):not(.cal-day-disabled) { background: #f1f5f9; }
+        .cal-days-grid .cal-day-empty { cursor: default; }
+        .cal-days-grid .cal-day-other { color: #cbd5e1; cursor: default; }
+        .cal-days-grid .cal-day-other:hover { background: transparent; }
+        .cal-days-grid .cal-day-today { background: rgba(59,130,246,0.08); font-weight: 700; color: #3b82f6; }
+        .cal-days-grid .cal-day-today:hover { background: rgba(59,130,246,0.14); }
+        .cal-days-grid .cal-day-selected { background: #3b82f6 !important; color: #ffffff !important; font-weight: 700; box-shadow: 0 2px 8px rgba(59,130,246,0.3); }
+        .cal-days-grid .cal-day-range-start { background: #3b82f6 !important; color: #ffffff !important; font-weight: 700; border-radius: 6px 0 0 6px; }
+        .cal-days-grid .cal-day-range-end { background: #3b82f6 !important; color: #ffffff !important; font-weight: 700; border-radius: 0 6px 6px 0; }
+        .cal-days-grid .cal-day-range-between { background: rgba(59,130,246,0.1); color: #1e293b; border-radius: 0; }
+        .cal-days-grid .cal-day-range-start.cal-day-range-end { border-radius: 6px; }
+        .cal-days-grid .cal-day-disabled { cursor: not-allowed; opacity: 0.4; }
+        .cal-slide-left { animation: slideInLeft 0.25s cubic-bezier(0.16,1,0.3,1) forwards; }
+        .cal-slide-right { animation: slideInRight 0.25s cubic-bezier(0.16,1,0.3,1) forwards; }
+        @keyframes slideInLeft { from { opacity:0; transform:translateX(-20px) scale(0.97); } to { opacity:1; transform:translateX(0) scale(1); } }
+        @keyframes slideInRight { from { opacity:0; transform:translateX(20px) scale(0.97); } to { opacity:1; transform:translateX(0) scale(1); } }
+        @keyframes popoverIn { from { opacity:0; transform:translateY(4px) scale(0.96); } to { opacity:1; transform:translateY(0) scale(1); } }
+        .cal-day-animate { animation: dayPop 0.25s cubic-bezier(0.16,1,0.3,1) both; }
+        @keyframes dayPop { from { opacity:0; transform:scale(0.7); } to { opacity:1; transform:scale(1); } }
     </style>
 
     <script src="../../js/supabase-config.js"></script>
     <script src="../../js/layout.js"></script>
+    <script src="../../js/custom-select.js"></script>
     <script src="consulta-rapida.js"></script>
 </body>
 </html>

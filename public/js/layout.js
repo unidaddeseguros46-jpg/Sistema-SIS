@@ -405,6 +405,10 @@ window.showGuideTooltip = (id, htmlContent, duration, showCheckbox, options = {}
         document.body.appendChild(tooltip);
     }
 
+    if (tooltip.style.position === 'fixed') {
+        tooltip.style.transition = 'bottom 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.3s ease';
+    }
+
     const handleClose = () => {
         const cb = tooltip.querySelector('#never-show-guide');
         if (cb && cb.checked) {
@@ -413,7 +417,10 @@ window.showGuideTooltip = (id, htmlContent, duration, showCheckbox, options = {}
             localStorage.setItem(hideKey, 'true');
         }
         tooltip.classList.add('guide-tooltip-exit');
-        setTimeout(() => tooltip.remove(), 400);
+        setTimeout(() => {
+            tooltip.remove();
+            if (window.repositionFloatingTooltips) window.repositionFloatingTooltips();
+        }, 400);
     };
 
     tooltip.querySelector('.close-guide').addEventListener('click', handleClose);
@@ -427,6 +434,18 @@ window.showGuideTooltip = (id, htmlContent, duration, showCheckbox, options = {}
     }
 };
 
+window.repositionFloatingTooltips = () => {
+    const tips = [...document.querySelectorAll('.guide-tooltip')]
+        .filter(t => t.style.position === 'fixed' && t.isConnected);
+    if (tips.length === 0) return;
+    tips.sort((a, b) => (parseFloat(a.style.bottom) || 0) - (parseFloat(b.style.bottom) || 0));
+    let bottomPos = 30;
+    tips.forEach(t => {
+        t.style.bottom = bottomPos + 'px';
+        bottomPos += (t.offsetHeight || 50) + 10;
+    });
+};
+
 window.showSystemTooltip = (message, isError = false) => {
     const existing = document.querySelector('.system-toast-tooltip');
     if (existing) existing.remove();
@@ -434,20 +453,21 @@ window.showSystemTooltip = (message, isError = false) => {
     const tooltip = document.createElement('div');
     tooltip.className = 'guide-tooltip system-toast-tooltip';
     
-    const icon = isError ? '<i class="fa-solid fa-circle-xmark" style="color:#ef4444; margin-right:8px; font-size:16px;"></i>' 
-                         : '<i class="fa-solid fa-circle-check" style="color:#10b981; margin-right:8px; font-size:16px;"></i>';
+    const icon = isError
+        ? '<i class="fa-solid fa-circle-xmark" style="color:#ef4444; margin-right:8px; font-size:14px; flex-shrink:0; margin-top:3px;"></i>'
+        : '<i class="fa-solid fa-circle-check" style="color:#10b981; margin-right:8px; font-size:14px; flex-shrink:0; margin-top:3px;"></i>';
     
     const borderColor = isError ? '#ef4444' : '#10b981';
 
     tooltip.innerHTML = `
-        <div style="display:flex; align-items:center;">
+        <div style="display:flex; align-items:flex-start;">
             ${icon}
-            <span style="font-weight:500; color:#1e293b; font-size:14px;">${message}</span>
+            <span style="font-weight:500; color:#1e293b; font-size:14px; line-height:1.5;">${message.replace(/\n/g, '<br>')}</span>
         </div>
     `;
     
     tooltip.style.position = 'fixed';
-    tooltip.style.bottom = '30px';
+    tooltip.style.transition = 'bottom 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.3s ease';
     tooltip.style.right = '30px';
     tooltip.style.background = '#ffffff';
     tooltip.style.padding = '12px 20px';
@@ -456,12 +476,24 @@ window.showSystemTooltip = (message, isError = false) => {
     tooltip.style.borderLeft = `4px solid ${borderColor}`;
     tooltip.style.zIndex = '10005';
 
+    const guideTip = document.querySelector('.guide-tooltip:not(.system-toast-tooltip)');
+    if (guideTip && guideTip.isConnected) {
+        const guideRect = guideTip.getBoundingClientRect();
+        const gap = 10;
+        tooltip.style.bottom = (window.innerHeight - guideRect.top + gap) + 'px';
+    } else {
+        tooltip.style.bottom = '30px';
+    }
+
     document.body.appendChild(tooltip);
 
     setTimeout(() => {
         if (tooltip.parentElement) {
             tooltip.classList.add('guide-tooltip-exit');
-            setTimeout(() => tooltip.remove(), 400);
+            setTimeout(() => {
+                tooltip.remove();
+                if (window.repositionFloatingTooltips) window.repositionFloatingTooltips();
+            }, 400);
         }
     }, 3000);
 };

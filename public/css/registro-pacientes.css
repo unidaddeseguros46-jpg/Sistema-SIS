@@ -227,7 +227,7 @@ select.standard-input:disabled {
 .input-stacked {
     display: flex;
     flex-direction: column;
-    margin-bottom: 20px;
+    margin-bottom: 14px;
 }
 
 .input-stacked label {

@@ -35,6 +35,129 @@ document.addEventListener('DOMContentLoaded', async () => {
     const filterServicio = document.getElementById('filter-servicio');
     const btnClearFilterServicio = document.getElementById('clear-filter-servicio');
     const inputDni = document.getElementById('paciente-dni');
+    const tipoDocumento = document.getElementById('tipo-documento');
+    const dniPrefix = document.getElementById('dni-prefix');
+    const dvGroup = document.getElementById('dv-group');
+    const fieldHc = document.getElementById('field-hc');
+    const fieldCondicion = document.getElementById('field-condicion');
+
+    const PREFIX_MAP = { DNI: '', DNI_TEMPORAL: 'E- ', CARNET_EXT: 'C.E ' };
+    const PLACEHOLDER_MAP = { DNI: '12345678', DNI_TEMPORAL: '12345678', CARNET_EXT: '12345678' };
+
+    const getRawDni = () => inputDni.value.replace(/[^0-9]/g, '');
+
+    const formatDniDisplay = (dni, tipo) => {
+        const prefix = PREFIX_MAP[tipo] || '';
+        return prefix ? prefix + dni : dni;
+    };
+
+    const handleTipoDocumentoChange = () => {
+        const tipo = tipoDocumento.value;
+        const prefix = PREFIX_MAP[tipo];
+
+        dniPrefix.textContent = prefix;
+        dniPrefix.style.display = prefix ? 'flex' : 'none';
+        inputDni.placeholder = PLACEHOLDER_MAP[tipo];
+        inputDni.style.borderRadius = prefix ? '0 8px 8px 0' : '8px';
+
+        dvGroup.style.display = tipo === 'DNI' ? 'block' : 'none';
+
+        inputDni.focus();
+    };
+
+    const highlightError = (el) => {
+        const target = el.closest('.global-search-box') || el;
+        if (target.dataset.errorActive === '1') return;
+        target.dataset.errorActive = '1';
+        const origBorder = target.style.borderColor;
+        const origShadow = target.style.boxShadow;
+        target.style.borderColor = '#ef4444';
+        target.style.boxShadow = '0 0 0 3px rgba(239,68,68,0.15)';
+        const clearError = () => {
+            target.style.borderColor = origBorder || '';
+            target.style.boxShadow = origShadow || '';
+            target.dataset.errorActive = '0';
+            el.removeEventListener('input', clearError);
+            el.removeEventListener('change', clearError);
+            if (target !== el) {
+                target.removeEventListener('change', clearError);
+            }
+        };
+        el.addEventListener('input', clearError);
+        el.addEventListener('change', clearError);
+        if (target !== el) {
+            target.addEventListener('change', clearError);
+        }
+        setTimeout(clearError, 5000);
+    };
+
+    const validateForm = () => {
+        // Para ediciones, permitir guardar aunque falten campos opcionales
+        if (document.getElementById('paciente-id').value) return true;
+
+        const missing = [];
+        const isDni = (tipoDocumento?.value || 'DNI') === 'DNI';
+
+        if (getRawDni().length !== 8) {
+            missing.push({ el: inputDni, msg: 'El DNI debe tener exactamente 8 dígitos' });
+        }
+
+        const apellidos = document.getElementById('paciente-apellidos');
+        if (!apellidos.value.trim()) {
+            missing.push({ el: apellidos, msg: 'El campo Apellidos es obligatorio' });
+        }
+
+        const nombres = document.getElementById('paciente-nombres');
+        if (!nombres.value.trim()) {
+            missing.push({ el: nombres, msg: 'El campo Nombres es obligatorio' });
+        }
+
+        const fechaNac = document.getElementById('paciente-fecha-nac');
+        if (!fechaNac.value.trim()) {
+            missing.push({ el: fechaNac, msg: 'La Fecha de Nacimiento es obligatoria' });
+        }
+
+        if (!isModal) {
+            const hc = document.getElementById('paciente-hc');
+            if (!hc.value.trim()) {
+                missing.push({ el: hc, msg: 'El Nº Historia Clínica es obligatorio' });
+            }
+        }
+
+        if (!selectSeguro.value) {
+            missing.push({ el: selectSeguro, msg: 'El Tipo de Seguro es obligatorio' });
+        }
+
+        if (isDni) {
+            const codVer = document.getElementById('paciente-codigo-ver');
+            if (!codVer.value.trim()) {
+                missing.push({ el: codVer, msg: 'El Código de Verificación es obligatorio' });
+            }
+        }
+
+        const servicio = document.getElementById('paciente-servicio');
+        if (!servicio.value || servicio.value === 'Seleccione Servicio') {
+            missing.push({ el: servicio, msg: 'El Servicio es obligatorio' });
+        }
+
+        if (missing.length === 0) return true;
+
+        const first = missing[0];
+        if (window.showSystemTooltip) window.showSystemTooltip(first.msg, true);
+        if (first.el && first.el.focus) {
+            first.el.focus();
+            first.el.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+        }
+        highlightError(first.el);
+        return false;
+    };
+
+    inputDni.addEventListener('input', function () {
+        const digits = this.value.replace(/[^0-9]/g, '').slice(0, 8);
+        if (digits !== this.value) this.value = digits;
+    });
+
+    tipoDocumento.addEventListener('change', handleTipoDocumentoChange);
 
     // Utility to strip accents and convert to uppercase
     const normalizeText = (text) => {
@@ -72,12 +195,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (tempStyle) tempStyle.remove();
             document.body.style.display = 'block';
 
-            // Forzar Condición "Hospitalizado" y bloquear al ser registro nuevo vía modal
-            const condField = document.getElementById('paciente-condicion');
-            if (condField) {
-                condField.value = 'Hospitalizado';
-                condField.disabled = true;
-            }
+            // Ocultar HC y Condición en modo modal
+            if (fieldHc) fieldHc.style.display = 'none';
+            if (fieldCondicion) fieldCondicion.style.display = 'none';
+        }
+
+        // Sincronizar display del tipo de documento (prefijo, DV, custom dropdown)
+        if (tipoDocumento) {
+            handleTipoDocumentoChange();
+            if (tipoDocumento.customDropdownUpdate) tipoDocumento.customDropdownUpdate();
         }
 
         if (dataStr) {
@@ -85,6 +211,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             sessionStorage.removeItem('cd_auto_fill');
 
             // 2. Rellenar campos de texto (Inmediato)
+            if (data.tipo_documento && tipoDocumento) {
+                tipoDocumento.value = data.tipo_documento;
+                handleTipoDocumentoChange();
+            }
             document.getElementById('paciente-dni').value = data.dni || '';
             document.getElementById('paciente-nombres').value = data.nombres || '';
             document.getElementById('paciente-apellidos').value = data.apellidos || '';
@@ -92,6 +222,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             if (data.tipo_seguro) {
                 setSelectValueCaseInsensitive(selectSeguro, data.tipo_seguro);
+                if (selectSeguro.customDropdownUpdate) selectSeguro.customDropdownUpdate();
             }
 
             // 3. Rellenar Fecha (Con pequeño retardo para asegurar que Flatpickr cargue)
@@ -300,9 +431,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('btn-obtener-fnac').style.display = 'none';
 
         // Bloquear todos los campos temporalmente
-        document.querySelectorAll('.standard-input').forEach(el => el.disabled = true);
+        document.getElementById('paciente-dni').disabled = true;
+
+        // Asegurar que HC y Condición sean visibles al editar (podrían estar ocultos desde modal)
+        if (fieldHc) fieldHc.style.display = '';
+        if (fieldCondicion) fieldCondicion.style.display = '';
 
         // Volcar data
+        // Setear tipo_documento antes que el DNI para que el prefix se aplique
+        if (p.tipo_documento && tipoDocumento) {
+            tipoDocumento.value = p.tipo_documento;
+            handleTipoDocumentoChange();
+            if (tipoDocumento.customDropdownUpdate) tipoDocumento.customDropdownUpdate();
+        }
         document.getElementById('paciente-dni').value = p.dni;
         document.getElementById('paciente-hc').value = p.historia_clinica;
 
@@ -322,10 +463,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         setSelectValueCaseInsensitive(selectSeguro, p.tipo_seguro);
         if (selectSeguro) {
             selectSeguro.dispatchEvent(new Event('change'));
+            if (selectSeguro.customDropdownUpdate) selectSeguro.customDropdownUpdate();
         }
 
-        setSelectValueCaseInsensitive(document.getElementById('paciente-servicio'), p.servicio);
-        setSelectValueCaseInsensitive(document.getElementById('paciente-condicion'), p.condicion);
+        const servEl = document.getElementById('paciente-servicio');
+        setSelectValueCaseInsensitive(servEl, p.servicio);
+        if (servEl.customDropdownUpdate) servEl.customDropdownUpdate();
+
+        const condEl = document.getElementById('paciente-condicion');
+        setSelectValueCaseInsensitive(condEl, p.condicion);
+        if (condEl.customDropdownUpdate) condEl.customDropdownUpdate();
 
         const isOtros = p.tipo_seguro && p.tipo_seguro.toUpperCase() === 'OTROS';
         if (isOtros) {
@@ -336,6 +483,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             inputOtros.required = false;
         }
 
+        console.log('[openEditForm] HC from DB:', JSON.stringify(p.historia_clinica),
+            '| HC input value:', document.getElementById('paciente-hc').value,
+            '| HC disabled:', document.getElementById('paciente-hc').disabled,
+            '| Seguro value:', selectSeguro.value, '| Seguro disabled:', selectSeguro.disabled,
+            '| Servicio value:', servEl.value, '| Servicio disabled:', servEl.disabled,
+            '| FechaNac value:', document.getElementById('paciente-fecha-nac').value,
+            '| Apellidos value:', document.getElementById('paciente-apellidos').value,
+            '| Nombres value:', document.getElementById('paciente-nombres').value);
+
         // Si falleció, NO permitir editar nada (Comparación insensible)
         const isFallecido = p.condicion && p.condicion.toUpperCase() === 'FALLECIDO';
         form.dataset.originalCondicion = p.condicion || '';
@@ -345,18 +501,30 @@ document.addEventListener('DOMContentLoaded', async () => {
             if(window.showSystemTooltip) window.showSystemTooltip('Edición bloqueada: Paciente fallecido', true);
         } else {
             btnGuardar.style.display = 'flex';
-            // Rehabilitar campos para edición
-            document.getElementById('paciente-dni').disabled = true; // El DNI nunca se edita
-            document.getElementById('paciente-hc').disabled = true; // La HC tampoco
-            document.getElementById('paciente-fecha-nac').disabled = true;
-            document.getElementById('paciente-apellidos').disabled = true;
-            document.getElementById('paciente-nombres').disabled = true;
-            document.getElementById('paciente-codigo-ver').disabled = true;
+            document.getElementById('paciente-dni').disabled = true;
+            if (tipoDocumento) tipoDocumento.disabled = true;
 
-            selectSeguro.disabled = true;
-            document.getElementById('paciente-servicio').disabled = true;
-            document.getElementById('paciente-condicion').disabled = true;
-            inputOtros.disabled = true;
+            const disableIfFilled = (el) => {
+                if (!el) return;
+                const isFilled = !!(el.value && el.value.toString().trim());
+                el.disabled = isFilled;
+            };
+
+            disableIfFilled(document.getElementById('paciente-hc'));
+            disableIfFilled(document.getElementById('paciente-fecha-nac'));
+            disableIfFilled(document.getElementById('paciente-apellidos'));
+            disableIfFilled(document.getElementById('paciente-nombres'));
+            disableIfFilled(document.getElementById('paciente-codigo-ver'));
+
+            selectSeguro.disabled = !!(selectSeguro.value && selectSeguro.value.toString().trim());
+            servEl.disabled = !!(servEl.value && servEl.value.toString().trim() && servEl.value !== 'Seleccione Servicio');
+            condEl.disabled = true;
+            inputOtros.disabled = !!(inputOtros.value && inputOtros.value.toString().trim());
+
+            if (selectSeguro.customDropdownUpdate) selectSeguro.customDropdownUpdate();
+            if (servEl.customDropdownUpdate) servEl.customDropdownUpdate();
+            if (condEl.customDropdownUpdate) condEl.customDropdownUpdate();
+            if (tipoDocumento && tipoDocumento.customDropdownUpdate) tipoDocumento.customDropdownUpdate();
         }
 
         viewLista.style.display = 'none';
@@ -495,7 +663,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // VALIDACIÓN DE DNI (8 DÍGITOS OBLIGATORIOS)
     // ============================================
     inputDni.addEventListener('blur', () => {
-        const dniValue = inputDni.value.trim();
+        const dniValue = getRawDni();
         if (dniValue && dniValue.length !== 8) {
             inputDni.setCustomValidity('El DNI debe contener exactamente 8 dígitos numéricos');
         } else {
@@ -504,7 +672,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     inputDni.addEventListener('input', () => {
-        if (inputDni.value.length === 8) {
+        const dniValue = getRawDni();
+        if (dniValue.length === 8) {
             inputDni.setCustomValidity('');
         }
     });
@@ -518,7 +687,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const fnacSpinner = document.getElementById('fnac-spinner');
 
     btnObtenerFnac.addEventListener('click', async () => {
-        const dniValue = inputDni.value.trim();
+        const dniValue = getRawDni();
 
         if (!dniValue || dniValue.length !== 8) {
             if(window.showSystemTooltip) window.showSystemTooltip('Ingrese un DNI válido de 8 dígitos primero', true);
@@ -578,10 +747,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Reset disabled states uniformly
         document.querySelectorAll('.standard-input').forEach(el => el.disabled = false);
 
+        // Reset tipo_documento a DNI
+        if (tipoDocumento) {
+            tipoDocumento.value = 'DNI';
+            handleTipoDocumentoChange();
+            if (tipoDocumento.customDropdownUpdate) tipoDocumento.customDropdownUpdate();
+        }
+
+        // Resetear y habilitar selects del formulario
+        selectSeguro.disabled = false;
+        if (selectSeguro.customDropdownUpdate) selectSeguro.customDropdownUpdate();
+        const servEl = document.getElementById('paciente-servicio');
+        servEl.disabled = false;
+        if (servEl.customDropdownUpdate) servEl.customDropdownUpdate();
+
+        // Mostrar HC y Condición (por si venía de modal)
+        if (fieldHc) fieldHc.style.display = '';
+        if (fieldCondicion) fieldCondicion.style.display = '';
+
         // Forzar Condición "Hospitalizado" al registrar nuevo y bloquear
         const condicionSelect = document.getElementById('paciente-condicion');
         condicionSelect.value = 'Hospitalizado';
         condicionSelect.disabled = true;
+        if (condicionSelect.customDropdownUpdate) condicionSelect.customDropdownUpdate();
 
         grupoOtros.style.display = 'none';
         inputOtros.required = false;
@@ -623,12 +811,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        // Validación de DNI antes de enviar
-        const dniValue = document.getElementById('paciente-dni').value.trim();
-        if (dniValue && dniValue.length !== 8) {
-            if(window.showSystemTooltip) window.showSystemTooltip('El DNI debe contener exactamente 8 dígitos numéricos', true);
-            return;
-        }
+        // Validar todos los campos obligatorios
+        if (!validateForm()) return;
 
         // Estado visual: Bloquear botón y mostrar spinner
         btnGuardar.disabled = true;
@@ -641,14 +825,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             tipo_seguro: selectSeguro.value,
             seguro_otros: selectSeguro.value === 'Otros' ? inputOtros.value.trim() : null,
             servicio: document.getElementById('paciente-servicio').value.trim() || null,
-            condicion: document.getElementById('paciente-condicion').value,
-            creado_por: userId // Supabase migh
+            condicion: isModal ? 'Hospitalizado' : document.getElementById('paciente-condicion').value,
+            creado_por: userId,
+            tipo_documento: tipoDocumento?.value || 'DNI'
         };
+
+        // historia_clinica: incluir solo si visible y con valor
+        if (!isModal) {
+            const hcVal = document.getElementById('paciente-hc').value.trim();
+            if (hcVal) payload.historia_clinica = hcVal;
+        }
 
         // If newly inserted
         if (!objectId) {
-            payload.dni = document.getElementById('paciente-dni').value.trim();
-            payload.historia_clinica = document.getElementById('paciente-hc').value.trim();
+            payload.dni = getRawDni();
 
             // Obtener fecha en formato ISO (Y-m-d) para Supabase desde Flatpickr
             const fp = document.getElementById('paciente-fecha-nac')._flatpickr;

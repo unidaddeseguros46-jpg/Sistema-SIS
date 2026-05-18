@@ -1,0 +1,1 @@
+ALTER TABLE pacientes ALTER COLUMN historia_clinica DROP NOT NULL;

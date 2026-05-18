@@ -11,10 +11,29 @@ document.addEventListener('DOMContentLoaded', async () => {
     const paginationContainer = document.getElementById('pagination-consulta');
     const blockingOverlay = document.getElementById('blocking-overlay');
     const templateAlerta = document.getElementById('template-alerta');
-    const templateProgreso = document.getElementById('template-progreso');
+    const filterCondicion = document.getElementById('filter-condicion');
+
+    // ── Datepicker ──
+    const crDateTrigger = document.getElementById('cr-date-trigger');
+    const crDateDisplay = document.getElementById('cr-date-display');
+    const crDatePopover = document.getElementById('cr-date-popover');
+    const crCalGrid = document.getElementById('cr-cal-days-grid');
+    const crCalTitle = document.getElementById('cr-cal-title');
+    const crFilterMonth = document.getElementById('cr-filter-month');
+    const crFilterYear = document.getElementById('cr-filter-year');
+    const crCalPrev = document.getElementById('cr-cal-prev');
+    const crCalNext = document.getElementById('cr-cal-next');
+    const crCalToday = document.getElementById('cr-cal-today');
+    const monthNames = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Setiembre','Octubre','Noviembre','Diciembre'];
+    let crRangeStart = null; // Date object
+    let crRangeEnd = null;   // Date object
+    let crViewMonth = new Date().getMonth();
+    let crViewYear = new Date().getFullYear();
+    const crToday = new Date();
+    crToday.setHours(0,0,0,0);
 
     let isValidating = false;
-    let countdownInterval = null;
+    let currentSearchController = null;
 
     let accumulatedResults = [];
     let selectedDNIs = [];
@@ -75,15 +94,47 @@ document.addEventListener('DOMContentLoaded', async () => {
         try { sessionStorage.setItem('cr_accumulated', JSON.stringify(accumulatedResults)); } catch { }
     };
 
+    const restoreDateRange = () => {
+        const savedDesde = sessionStorage.getItem('cr_filter_fecha_desde');
+        const savedHasta = sessionStorage.getItem('cr_filter_fecha_hasta');
+        if (savedDesde) {
+            crRangeStart = new Date(savedDesde + 'T00:00:00');
+            if (savedHasta) crRangeEnd = new Date(savedHasta + 'T00:00:00');
+            updateDateDisplay();
+        }
+    };
+
+    const updateDateDisplay = () => {
+        const fmt = d => {
+            if (!d) return '';
+            const pad = n => String(n).padStart(2, '0');
+            return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`;
+        };
+        if (crRangeStart && crRangeEnd) {
+            crDateDisplay.textContent = `${fmt(crRangeStart)} — ${fmt(crRangeEnd)}`;
+            crDateDisplay.style.color = '#1e293b';
+        } else if (crRangeStart) {
+            crDateDisplay.textContent = `Desde: ${fmt(crRangeStart)}`;
+            crDateDisplay.style.color = '#1e293b';
+        } else {
+            crDateDisplay.textContent = 'Seleccionar rango de fechas';
+            crDateDisplay.style.color = '#94a3b8';
+        }
+    };
+
     const restoreState = async () => {
         try {
             const savedDNI = sessionStorage.getItem('cr_filter_dni');
             const savedHC = sessionStorage.getItem('cr_filter_hc');
             const savedApellidos = sessionStorage.getItem('cr_filter_apellidos');
+            const savedCondicion = sessionStorage.getItem('cr_filter_condicion');
 
             if (savedDNI) inputDNI.value = savedDNI;
             if (savedHC) inputHC.value = savedHC;
             if (savedApellidos) inputApellidos.value = savedApellidos;
+            if (savedCondicion) { filterCondicion.value = savedCondicion; if (filterCondicion.customDropdownUpdate) filterCondicion.customDropdownUpdate(); }
+
+            restoreDateRange();
 
             const saved = sessionStorage.getItem('cr_accumulated');
             if (saved) {
@@ -100,16 +151,207 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     const updateActionsBar = () => {
-        const selectedCount = document.getElementById('selected-count');
-        const btnValidar = document.getElementById('btn-validar');
-
-        selectedCount.textContent = selectedDNIs.length;
-        btnValidar.disabled = selectedDNIs.length === 0;
+        document.getElementById('btn-validar').disabled = selectedDNIs.length === 0;
     };
+
+    const getDateRangeValues = () => {
+        if (!crRangeStart) return { start: null, end: null };
+        const pad = n => String(n).padStart(2, '0');
+        const start = `${crRangeStart.getFullYear()}-${pad(crRangeStart.getMonth()+1)}-${pad(crRangeStart.getDate())}`;
+        const end = crRangeEnd
+            ? `${crRangeEnd.getFullYear()}-${pad(crRangeEnd.getMonth()+1)}-${pad(crRangeEnd.getDate())}`
+            : start;
+        return { start, end };
+    };
+
+    const triggerActionsSearch = () => {
+        if (!crRangeStart) {
+            showToast('Seleccione un rango de fechas para buscar.', true);
+            return;
+        }
+        loadPacientes(true);
+    };
+
+    filterCondicion.addEventListener('change', () => {
+        if (crRangeStart) triggerActionsSearch();
+    });
+
+    // ── Datepicker: Calendar Render ──
+    const toIso = (y, m, d) => `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isSameDay = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+
+    function populateMonths() {
+        monthNames.forEach((name, i) => {
+            const opt = document.createElement('option');
+            opt.value = i; opt.textContent = name;
+            crFilterMonth.appendChild(opt);
+        });
+    }
+    function populateYears() {
+        const y = crToday.getFullYear();
+        for (let i = y - 5; i <= y + 5; i++) {
+            const opt = document.createElement('option');
+            opt.value = i; opt.textContent = i;
+            crFilterYear.appendChild(opt);
+        }
+    }
+    function syncCalFilters() {
+        crFilterMonth.value = crViewMonth;
+        crFilterYear.value = crViewYear;
+    }
+
+    function renderCalendar(direction) {
+        const firstDay = new Date(crViewYear, crViewMonth, 1);
+        const lastDay = new Date(crViewYear, crViewMonth + 1, 0);
+        const startDow = firstDay.getDay();
+        const daysInMonth = lastDay.getDate();
+        const daysInPrev = new Date(crViewYear, crViewMonth, 0).getDate();
+        const totalCells = Math.ceil((startDow + daysInMonth) / 7) * 7;
+
+        crCalTitle.textContent = `${monthNames[crViewMonth]}, ${crViewYear}`;
+        syncCalFilters();
+
+        crCalGrid.className = 'cal-days-grid' + (direction ? ' cal-slide-' + direction : '');
+        crCalGrid.innerHTML = '';
+
+        let dayIdx = 0;
+        for (let i = 0; i < totalCells; i++) {
+            const el = document.createElement('div');
+            el.className = 'cal-day';
+            let num, isCur = true;
+
+            if (i < startDow) {
+                num = daysInPrev - startDow + i + 1;
+                isCur = false;
+                el.classList.add('cal-day-other');
+            } else if (dayIdx >= daysInMonth) {
+                num = i - startDow - daysInMonth + 1;
+                isCur = false;
+                el.classList.add('cal-day-other');
+            } else {
+                num = dayIdx + 1;
+            }
+
+            if (!isCur) {
+                el.textContent = num;
+                crCalGrid.appendChild(el);
+                if (i >= startDow) dayIdx++;
+                continue;
+            }
+
+            el.textContent = num;
+            const dateObj = new Date(crViewYear, crViewMonth, num);
+            const dateStr = toIso(crViewYear, crViewMonth, num);
+            el.dataset.date = dateStr;
+
+            if (isSameDay(dateObj, crToday)) el.classList.add('cal-day-today');
+            if (dateObj > crToday) el.classList.add('cal-day-disabled');
+
+            if (crRangeStart && isSameDay(dateObj, crRangeStart)) {
+                el.classList.add('cal-day-selected', 'cal-day-range-start');
+            }
+            if (crRangeEnd && isSameDay(dateObj, crRangeEnd)) {
+                el.classList.add('cal-day-selected', 'cal-day-range-end');
+            }
+            if (crRangeStart && crRangeEnd && dateObj > crRangeStart && dateObj < crRangeEnd) {
+                el.classList.add('cal-day-range-between');
+            }
+            if (crRangeStart && crRangeEnd && isSameDay(dateObj, crRangeStart) && isSameDay(dateObj, crRangeEnd)) {
+                el.classList.add('cal-day-range-start', 'cal-day-range-end');
+            }
+
+            el.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (el.classList.contains('cal-day-disabled') || el.classList.contains('cal-day-other')) return;
+                if (!crRangeStart || (crRangeStart && crRangeEnd)) {
+                    crRangeStart = dateObj;
+                    crRangeEnd = null;
+                } else {
+                    if (dateObj < crRangeStart) {
+                        crRangeStart = dateObj;
+                    } else {
+                        crRangeEnd = dateObj;
+                        updateDateDisplay();
+                        closeDatePopover();
+                        triggerActionsSearch();
+                        return;
+                    }
+                }
+                updateDateDisplay();
+                renderCalendar();
+            });
+
+            crCalGrid.appendChild(el);
+            dayIdx++;
+        }
+
+        const days = crCalGrid.querySelectorAll('.cal-day:not(.cal-day-empty)');
+        days.forEach((el, idx) => {
+            el.style.animationDelay = `${idx * 15}ms`;
+            el.classList.add('cal-day-animate');
+        });
+    }
+
+    function closeDatePopover() {
+        crDatePopover.style.display = 'none';
+        crDateTrigger.classList.remove('is-open');
+    }
+
+    function toggleDatePopover() {
+        const isOpen = crDatePopover.style.display !== 'none';
+        if (isOpen) {
+            closeDatePopover();
+        } else {
+            if (crRangeStart) {
+                crViewMonth = crRangeStart.getMonth();
+                crViewYear = crRangeStart.getFullYear();
+            }
+            renderCalendar();
+            crDatePopover.style.display = 'block';
+            crDateTrigger.classList.add('is-open');
+        }
+    }
+
+    // ── Datepicker: Init ──
+    populateMonths();
+    populateYears();
+    crDateTrigger.addEventListener('click', toggleDatePopover);
+    crCalPrev.addEventListener('click', () => { crViewMonth--; if (crViewMonth < 0) { crViewMonth = 11; crViewYear--; } renderCalendar('left'); });
+    crCalNext.addEventListener('click', () => { crViewMonth++; if (crViewMonth > 11) { crViewMonth = 0; crViewYear++; } renderCalendar('right'); });
+    crFilterMonth.addEventListener('change', () => { crViewMonth = parseInt(crFilterMonth.value, 10); renderCalendar(); });
+    crFilterYear.addEventListener('change', () => { crViewYear = parseInt(crFilterYear.value, 10); renderCalendar(); });
+    crCalToday.addEventListener('click', () => { crViewMonth = crToday.getMonth(); crViewYear = crToday.getFullYear(); renderCalendar(); });
+
+    // Close popover on click outside
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.cr-datepicker-wrapper')) closeDatePopover();
+    });
+
+    // ========== CHECKBOX SELECT ALL ==========
+    document.addEventListener('change', (e) => {
+        if (e.target.id === 'checkbox-select-all') {
+            if (e.target.checked) {
+                const checkboxes = [...document.querySelectorAll('.patient-checkbox:not(:disabled)')];
+                for (const cb of checkboxes) {
+                    if (selectedDNIs.length >= 20) break;
+                    const dni = cb.dataset.dni;
+                    if (!selectedDNIs.includes(dni)) {
+                        selectedDNIs.push(dni);
+                        cb.checked = true;
+                    }
+                }
+            } else {
+                selectedDNIs = [];
+                document.querySelectorAll('.patient-checkbox').forEach(cb => cb.checked = false);
+            }
+            updateActionsBar();
+        }
+    });
 
     // ========== GESTIÓN ALERTA FLOTANTE (Inyección en Header) ==========
     const updateAlertaBanner = () => {
-        if (isValidating) return; // No mostrar alerta roja si estamos validando (banner azul activo)
+        if (isValidating) return;
+        if (!templateAlerta || !templateAlerta.content || !templateAlerta.content.children.length) return;
 
         const tryInject = () => {
             const header = document.querySelector('.top-header');
@@ -126,8 +368,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (hayAlerta) {
                 if (!banner) {
+                    if (!templateAlerta.content || !templateAlerta.content.children.length) return;
                     const clone = templateAlerta.content.cloneNode(true);
                     banner = clone.querySelector('#alerta-banner');
+                    if (!banner) return;
                     banner.style.position = 'fixed';
                     banner.style.left = '50%';
                     banner.style.top = '35px';
@@ -146,49 +390,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         tryInject();
     };
 
-    // ========== GESTIÓN BANNER PROGRESO (Azul) ==========
-    const showProgresoBanner = (segundos) => {
-        isValidating = true;
-        const header = document.querySelector('.top-header');
-        if (!header) return;
-
-        // Quitar alerta roja si existe
-        const alertaRoja = document.getElementById('alerta-banner');
-        if (alertaRoja) alertaRoja.remove();
-
-        const clone = templateProgreso.content.cloneNode(true);
-        const banner = clone.querySelector('#progreso-banner');
-        const countSpan = banner.querySelector('#countdown-val');
-
-        banner.style.position = 'fixed';
-        banner.style.left = '50%';
-        banner.style.top = '35px';
-        banner.style.transform = 'translate(-50%, -50%)';
-        banner.style.zIndex = '10001'; // Superior al overlay
-
-        document.body.appendChild(banner);
-
-        let rem = segundos;
-        countSpan.textContent = rem;
-
-        countdownInterval = setInterval(() => {
-            rem--;
-            if (rem < 0) rem = 0;
-            countSpan.textContent = rem;
-        }, 1000);
+    // ========== CONTROL OVERLAY DE VALIDACIÓN ==========
+    const updateOverlay = (msg) => {
+        const el = document.getElementById('overlay-msg');
+        if (el) el.textContent = msg;
     };
 
-    const hideProgresoBanner = () => {
+    const showLoadingOverlay = (msg) => {
+        isValidating = true;
+        const alertaRoja = document.getElementById('alerta-banner');
+        if (alertaRoja) alertaRoja.remove();
+        updateOverlay(msg);
+        blockingOverlay.style.display = 'flex';
+    };
+
+    const hideLoadingOverlay = () => {
         isValidating = false;
-        if (countdownInterval) clearInterval(countdownInterval);
-        const banner = document.getElementById('progreso-banner');
-        if (banner) {
-            banner.style.animation = 'fluidSlideDown 0.4s reverse cubic-bezier(0.16, 1, 0.3, 1) forwards';
-            setTimeout(() => {
-                banner.remove();
-                updateAlertaBanner(); // Restaurar alerta roja si aplica
-            }, 400);
-        }
+        blockingOverlay.style.display = 'none';
+        updateAlertaBanner();
     };
 
     // ========== OBTENER ESTADO EFECTIVO ==========
@@ -211,6 +430,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const start = (crCurrentPage - 1) * crRowsPerPage;
         const pageData = accumulatedResults.slice(start, start + crRowsPerPage);
+
+        const formatDniDisplay = (dni, tipo) => {
+            const PREFIX_MAP = { DNI: '', DNI_TEMPORAL: 'E- ', CARNET_EXT: 'C.E ' };
+            const prefix = PREFIX_MAP[tipo] || '';
+            return prefix ? prefix + dni : dni;
+        };
 
         pageData.forEach(p => {
             const tr = document.createElement('tr');
@@ -251,6 +476,16 @@ document.addEventListener('DOMContentLoaded', async () => {
                 estadoHTML = `<span class="condicion-badge" style="background:#f1f5f9; color:#94a3b8; border-left:3px solid #cbd5e1;">N/A</span>`;
             }
 
+            // Badge Condición
+            const condicionStyles = {
+                'HOSPITALIZADO': 'background:#e0f2fe; color:#0284c7; border-left:3px solid #0ea5e9;',
+                'ALTA': 'background:#dcfce7; color:#16a34a; border-left:3px solid #22c55e;',
+                'FALLECIDO': 'background:#fee2e2; color:#dc2626; border-left:3px solid #ef4444;',
+            };
+            const condicionVal = p.condicion || '';
+            const condicionStyle = condicionStyles[condicionVal.toUpperCase()] || 'background:#f1f5f9; color:#94a3b8; border-left:3px solid #cbd5e1;';
+            const condicionHTML = `<span class="condicion-badge" style="${condicionStyle}">${condicionVal || 'N/A'}</span>`;
+
             // Última validación
             let ultValidacionHTML = '<span style="color:#94a3b8; font-size:12px;">—</span>';
             if (ultimaValidacion) {
@@ -271,7 +506,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <td style="text-align:center;">
                     <input type="checkbox" class="patient-checkbox" data-dni="${p.dni}" ${selectedDNIs.includes(p.dni) ? 'checked' : ''} ${isFallecido ? 'disabled' : ''}>
                 </td>
-                <td>${p.dni}</td>
+                <td>${formatDniDisplay(p.dni, p.tipo_documento)}</td>
                 <td>
                     <div style="color:#0f172a;">${p.apellidos}, ${p.nombres}</div>
                     ${nacFormateada ? `<div style="font-size:11px; color:#94a3b8; margin-top:2px;"><i class="fa-regular fa-calendar" style="margin-right:3px;"></i>${nacFormateada}</div>` : ''}
@@ -280,6 +515,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <td>${seguroDeclaradoHTML}</td>
                 <td>${seguroExtraidoHTML}</td>
                 <td>${estadoHTML}</td>
+                <td>${condicionHTML}</td>
                 <td>${ultValidacionHTML}</td>
                 <td style="text-align:center;">${accionHTML}</td>
             `;
@@ -289,9 +525,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             checkbox.addEventListener('change', (e) => {
                 const dni = e.target.getAttribute('data-dni');
                 if (e.target.checked) {
-                    if (selectedDNIs.length >= 2) {
+                    if (selectedDNIs.length >= 20) {
                         e.target.checked = false;
-                        showToast('Solo puede seleccionar un máximo de 2 registros para validación rápida.', true);
                         return;
                     }
                     selectedDNIs.push(dni);
@@ -315,7 +550,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     } else {
                         // Re-validar normalmente
                         if (!selectedDNIs.includes(dni)) {
-                            if (selectedDNIs.length >= 2) {
+                            if (selectedDNIs.length >= 20) {
                                 showToast('Desmarque un paciente para re-validar este.', true);
                                 return;
                             }
@@ -352,16 +587,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     // ========== BÚSQUEDA ACUMULATIVA ==========
-    const loadPacientes = async () => {
+    const loadPacientes = async (replace = false) => {
         const dni = inputDNI.value.trim();
         const hc = inputHC.value.trim();
         const apellidos = inputApellidos.value.trim();
+        const { start: fechaDesde, end: fechaHasta } = getDateRangeValues();
+        const condicionVal = filterCondicion.value;
+
+        if (replace) {
+            accumulatedResults = [];
+            selectedDNIs = [];
+            updateActionsBar();
+        }
 
         sessionStorage.setItem('cr_filter_dni', dni);
         sessionStorage.setItem('cr_filter_hc', hc);
         sessionStorage.setItem('cr_filter_apellidos', apellidos);
+        sessionStorage.setItem('cr_filter_fecha_desde', fechaDesde || '');
+        sessionStorage.setItem('cr_filter_fecha_hasta', fechaHasta || '');
+        sessionStorage.setItem('cr_filter_condicion', condicionVal);
 
-        if (!dni && !hc && !apellidos) {
+        if (!dni && !hc && !apellidos && !fechaDesde && !fechaHasta && !condicionVal) {
             showToast('Use los filtros para buscar pacientes.', true);
             return;
         }
@@ -375,21 +621,23 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (dni) query = query.ilike('dni', `%${dni}%`);
             if (hc) query = query.ilike('historia_clinica', `%${hc}%`);
             if (apellidos) query = query.ilike('apellidos', `%${normalizeText(apellidos)}%`);
+            if (fechaDesde) query = query.gte('creado_en', `${fechaDesde}T00:00:00`);
+            if (fechaHasta) query = query.lte('creado_en', `${fechaHasta}T23:59:59`);
+            if (condicionVal) query = query.eq('condicion', condicionVal);
 
             const { data, error } = await query;
 
             if (error) throw error;
 
             if (data.length === 0) {
-                showToast('No se encontraron pacientes.', true);
+                showToast('No se encontraron pacientes.');
             } else {
-                // ACUMULAR: agregar pacientes nuevos sin duplicar
                 data.forEach(nuevo => {
                     const existente = accumulatedResults.findIndex(p => p.id === nuevo.id);
                     if (existente >= 0) {
-                        accumulatedResults[existente] = nuevo; // Actualizar datos
+                        accumulatedResults[existente] = nuevo;
                     } else {
-                        accumulatedResults.unshift(nuevo); // Agregar al inicio
+                        accumulatedResults.unshift(nuevo);
                     }
                 });
                 crCurrentPage = 1;
@@ -416,9 +664,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         inputDNI.value = '';
         inputHC.value = '';
         inputApellidos.value = '';
+        crRangeStart = null;
+        crRangeEnd = null;
+        updateDateDisplay();
+        filterCondicion.value = '';
+        if (filterCondicion.customDropdownUpdate) filterCondicion.customDropdownUpdate();
         sessionStorage.removeItem('cr_filter_dni');
         sessionStorage.removeItem('cr_filter_hc');
         sessionStorage.removeItem('cr_filter_apellidos');
+        sessionStorage.removeItem('cr_filter_fecha_desde');
+        sessionStorage.removeItem('cr_filter_fecha_hasta');
+        sessionStorage.removeItem('cr_filter_condicion');
         sessionStorage.removeItem('cr_accumulated');
         accumulatedResults = [];
         selectedDNIs = [];
@@ -426,16 +682,39 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderTable();
     });
 
+    // ========== CANCELAR VALIDACIÓN ==========
+    const btnCancelValidacion = document.getElementById('btn-cancel-validacion');
+    if (btnCancelValidacion) {
+        btnCancelValidacion.addEventListener('click', () => {
+            if (currentSearchController) {
+                currentSearchController.abort();
+            }
+        });
+    }
+
     // ========== VALIDACIÓN RPA ==========
     const btnValidar = document.getElementById('btn-validar');
     btnValidar.addEventListener('click', async () => {
         if (selectedDNIs.length === 0) return;
 
-        btnValidar.disabled = true;
-        blockingOverlay.style.display = 'flex';
+        // Verificar si hay pacientes no-DNI seleccionados
+        const nonDniSelected = selectedDNIs.some(dni => {
+            const p = accumulatedResults.find(pac => pac.dni === dni);
+            return p && p.tipo_documento && p.tipo_documento !== 'DNI';
+        });
 
-        // Mostrar banner azul con estimado (aprox 12s por lote de 1-2)
-        showProgresoBanner(20);
+        if (nonDniSelected) {
+            if (window.showSystemTooltip) {
+                window.showSystemTooltip('Este paciente no cuenta con\nCódigo de Verificación\npara realizar la consulta', true);
+            }
+            return;
+        }
+
+        currentSearchController = new AbortController();
+        const signal = currentSearchController.signal;
+
+        btnValidar.disabled = true;
+        showLoadingOverlay('Validando seguro en EsSalud...');
 
         try {
             const pacientesParaValidar = selectedDNIs.map(dni => {
@@ -449,17 +728,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (pacientesParaValidar.length === 0) {
                 showToast('Ningún paciente válido seleccionado.', true);
-
                 btnValidar.disabled = false;
-                blockingOverlay.style.display = 'none';
-                hideProgresoBanner();
+                hideLoadingOverlay();
                 return;
             }
 
             const response = await fetch('https://sistema-sis-production-5b60.up.railway.app/validate-batch', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ pacientes: pacientesParaValidar })
+                body: JSON.stringify({ pacientes: pacientesParaValidar }),
+                signal: signal
             });
 
             if (!response.ok) throw new Error('Error en la respuesta del servidor RPA');
@@ -476,7 +754,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const seguroDeclarado = (paciente.tipo_seguro || '').toUpperCase();
                     const seguroExtraido = (res.seguro || '').toUpperCase();
 
-                    // Lógica de validación: ÉXITO, ALERTA o ERROR
                     let estado;
                     if (seguroExtraido.includes('SIN COBERTURA') || seguroExtraido.includes('NO TIENE')) {
                         estado = 'ÉXITO';
@@ -485,15 +762,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                     } else if (!res.success) {
                         estado = 'ERROR';
                     } else {
-                        estado = 'ALERTA'; // Seguro declarado ≠ seguro extraído
+                        estado = 'ALERTA';
                     }
 
-                    // Actualizar datos locales
                     paciente._seguro_extraido = res.seguro;
                     paciente._estado_rpa = estado;
                     paciente._ultima_validacion_rpa = ahora;
 
-                    // Guardar en BD
                     try {
                         await supabaseClient.from('pacientes').update({
                             seguro_extraido: res.seguro,
@@ -526,11 +801,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
         } catch (err) {
-            showToast('Error al conectar con el servicio RPA: ' + err.message, true);
+            if (err.name === 'AbortError' || err.message === 'AbortError') {
+                showToast('Validación cancelada');
+            } else {
+                showToast('Error al conectar con el servicio RPA: ' + err.message, true);
+            }
         } finally {
             btnValidar.disabled = false;
-            blockingOverlay.style.display = 'none';
-            hideProgresoBanner();
+            hideLoadingOverlay();
+            currentSearchController = null;
         }
     });
 
@@ -806,7 +1085,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
                 // 2. Seleccionar el registro (el b&#250;squeda ya renderiz&#243; la tabla)
                 const pac = accumulatedResults.find(p => p.dni === autoDNI);
-                if (pac && (!pac.condicion || pac.condicion.toUpperCase() !== 'FALLECIDO')) {
+                if (pac && (!pac.tipo_documento || pac.tipo_documento === 'DNI') && (!pac.condicion || pac.condicion.toUpperCase() !== 'FALLECIDO')) {
                     if (!selectedDNIs.includes(autoDNI)) {
                         selectedDNIs.push(autoDNI);
                         updateActionsBar();
