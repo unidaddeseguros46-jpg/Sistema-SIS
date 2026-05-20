@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const filterCondicion = document.getElementById('filter-condicion');
     const filterServicio = document.getElementById('filter-servicio');
     const btnHastaHoy = document.getElementById('btn-hasta-hoy');
+    const patientCountEl = document.getElementById('cr-patient-count');
 
     // ── Datepicker ──
     const crDateTrigger = document.getElementById('cr-date-trigger');
@@ -162,6 +163,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const updateActionsBar = () => {
         document.getElementById('btn-validar').disabled = selectedDNIs.length === 0;
+        updatePatientCount();
+    };
+
+    const updatePatientCount = () => {
+        const total = accumulatedResults.length;
+        const selected = selectedDNIs.length;
+        let text = '';
+        if (total > 0) {
+            text = `${total} pacientes`;
+            if (selected > 0) text += ` | ${selected} seleccionados`;
+        }
+        patientCountEl.textContent = text;
     };
 
     const getDateRangeValues = () => {
@@ -456,6 +469,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             tablePacientes.style.display = 'none';
             paginationContainer.innerHTML = '';
             updateAlertaBanner();
+            updatePatientCount();
             return;
         }
 
@@ -562,6 +576,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (e.target.checked) {
                     if (selectedDNIs.length >= 20) {
                         e.target.checked = false;
+                        showToast('Solo se pueden seleccionar como máximo 20 pacientes.', true);
                         return;
                     }
                     selectedDNIs.push(dni);
@@ -603,6 +618,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         tablePacientes.style.display = 'table';
         renderPagination(totalPages);
         updateAlertaBanner();
+        updatePatientCount();
     };
 
     const renderPagination = (totalPages) => {
