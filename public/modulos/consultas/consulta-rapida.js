@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let selectedDNIs = [];
     let hastaHoyActive = false;
     let crCurrentPage = 1;
-    let crRowsPerPage = 10;
+    let crRowsPerPage = 20;
     let modalPacienteActual = null;
     let susaludCreds = null;
 
