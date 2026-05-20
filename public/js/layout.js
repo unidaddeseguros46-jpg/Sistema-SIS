@@ -126,7 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     } else if (currentPage === 'consulta-rapida.html') {
                         return '<span class="welcome-dark">CONSULTA A WEB </span><span class="welcome-celeste">DONDE ME ATIENDO</span>';
                     } else if (currentPage === 'consulta-datos.html') {
-                        return '<span class="welcome-dark">CONSULTA DE </span><span class="welcome-celeste">DATOS</span>';
+                        return '<span class="welcome-dark">CÓDIGO / FECHA_NAC / </span><span class="welcome-celeste">SEGURO</span>';
                     } else if (currentPage === 'reportes.html') {
                         return '<span class="welcome-dark">EXCEL / </span><span class="welcome-celeste">PDF</span>';
                     }

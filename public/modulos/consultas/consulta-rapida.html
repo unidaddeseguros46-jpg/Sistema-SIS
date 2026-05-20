@@ -91,6 +91,9 @@
                             <div class="cal-days-grid" id="cr-cal-days-grid" style="display:grid; grid-template-columns:repeat(7,1fr); gap:3px;"></div>
                         </div>
                     </div>
+                    <button class="btn-module btn-clear-hover" id="btn-hasta-hoy" style="padding:8px 15px; height:42px; font-weight:500; display:flex; align-items:center; gap:6px; border-radius:8px; transition:all 0.2s; border:1px solid #e2e8f0; background:#f1f5f9; color:#475569;">
+                        <i class="fa-solid fa-calendar-day"></i> Hasta hoy
+                    </button>
                     <div class="global-search-box" style="width: 170px; display: flex; align-items: center; background: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; padding: 0 15px; position: relative; height: 42px;">
                         <i class="fa-solid fa-filter" style="color: #64748b; margin-right: 10px;"></i>
                         <select id="filter-condicion" class="global-search-input custom-select-source" style="border: none; padding: 0; outline: none; flex: 1; min-width: 0; appearance: none; -webkit-appearance: none; cursor: pointer; color: #94a3b8; background: transparent; font-size: 13px;">
@@ -98,6 +101,13 @@
                             <option value="HOSPITALIZADO">HOSPITALIZADO</option>
                             <option value="ALTA">ALTA</option>
                             <option value="FALLECIDO">FALLECIDO</option>
+                        </select>
+                        <i class="fa-solid fa-chevron-down" style="position: absolute; right: 15px; color: #64748b; font-size: 12px; pointer-events: none;"></i>
+                    </div>
+                    <div class="global-search-box" style="width: 170px; display: flex; align-items: center; background: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; padding: 0 15px; position: relative; height: 42px;">
+                        <i class="fa-solid fa-building" style="color: #64748b; margin-right: 10px;"></i>
+                        <select id="filter-servicio" class="global-search-input custom-select-source" data-servicio="upper" style="border: none; padding: 0; outline: none; flex: 1; min-width: 0; appearance: none; -webkit-appearance: none; cursor: pointer; color: #94a3b8; background: transparent; font-size: 13px;">
+                            <option value="">TODOS</option>
                         </select>
                         <i class="fa-solid fa-chevron-down" style="position: absolute; right: 15px; color: #64748b; font-size: 12px; pointer-events: none;"></i>
                     </div>
@@ -138,6 +148,7 @@
                                 <th>Seguro Extra&#237;do</th>
                                 <th>Estado</th>
                                 <th>Condici&#243;n</th>
+                                <th>Servicio Actual</th>
                                 <th>&#218;lt. Validaci&#243;n</th>
                                 <th style="width: 60px; text-align: center;">&#8635;</th>
                             </tr>
@@ -270,6 +281,11 @@
         .susalud-copy-btn[data-creds="usuario"]:hover { color: #3b82f6 !important; }
         .susalud-copy-btn[data-creds="clave"]:hover { color: #10b981 !important; }
 
+        /* ── Hasta hoy ── */
+        #btn-hasta-hoy.active { background: #eff6ff !important; border-color: #3b82f6 !important; color: #1d4ed8 !important; }
+        @keyframes btnPulse { 0%,100% { border-color:#e2e8f0; box-shadow:0 0 0 0 rgba(64,64,64,0.2); } 50% { border-color:#404040; box-shadow:0 0 0 6px rgba(64,64,64,0.1); } }
+        .btn-pulse { animation: btnPulse 0.5s ease-in-out 4; }
+
         /* ── Datepicker Calendar ── */
         .cr-date-trigger:hover { border-color: #cbd5e1 !important; }
         .cr-date-trigger.is-open { border-color: #3b82f6 !important; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
@@ -313,6 +329,7 @@
 
     <script src="../../js/supabase-config.js"></script>
     <script src="../../js/layout.js"></script>
+    <script src="../../js/servicios.js"></script>
     <script src="../../js/custom-select.js"></script>
     <script src="consulta-rapida.js"></script>
 </body>

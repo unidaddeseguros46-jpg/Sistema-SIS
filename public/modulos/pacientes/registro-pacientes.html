@@ -61,19 +61,10 @@
                          <div class="global-search-box"
                              style="width: 250px; display: flex; align-items: center; background: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; padding: 0 15px; position: relative; height: 42px;">
                              <i class="fa-solid fa-filter" style="color: #64748b; margin-right: 10px;"></i>
-                             <select id="filter-servicio" class="global-search-input custom-select-source"
-                                 style="border: none; padding: 0; outline: none; flex: 1; min-width: 0; appearance: none; -webkit-appearance: none; cursor: pointer; color: #94a3b8; background: transparent;">
-                                 <option value="" style="color: #94a3b8;">TODOS</option>
-                                <option value="Shock trauma">Shock trauma</option>
-                                <option value="Salud mental">Salud mental</option>
-                                <option value="UVI">UVI</option>
-                                <option value="Medicina">Medicina</option>
-                                <option value="Cirugía">Cirugía</option>
-                                <option value="Pediatría">Pediatría</option>
-                                <option value="Neonatología">Neonatología</option>
-                                <option value="Ginecología">Ginecología</option>
-                                <option value="Puerperio">Puerperio</option>
-                             </select>
+                              <select id="filter-servicio" class="global-search-input custom-select-source" data-servicio
+                                  style="border: none; padding: 0; outline: none; flex: 1; min-width: 0; appearance: none; -webkit-appearance: none; cursor: pointer; color: #94a3b8; background: transparent;">
+                                   <option value="" style="color: #94a3b8;">TODOS</option>
+                              </select>
                              <i class="fa-solid fa-chevron-down"
                                  style="position: absolute; right: 15px; color: #64748b; font-size: 12px; pointer-events: none;"></i>
                          </div>
@@ -184,8 +175,9 @@
                         <!-- FILA 3: HC | TIPO SEGURO (2+2) + GRUPO OTROS (2) -->
                         <div class="input-stacked col-span-2" id="field-hc">
                             <label>Nº Historia Clínica</label>
-                            <input type="text" id="paciente-hc" class="standard-input hc-input"
-                                oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+    <input type="text" id="paciente-hc" class="standard-input hc-input"
+        placeholder="Opcional"
+        oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                         </div>
 
                         <div class="input-stacked col-span-2">
@@ -216,17 +208,8 @@
                             <label>Servicio</label>
                             <div class="global-search-box" style="width:100%; display:flex; align-items:center; background:#ffffff; border-radius:8px; border:1px solid #e2e8f0; padding:0 15px; position:relative; height:42px;">
                                 <i class="fa-solid fa-building" style="color:#64748b; margin-right:10px;"></i>
-                                <select id="paciente-servicio" class="global-search-input custom-select-source" required style="border:none; padding:0; outline:none; flex:1; min-width:0; appearance:none; -webkit-appearance:none; cursor:pointer; color:inherit; background:transparent; font-size:13px;">
+                                <select id="paciente-servicio" class="global-search-input custom-select-source" data-servicio required style="border:none; padding:0; outline:none; flex:1; min-width:0; appearance:none; -webkit-appearance:none; cursor:pointer; color:inherit; background:transparent; font-size:13px;">
                                     <option value="" disabled selected hidden>Seleccione Servicio</option>
-                                    <option value="Shock trauma">Shock trauma</option>
-                                    <option value="Salud mental">Salud mental</option>
-                                    <option value="UVI">UVI</option>
-                                    <option value="Medicina">Medicina</option>
-                                    <option value="Cirugía">Cirugía</option>
-                                    <option value="Pediatría">Pediatría</option>
-                                    <option value="Neonatología">Neonatología</option>
-                                    <option value="Ginecología">Ginecología</option>
-                                    <option value="Puerperio">Puerperio</option>
                                 </select>
                                 <i class="fa-solid fa-chevron-down" style="position:absolute; right:15px; color:#64748b; font-size:12px; pointer-events:none;"></i>
                             </div>
@@ -326,6 +309,7 @@
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://npmcdn.com/flatpickr/dist/l10n/es.js"></script>
     <script src="../../js/supabase-config.js"></script>
+    <script src="../../js/servicios.js"></script>
     <script src="../../js/custom-select.js"></script>
     <script src="../../js/layout.js"></script>
     <script src="../../js/dynamic-table.js"></script>

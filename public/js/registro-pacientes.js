@@ -195,8 +195,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (tempStyle) tempStyle.remove();
             document.body.style.display = 'block';
 
-            // Ocultar HC y Condición en modo modal
-            if (fieldHc) fieldHc.style.display = 'none';
+            // Ocultar Condición en modo modal
             if (fieldCondicion) fieldCondicion.style.display = 'none';
         }
 
@@ -830,11 +829,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             tipo_documento: tipoDocumento?.value || 'DNI'
         };
 
-        // historia_clinica: incluir solo si visible y con valor
-        if (!isModal) {
-            const hcVal = document.getElementById('paciente-hc').value.trim();
-            if (hcVal) payload.historia_clinica = hcVal;
-        }
+        const hcVal = document.getElementById('paciente-hc').value.trim();
+        if (hcVal) payload.historia_clinica = hcVal;
 
         // If newly inserted
         if (!objectId) {
