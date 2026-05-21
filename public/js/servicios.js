@@ -33,7 +33,9 @@ function populateServicioSelects() {
             opt.value = val; opt.textContent = val;
             select.appendChild(opt);
         });
-        select.value = currentValue;
+        if (currentValue !== '' || !hasPlaceholder) {
+            select.value = currentValue;
+        }
     });
 }
 

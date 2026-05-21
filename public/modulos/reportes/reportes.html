@@ -7,27 +7,298 @@
     <link rel="stylesheet" href="../../css/styles.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        .reports-page { display: flex; flex-direction: column; gap: 20px; }
+
+        /* ── Actions bar ── */
+        .rp-actions-bar {
+            background: #ffffff;
+            border-radius: 14px;
+            padding: 16px 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            border: 1px solid #cbd5e1;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        /* ── Date trigger ── */
+        .rp-date-trigger {
+            height: 42px; display: flex; align-items: center;
+            background: #ffffff; border-radius: 8px;
+            border: 1px solid #cbd5e1; padding: 0 14px;
+            cursor: pointer; gap: 8px; transition: border-color 0.2s, box-shadow 0.2s;
+            min-width: 260px;
+        }
+        .rp-date-trigger:hover { border-color: #94a3b8; }
+        .rp-date-trigger.is-open { border-color: #1e40af; box-shadow: 0 0 0 3px rgba(30,64,175,0.12); }
+        .rp-date-display {
+            flex: 1; font-size: 13px; color: #94a3b8;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .rp-date-hastahoy .rp-date-display { color: #1e40af; font-weight: 600; }
+
+        .rp-date-popover {
+            display: none; position: absolute; top: calc(100% + 6px); left: 0;
+            z-index: 10002; background: #ffffff; border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.14), 0 2px 8px rgba(0,0,0,0.08);
+            padding: 16px 20px; width: 320px;
+            animation: popoverIn 0.2s cubic-bezier(0.16,1,0.3,1) forwards;
+        }
+        .rp-date-wrapper { position: relative; min-width: 260px; }
+
+        .cal-filters { display: flex; gap: 8px; align-items: flex-end; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #f1f5f9; }
+        .cal-filters .filter-group { display:flex; flex-direction:column; gap:3px; flex:1; }
+        .cal-filters .filter-group label { font-size:10px; font-weight:600; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em; }
+        .filter-select { padding:6px 10px; font-size:13px; font-weight:500; color:#0f172a; background:#f8fafc; border:1px solid #cbd5e1; border-radius:6px; outline:none; cursor:pointer; transition:border-color 0.2s,box-shadow 0.2s; min-width:0; width:100%; }
+        .filter-select:hover { border-color:#94a3b8; }
+        .filter-select:focus { border-color:#1e40af; box-shadow:0 0 0 3px rgba(30,64,175,0.12); background:#ffffff; }
+
+        .cal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+        .cal-nav-btn { width:32px; height:32px; border-radius:8px; border:1px solid #e2e8f0; background:#ffffff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:16px; color:#475569; transition:all 0.15s; }
+        .cal-nav-btn:hover { background:#f1f5f9; color:#1e40af; border-color:#cbd5e1; }
+        .cal-title { font-size:14px; font-weight:700; color:#0f172a; }
+        .cal-weekdays { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; margin-bottom:6px; }
+        .cal-weekdays span { text-align:center; font-size:11px; font-weight:600; color:#94a3b8; padding:4px 0; }
+
+        .cal-days-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; }
+        .cal-days-grid .cal-day { aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:500; color:#0f172a; background:#ffffff; border-radius:6px; cursor:pointer; transition:background 0.12s; position:relative; }
+        .cal-days-grid .cal-day:hover:not(.cal-day-empty):not(.cal-day-other):not(.cal-day-disabled) { background:#f1f5f9; color:#1e40af; }
+        .cal-days-grid .cal-day-empty { cursor:default; }
+        .cal-days-grid .cal-day-other { color:#cbd5e1; cursor:default; }
+        .cal-days-grid .cal-day-other:hover { background:transparent; }
+        .cal-days-grid .cal-day-today { background:rgba(30,64,175,0.08); font-weight:700; color:#1e40af; }
+        .cal-days-grid .cal-day-today:hover { background:rgba(30,64,175,0.14); }
+        .cal-days-grid .cal-day-selected { background:#1e40af !important; color:#ffffff !important; font-weight:700; box-shadow:0 2px 8px rgba(30,64,175,0.3); }
+        .cal-days-grid .cal-day-range-start { background:#1e40af !important; color:#ffffff !important; font-weight:700; border-radius:6px 0 0 6px; }
+        .cal-days-grid .cal-day-range-end { background:#1e40af !important; color:#ffffff !important; font-weight:700; border-radius:0 6px 6px 0; }
+        .cal-days-grid .cal-day-range-between { background:rgba(30,64,175,0.1); color:#0f172a; border-radius:0; }
+        .cal-days-grid .cal-day-range-start.cal-day-range-end { border-radius:6px; }
+        .cal-days-grid .cal-day-disabled { cursor:not-allowed; opacity:0.4; }
+        .cal-day-animate { animation:dayPop 0.25s cubic-bezier(0.16,1,0.3,1) both; }
+        .cal-slide-left { animation:slideInLeft 0.25s cubic-bezier(0.16,1,0.3,1) forwards; }
+        .cal-slide-right { animation:slideInRight 0.25s cubic-bezier(0.16,1,0.3,1) forwards; }
+
+        @keyframes slideInLeft { from { opacity:0; transform:translateX(-20px) scale(0.97); } to { opacity:1; transform:translateX(0) scale(1); } }
+        @keyframes slideInRight { from { opacity:0; transform:translateX(20px) scale(0.97); } to { opacity:1; transform:translateX(0) scale(1); } }
+        @keyframes popoverIn { from { opacity:0; transform:translateY(4px) scale(0.96); } to { opacity:1; transform:translateY(0) scale(1); } }
+        @keyframes dayPop { from { opacity:0; transform:scale(0.7); } to { opacity:1; transform:scale(1); } }
+
+        /* ── Hasta hoy ── */
+        .rp-hastahoy-btn { height:42px; padding:0 16px; font-size:13px; font-weight:600; display:flex; align-items:center; gap:6px; border-radius:8px; border:1px solid #cbd5e1; background:#f8fafc; color:#475569; cursor:pointer; transition:all 0.2s; white-space:nowrap; }
+        .rp-hastahoy-btn:hover { background:#f1f5f9; border-color:#94a3b8; }
+        .rp-hastahoy-btn.active { background:#eff6ff !important; border-color:#1e40af !important; color:#1e40af !important; }
+        @keyframes btnPulse { 0%,100% { border-color:#cbd5e1; box-shadow:0 0 0 0 rgba(30,64,175,0.2); } 50% { border-color:#1e40af; box-shadow:0 0 0 6px rgba(30,64,175,0.12); } }
+        .btn-pulse { animation:btnPulse 0.5s ease-in-out 4; }
+
+        /* ── Generate button ── */
+        .rp-generate-btn { height:42px; padding:0 24px; background:#1e40af; color:#ffffff; border:none; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:8px; transition:background 0.2s,transform 0.15s; white-space:nowrap; }
+        .rp-generate-btn:hover { background:#1e3a8a; transform:translateY(-1px); }
+        .rp-generate-btn:active { transform:translateY(0); }
+        .rp-generate-btn:disabled { opacity:0.6; cursor:not-allowed; transform:none; }
+
+        /* ── Main layout 3/8 + 5/8 ── */
+        .rp-reports-layout { display: flex; gap: 20px; align-items: flex-start; }
+        .rp-layout-left { flex: 2.5; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+        .rp-layout-right { flex: 7.5; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+
+        .chart-card {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            border: 1px solid #cbd5e1;
+        }
+        .chart-card h3 {
+            font-size: 14px; font-weight: 700; color: #0f172a;
+            margin: 0 0 16px 0; display: flex; align-items: center; gap: 8px;
+        }
+        .chart-card h3 i { color: #1e40af; font-size: 15px; }
+
+        .chart-wrapper { position: relative; width: 100%; }
+        .chart-wrapper.score-size { height: 200px; max-width: 200px; margin: 0 auto; }
+        .sc-icon { font-size: 28px; color: #475569; display: block; text-align: center; margin: 6px 0; }
+
+        /* ── Service cards grid ── */
+        #service-list {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+        .service-card {
+            background: #ffffff;
+            border-radius: 10px;
+            padding: 16px;
+            border-top: 3px solid var(--scolor, #2563eb);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .sc-title { font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.03em; text-align: center; }
+        .sc-value { font-size: 28px; font-weight: 700; color: #0f172a; line-height: 1.1; text-align: center; }
+        .sc-pct { font-size: 12px; color: #64748b; font-weight: 500; text-align: center; }
+        .sc-bar { height: 4px; background: #f1f5f9; border-radius: 4px; overflow: hidden; }
+        .sc-bar-fill { height: 100%; border-radius: 4px; background: var(--scolor, #2563eb); }
+
+        /* ── Seguro list ── */
+        #seguro-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .seguro-list-item {
+            display: flex; align-items: center; gap: 10px; padding: 5px 0;
+            border-bottom: 1px solid #f8fafc;
+        }
+        .seguro-list-item:last-child { border-bottom: none; }
+        .sl-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+        .sl-name { flex: 1; font-size: 13px; font-weight: 500; color: #0f172a; }
+        .sl-count { font-size: 14px; font-weight: 700; color: #0f172a; }
+        .sl-bar {
+            width: 60px; height: 6px; background: #f1f5f9; border-radius: 4px; overflow: hidden; flex-shrink: 0;
+        }
+        .sl-bar-fill { height: 100%; border-radius: 4px; }
+
+        /* ── Loading ── */
+        .loading-overlay { display:none; align-items:center; justify-content:center; gap:12px; padding:40px; color:#64748b; font-size:15px; }
+        .loading-overlay.active { display:flex; }
+        .loading-overlay .spinner-reports { width:24px; height:24px; border:3px solid #e2e8f0; border-top-color:#1e40af; border-radius:50%; animation:spin 0.6s linear infinite; }
+
+        .no-data-msg { text-align:center; padding:40px; color:#94a3b8; font-size:15px; }
+        .no-data-msg i { font-size:40px; display:block; margin-bottom:12px; color:#cbd5e1; }
+        .empty-list { text-align:center; padding:20px; color:#94a3b8; font-size:13px; }
+
+        .export-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+        .btn-export { padding:8px 16px; border-radius:8px; font-size:13px; font-weight:600; border:none; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all 0.2s; }
+        .btn-export.excel { background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; }
+        .btn-export.excel:hover { background:#dcfce7; }
+        .btn-export.print { background:#eff6ff; color:#1e40af; border:1px solid #bfdbfe; }
+        .btn-export.print:hover { background:#dbeafe; }
+
+        /* ── Responsive ── */
+        @media (max-width: 1100px) {
+            .rp-reports-layout { flex-direction: column; }
+            .rp-layout-left, .rp-layout-right { flex: 1; width: 100%; }
+        }
+        @media (max-width: 768px) {
+            .rp-actions-bar { flex-direction: column; align-items: stretch; }
+            .rp-date-wrapper { min-width: auto; }
+            .rp-date-trigger { min-width: auto; }
+            .rp-generate-btn { width: 100%; justify-content: center; }
+            .chart-wrapper.score-size { height: 180px; max-width: 180px; }
+            #service-list { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 480px) {
+            .chart-card { padding: 14px; }
+            .sc-value { font-size: 24px; }
+            #service-list { grid-template-columns: 1fr; }
+        }
+
+        @media print {
+            .sidebar, .top-header, .rp-actions-bar, .export-actions,
+            .sidebar-toggle-btn, #sidebar-overlay,
+            .main-wrapper { padding-left: 0 !important; }
+            .page-content { margin-top: 0 !important; padding: 20px !important; max-width: 100% !important; }
+            .reports-page { gap: 12px; }
+            .chart-card { break-inside: avoid; border: 1px solid #cbd5e1; box-shadow: none; }
+            .chart-wrapper.score-size { height: 180px; max-width: 220px; }
+            .service-card, .seguro-list-item { break-inside: avoid; }
+            .rp-reports-layout { flex-direction: row; }
+            #service-list { grid-template-columns: repeat(4, 1fr); }
+            #seguro-cards { gap: 2px; }
+        }
+    </style>
 </head>
 <body>
     <div class="main-wrapper">
         <main class="page-content" id="page-content">
-            <div class="module-card dark-theme">
-                <h3>Vista en desarrollo</h3>
-                <p>Módulo de generación de reportes y exportación irá aquí.</p>
-                <a href="../../menu.html" class="btn-module primary" style="width: fit-content; margin-top:20px;">
-                    <i class="fa-solid fa-arrow-left"></i> Volver al Menú
-                </a>
+            <div class="reports-page">
+
+                <!-- ═══ Actions bar ═══ -->
+                <div class="rp-actions-bar">
+                    <div class="rp-date-wrapper">
+                        <div class="rp-date-trigger" id="rp-date-trigger">
+                            <i class="fa-regular fa-calendar" style="color:#64748b;"></i>
+                            <span class="rp-date-display" id="rp-date-display">Seleccionar rango de fechas</span>
+                            <i class="fa-solid fa-chevron-down" style="color:#94a3b8;font-size:11px;"></i>
+                        </div>
+                        <div class="rp-date-popover" id="rp-date-popover">
+                            <div class="cal-filters">
+                                <div class="filter-group">
+                                    <label>Mes</label>
+                                    <select id="rp-filter-month" class="filter-select"></select>
+                                </div>
+                                <div class="filter-group">
+                                    <label>Año</label>
+                                    <select id="rp-filter-year" class="filter-select"></select>
+                                </div>
+                                <button id="rp-cal-today" class="btn-module btn-clear-hover" style="padding:5px 12px;font-size:11px;white-space:nowrap;height:fit-content;">Hoy</button>
+                            </div>
+                            <div class="cal-header">
+                                <button class="cal-nav-btn" id="rp-cal-prev">‹</button>
+                                <div class="cal-title" id="rp-cal-title"></div>
+                                <button class="cal-nav-btn" id="rp-cal-next">›</button>
+                            </div>
+                            <div class="cal-weekdays"><span>D</span><span>L</span><span>M</span><span>MI</span><span>J</span><span>V</span><span>S</span></div>
+                            <div class="cal-days-grid" id="rp-cal-days-grid"></div>
+                        </div>
+                    </div>
+                    <button class="rp-hastahoy-btn" id="rp-hasta-hoy"><i class="fa-solid fa-calendar-day"></i> Hasta hoy</button>
+                    <div class="global-search-box" style="width:170px;display:flex;align-items:center;border-radius:8px;border:1px solid #cbd5e1;padding:0 12px;height:42px;position:relative;">
+                        <i class="fa-solid fa-building" style="color:#64748b;margin-right:8px;"></i>
+                        <select id="filter-servicio" class="global-search-input custom-select-source" data-servicio="upper" style="border:none;outline:none;flex:1;min-width:0;appearance:none;cursor:pointer;color:#475569;background:transparent;font-size:13px;">
+                            <option value="">TODOS</option>
+                        </select>
+                        <i class="fa-solid fa-chevron-down" style="position:absolute;right:15px;color:#64748b;font-size:12px;pointer-events:none;"></i>
+                    </div>
+                    <button class="rp-generate-btn" id="btn-generate"><i class="fa-solid fa-rotate"></i> Generar Reporte</button>
+                </div>
+
+                <!-- ═══ Loading ═══ -->
+                <div class="loading-overlay" id="loading-reports">
+                    <div class="spinner-reports"></div>
+                    <span>Cargando datos...</span>
+                </div>
+
+                <!-- ═══ Main layout ═══ -->
+                <div class="rp-reports-layout">
+
+                    <!-- ─── Left (2.5/10) ─── -->
+                    <div class="rp-layout-left">
+                        <div class="chart-card">
+                            <h3><i class="fa-solid fa-chart-pie"></i> Score</h3>
+                            <div class="chart-wrapper score-size"><canvas id="chart-score"></canvas></div>
+                        </div>
+                        <div class="chart-card">
+                            <h3><i class="fa-solid fa-list"></i> Distribución por Seguro</h3>
+                            <div id="seguro-cards"><div class="empty-list">Cargue un reporte para ver datos</div></div>
+                        </div>
+                    </div>
+
+                    <!-- ─── Right (7.5/10) ─── -->
+                    <div class="rp-layout-right">
+                        <div class="chart-card" style="height:100%;">
+                            <h3><i class="fa-solid fa-bed-pulse"></i> Pacientes por Servicio</h3>
+                            <div id="service-list"><div class="empty-list">Cargue un reporte para ver datos</div></div>
+                            <div class="export-actions">
+                                <button class="btn-export excel" id="btn-export-excel"><i class="fa-solid fa-file-excel"></i> Excel</button>
+                                <button class="btn-export print" id="btn-export-print"><i class="fa-solid fa-print"></i> Imprimir / PDF</button>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
             </div>
         </main>
     </div>
     <script src="../../js/supabase-config.js"></script>
     <script src="../../js/layout.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', async () => {
-            const { data: { session } } = await supabaseClient.auth.getSession();
-            if (!session) window.location.href = 'index.html';
-        });
-    </script>
+    <script src="../../js/servicios.js"></script>
+    <script src="../../js/custom-select.js"></script>
+    <script src="../../js/reportes.js"></script>
 </body>
 </html>
-

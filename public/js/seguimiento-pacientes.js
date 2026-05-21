@@ -122,7 +122,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             row.innerHTML = `
                 <td>${formatDniDisplay(item.dni, item.tipo_documento)}</td>
                 <td>${item.apellidos}, ${item.nombres}</td>
-                <td>${item.historia_clinica}</td>
+                <td>${item.historia_clinica || '—'}</td>
                 <td><span class="seguro-badge">${item.tipo_seguro}</span></td>
                 <td>${item.servicio || '-'}</td>
                 <td><span class="condicion-badge ${condClass}">${item.condicion || '—'}</span></td>

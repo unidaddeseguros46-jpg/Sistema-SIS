@@ -41,6 +41,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     const fieldHc = document.getElementById('field-hc');
     const fieldCondicion = document.getElementById('field-condicion');
 
+    // Referencias para el modal de Fecha de Ingreso
+    const modalOverlay = document.getElementById('modal-ingreso-overlay');
+    const modalClose = document.getElementById('modal-ingreso-close');
+    const modalGuardar = document.getElementById('modal-ingreso-guardar');
+    const modalGuardarText = document.getElementById('modal-ingreso-guardar-text');
+    const modalSpinner = document.getElementById('modal-ingreso-spinner');
+    const modalHora = document.getElementById('modal-ingreso-hora');
+    const modalNombre = document.getElementById('modal-ingreso-nombre');
+    const modalInfo = document.getElementById('modal-ingreso-info');
+    const fechaIngresoData = document.getElementById('fecha-ingreso-data');
+    const horaIngresoData = document.getElementById('hora-ingreso-data');
+    const btnReintentarHosp = document.getElementById('btn-reintentar-hosp');
+    // Calendar popovers
+    const rpFiTrigger = document.getElementById('rp-fi-trigger');
+    const rpFiDisplay = document.getElementById('rp-fi-display');
+    const mFiTrigger = document.getElementById('modal-fi-trigger');
+    const mFiPopover = document.getElementById('modal-fi-popover');
+    const mFiDisplay = document.getElementById('modal-fi-display');
+    const mFiGrid = document.getElementById('modal-fi-days-grid');
+    const mFiTitle = document.getElementById('modal-fi-title');
+    const mFiMonth = document.getElementById('modal-fi-month');
+    const mFiYear = document.getElementById('modal-fi-year');
+    const mFiPrev = document.getElementById('modal-fi-prev');
+    const mFiNext = document.getElementById('modal-fi-next');
+    const mFiToday = document.getElementById('modal-fi-today');
+
     const PREFIX_MAP = { DNI: '', DNI_TEMPORAL: 'E- ', CARNET_EXT: 'C.E ' };
     const PLACEHOLDER_MAP = { DNI: '12345678', DNI_TEMPORAL: '12345678', CARNET_EXT: '12345678' };
 
@@ -397,7 +423,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             row.innerHTML = `
                 <td>${item.dni}</td>
                 <td>${item.apellidos}, ${item.nombres}</td>
-                <td>${item.historia_clinica}</td>
+                <td>${item.historia_clinica || '—'}</td>
                 <td><span class="seguro-badge">${item.tipo_seguro}</span></td>
                 <td>${item.servicio || '-'}</td>
                 <td><span class="condicion-badge ${condClass}">${(item.condicion || '').trim()}</span></td>
@@ -757,6 +783,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         selectSeguro.disabled = false;
         if (selectSeguro.customDropdownUpdate) selectSeguro.customDropdownUpdate();
         const servEl = document.getElementById('paciente-servicio');
+        servEl.value = '';
         servEl.disabled = false;
         if (servEl.customDropdownUpdate) servEl.customDropdownUpdate();
 
@@ -796,6 +823,189 @@ document.addEventListener('DOMContentLoaded', async () => {
             inputOtros.required = false;
             inputOtros.value = "";
         }
+    });
+
+    // ============================================
+    // CALENDAR POPOVER (mismo diseño que consulta-rapida)
+    // ============================================
+    let pendingRetryPacienteId = null;
+    let pendingRetryFecha = null;
+    let pendingRetryHora = null;
+
+    const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Setiembre','Octubre','Noviembre','Diciembre'];
+    let fiViewMonth = new Date().getMonth();
+    let fiViewYear = new Date().getFullYear();
+    const fiToday = (() => { const d = new Date(); d.setHours(0,0,0,0); return d; })();
+
+    const toIso = (y, m, d) => `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isSameDay = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+    const getPeruDate = () => new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Lima' }));
+    const getPeruTimeNow = () => new Date().toLocaleTimeString('en-GB', { timeZone: 'America/Lima', hour: '2-digit', minute: '2-digit', hour12: false });
+    const fmtDate = (d) => d ? `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}` : '';
+
+    // ── Shared calendar helpers ──
+    function populateFiMonths(sel) {
+        MONTHS.forEach((n, i) => { const o = document.createElement('option'); o.value = i; o.textContent = n; sel.appendChild(o); });
+    }
+    function populateFiYears(sel) {
+        const y = fiToday.getFullYear();
+        for (let i = y - 5; i <= y + 5; i++) { const o = document.createElement('option'); o.value = i; o.textContent = i; sel.appendChild(o); }
+    }
+    function syncFiFilters(monthSel, yearSel) { monthSel.value = fiViewMonth; yearSel.value = fiViewYear; }
+
+    let fiSelectedDate = null; // shared selected date
+
+    function renderFiCalendar(grid, titleEl, monthSel, yearSel, direction, onSelect) {
+        const firstDay = new Date(fiViewYear, fiViewMonth, 1);
+        const lastDay = new Date(fiViewYear, fiViewMonth + 1, 0);
+        const startDow = firstDay.getDay();
+        const daysInMonth = lastDay.getDate();
+        const daysInPrev = new Date(fiViewYear, fiViewMonth, 0).getDate();
+        const totalCells = Math.ceil((startDow + daysInMonth) / 7) * 7;
+
+        titleEl.textContent = `${MONTHS[fiViewMonth]}, ${fiViewYear}`;
+        syncFiFilters(monthSel, yearSel);
+
+        grid.className = 'cal-days-grid' + (direction ? ' cal-slide-' + direction : '');
+        grid.innerHTML = '';
+
+        let dayIdx = 0;
+        for (let i = 0; i < totalCells; i++) {
+            const el = document.createElement('div');
+            el.className = 'cal-day';
+            let num, isCur = true;
+            if (i < startDow) { num = daysInPrev - startDow + i + 1; isCur = false; el.classList.add('cal-day-other'); }
+            else if (dayIdx >= daysInMonth) { num = i - startDow - daysInMonth + 1; isCur = false; el.classList.add('cal-day-other'); }
+            else { num = dayIdx + 1; }
+
+            if (!isCur) { el.textContent = num; grid.appendChild(el); if (i >= startDow) dayIdx++; continue; }
+
+            el.textContent = num;
+            const dateObj = new Date(fiViewYear, fiViewMonth, num);
+            const dateStr = toIso(fiViewYear, fiViewMonth, num);
+            el.dataset.date = dateStr;
+
+            if (isSameDay(dateObj, fiToday)) el.classList.add('cal-day-today');
+            if (dateObj > fiToday) el.classList.add('cal-day-disabled');
+            if (fiSelectedDate && isSameDay(dateObj, fiSelectedDate)) el.classList.add('cal-day-selected');
+
+            el.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (el.classList.contains('cal-day-disabled') || el.classList.contains('cal-day-other')) return;
+                fiSelectedDate = dateObj;
+                if (onSelect) onSelect(dateObj);
+                renderFiCalendar(grid, titleEl, monthSel, yearSel, null, onSelect);
+            });
+
+            grid.appendChild(el);
+            dayIdx++;
+        }
+
+        const days = grid.querySelectorAll('.cal-day:not(.cal-day-empty)');
+        days.forEach((el2, idx) => { el2.style.animationDelay = `${idx * 15}ms`; el2.classList.add('cal-day-animate'); });
+    }
+
+    // ── Form trigger: abre el modal directamente ──
+    rpFiTrigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const nombres = document.getElementById('paciente-nombres').value.trim();
+        const apellidos = document.getElementById('paciente-apellidos').value.trim();
+        modalNombre.textContent = apellidos && nombres ? `${apellidos}, ${nombres}` : 'Datos del paciente';
+        modalInfo.textContent = `DNI: ${inputDni.value || '—'} | HC: ${document.getElementById('paciente-hc').value || 'N/A'}`;
+        const now = getPeruDate();
+        fiSelectedDate = now;
+        mFiDisplay.textContent = fmtDate(now);
+        mFiDisplay.style.color = '#1e293b';
+        modalHora.value = getPeruTimeNow();
+        modalOverlay.style.display = 'flex';
+    });
+
+    // ── Modal popover ──
+    let mFiOpen = false;
+    populateFiMonths(mFiMonth);
+    populateFiYears(mFiYear);
+
+    const onMfiSelect = (d) => {
+        mFiDisplay.textContent = fmtDate(d);
+        mFiDisplay.style.color = '#1e293b';
+        mFiTrigger.classList.remove('is-open');
+        mFiPopover.style.display = 'none';
+        mFiOpen = false;
+    };
+
+    function openMFiPopover() {
+        mFiOpen = true;
+        if (fiSelectedDate) { fiViewMonth = fiSelectedDate.getMonth(); fiViewYear = fiSelectedDate.getFullYear(); }
+        renderFiCalendar(mFiGrid, mFiTitle, mFiMonth, mFiYear, null, onMfiSelect);
+        const r = mFiTrigger.getBoundingClientRect();
+        const popH = 350;
+        const spaceBelow = window.innerHeight - r.bottom - 8;
+        if (spaceBelow >= popH) {
+            mFiPopover.style.top = (r.bottom + 6) + 'px';
+            mFiPopover.style.left = Math.min(r.left, window.innerWidth - 330) + 'px';
+        } else {
+            mFiPopover.style.top = Math.max(8, r.top - popH) + 'px';
+            mFiPopover.style.left = Math.min(r.left, window.innerWidth - 330) + 'px';
+        }
+        mFiPopover.style.display = 'block';
+        mFiTrigger.classList.add('is-open');
+    }
+
+    function closeMFiPopover() {
+        mFiPopover.style.display = 'none';
+        mFiTrigger.classList.remove('is-open');
+        mFiOpen = false;
+    }
+
+    mFiTrigger.addEventListener('click', (e) => { e.stopPropagation(); if (mFiOpen) closeMFiPopover(); else openMFiPopover(); });
+    mFiPrev.addEventListener('click', () => { fiViewMonth--; if (fiViewMonth < 0) { fiViewMonth = 11; fiViewYear--; } renderFiCalendar(mFiGrid, mFiTitle, mFiMonth, mFiYear, 'left', onMfiSelect); });
+    mFiNext.addEventListener('click', () => { fiViewMonth++; if (fiViewMonth > 11) { fiViewMonth = 0; fiViewYear++; } renderFiCalendar(mFiGrid, mFiTitle, mFiMonth, mFiYear, 'right', onMfiSelect); });
+    mFiMonth.addEventListener('change', () => { fiViewMonth = parseInt(mFiMonth.value, 10); renderFiCalendar(mFiGrid, mFiTitle, mFiMonth, mFiYear, null, onMfiSelect); });
+    mFiYear.addEventListener('change', () => { fiViewYear = parseInt(mFiYear.value, 10); renderFiCalendar(mFiGrid, mFiTitle, mFiMonth, mFiYear, null, onMfiSelect); });
+    mFiToday.addEventListener('click', () => { fiViewMonth = fiToday.getMonth(); fiViewYear = fiToday.getFullYear(); renderFiCalendar(mFiGrid, mFiTitle, mFiMonth, mFiYear, null, onMfiSelect); });
+
+    // ── Modal overlay ──
+    const closeModalIngreso = () => {
+        closeMFiPopover();
+        modalOverlay.style.display = 'none';
+    };
+
+    modalClose.addEventListener('click', closeModalIngreso);
+    modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) closeModalIngreso(); });
+
+    const openModalIngreso = () => {
+        const nombres = document.getElementById('paciente-nombres').value.trim();
+        const apellidos = document.getElementById('paciente-apellidos').value.trim();
+        modalNombre.textContent = apellidos && nombres ? `${apellidos}, ${nombres}` : 'Datos del paciente';
+        modalInfo.textContent = `DNI: ${inputDni.value || '—'} | HC: ${document.getElementById('paciente-hc').value || 'N/A'}`;
+        const now = getPeruDate();
+        fiSelectedDate = now;
+        mFiDisplay.textContent = fmtDate(now);
+        mFiDisplay.style.color = '#1e293b';
+        modalHora.value = getPeruTimeNow();
+        modalOverlay.style.display = 'flex';
+    };
+
+    modalGuardar.addEventListener('click', () => {
+        if (!fiSelectedDate) {
+            if (window.showSystemTooltip) window.showSystemTooltip('Seleccione una fecha de ingreso en el calendario', true);
+            return;
+        }
+        const hora = modalHora.value || '08:00';
+        fechaIngresoData.value = toIso(fiSelectedDate.getFullYear(), fiSelectedDate.getMonth(), fiSelectedDate.getDate());
+        horaIngresoData.value = hora;
+        if (window.showSystemTooltip) window.showSystemTooltip('Fecha de ingreso registrada. Guarde el paciente para completar.');
+
+        // Sincronizar display del form trigger
+        rpFiDisplay.textContent = fmtDate(fiSelectedDate);
+        rpFiDisplay.style.color = '#1e293b';
+
+        closeModalIngreso();
+    });
+
+    // Click fuera de los popovers para cerrarlos
+    document.addEventListener('click', (e) => {
+        if (mFiOpen && !e.target.closest('#modal-fi-trigger') && !e.target.closest('#modal-fi-popover')) closeMFiPopover();
     });
 
     // ============================================
@@ -859,8 +1069,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const { data: insertedData, error } = await client.from('pacientes').insert([payload]).select().single();
                 errorResp = error;
                 if (insertedData) newPacienteId = insertedData.id;
-                // El evento 'Hospitalizado' se creará automáticamente al asignar
-                // fecha de ingreso desde el módulo detalle-paciente (trigger en BD)
             }
 
             if (errorResp) {
@@ -868,12 +1076,51 @@ document.addEventListener('DOMContentLoaded', async () => {
                 throw errorResp;
             }
 
+            // Crear hospitalización si hay fecha de ingreso registrada
+            const finalPacienteId = newPacienteId || objectId;
+            const fechaIng = fechaIngresoData.value;
+            const horaIng = horaIngresoData.value;
+            if (finalPacienteId && fechaIng) {
+                try {
+                    const { data: hospExistentes } = await client
+                        .from('hospitalizaciones')
+                        .select('numero_registro')
+                        .eq('paciente_id', finalPacienteId)
+                        .order('numero_registro', { ascending: false })
+                        .limit(1);
+                    const nextNum = (hospExistentes && hospExistentes.length > 0) ? hospExistentes[0].numero_registro + 1 : 1;
+
+                    const { error: hospErr } = await client
+                        .from('hospitalizaciones')
+                        .insert([{
+                            paciente_id: finalPacienteId,
+                            fecha_ingreso: fechaIng,
+                            hora_ingreso: horaIng || '08:00',
+                            servicio: document.getElementById('paciente-servicio').value || 'No especificado',
+                            activa: true,
+                            creado_por: userId,
+                            numero_registro: nextNum
+                        }]);
+
+                    if (hospErr) throw hospErr;
+
+                    fechaIngresoData.value = '';
+                    horaIngresoData.value = '';
+                } catch (hospErr) {
+                    pendingRetryPacienteId = finalPacienteId;
+                    pendingRetryFecha = fechaIng;
+                    pendingRetryHora = horaIng;
+                    btnReintentarHosp.style.display = 'flex';
+                    if (window.showSystemTooltip) window.showSystemTooltip('Paciente guardado, pero error al registrar hospitalización. Use "Reintentar".', true);
+                }
+            }
+
             // Si estamos en modo modal (iframe desde consulta-datos), notificar al padre y salir
             if (isModal && window.parent !== window) {
                 window.parent.postMessage({
                     type: 'paciente-registrado',
                     dni: payload.dni || '',
-                    pacienteId: newPacienteId || objectId
+                    pacienteId: finalPacienteId
                 }, '*');
                 return; // El padre se encarga de cerrar el modal y mostrar el tooltip
             }
@@ -896,6 +1143,44 @@ document.addEventListener('DOMContentLoaded', async () => {
             btnGuardar.disabled = false;
             textGuardar.textContent = 'Guardar Registro';
             spinnerGuardar.style.display = 'none';
+        }
+    });
+
+    // ── Botón de reintento de hospitalización ──
+    btnReintentarHosp.addEventListener('click', async () => {
+        if (!pendingRetryPacienteId || !pendingRetryFecha) return;
+        btnReintentarHosp.disabled = true;
+        btnReintentarHosp.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Reintentando...';
+        try {
+            const { data: existentes } = await client
+                .from('hospitalizaciones')
+                .select('numero_registro')
+                .eq('paciente_id', pendingRetryPacienteId)
+                .order('numero_registro', { ascending: false })
+                .limit(1);
+            const nextNum = (existentes && existentes.length > 0) ? existentes[0].numero_registro + 1 : 1;
+            const { error } = await client
+                .from('hospitalizaciones')
+                .insert([{
+                    paciente_id: pendingRetryPacienteId,
+                    fecha_ingreso: pendingRetryFecha,
+                    hora_ingreso: pendingRetryHora || '08:00',
+                    servicio: document.getElementById('paciente-servicio').value || 'No especificado',
+                    activa: true,
+                    creado_por: userId,
+                    numero_registro: nextNum
+                }]);
+            if (error) throw error;
+            if (window.showSystemTooltip) window.showSystemTooltip('Hospitalización registrada exitosamente');
+            btnReintentarHosp.style.display = 'none';
+            pendingRetryPacienteId = null;
+            pendingRetryFecha = null;
+            pendingRetryHora = null;
+        } catch (err) {
+            if (window.showSystemTooltip) window.showSystemTooltip('Error al reintentar: ' + (err.message || err), true);
+        } finally {
+            btnReintentarHosp.disabled = false;
+            btnReintentarHosp.innerHTML = '<i class="fa-solid fa-rotate"></i> Reintentar Fecha de Ingreso';
         }
     });
 
