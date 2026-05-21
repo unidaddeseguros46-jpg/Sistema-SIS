@@ -67,6 +67,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     const mFiNext = document.getElementById('modal-fi-next');
     const mFiToday = document.getElementById('modal-fi-today');
 
+    // Referencias para el popover de Fecha de Nacimiento
+    const fnacInput = document.getElementById('paciente-fecha-nac');
+    const fnacTrigger = document.getElementById('fnac-trigger');
+    const fnacPopover = document.getElementById('fnac-popover');
+    const fnacGrid = document.getElementById('fnac-days-grid');
+    const fnacTitle = document.getElementById('fnac-title');
+    const fnacMonth = document.getElementById('fnac-month');
+    const fnacYear = document.getElementById('fnac-year');
+    const fnacPrev = document.getElementById('fnac-prev');
+    const fnacNext = document.getElementById('fnac-next');
+    const fnacToday = document.getElementById('fnac-today');
+
     const PREFIX_MAP = { DNI: '', DNI_TEMPORAL: 'E- ', CARNET_EXT: 'C.E ' };
     const PLACEHOLDER_MAP = { DNI: '12345678', DNI_TEMPORAL: '12345678', CARNET_EXT: '12345678' };
 
@@ -250,19 +262,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if (selectSeguro.customDropdownUpdate) selectSeguro.customDropdownUpdate();
             }
 
-            // 3. Rellenar Fecha (Con pequeño retardo para asegurar que Flatpickr cargue)
-            setTimeout(() => {
-                if (data.fecha_nacimiento) {
-                    const fp = document.getElementById('paciente-fecha-nac')._flatpickr;
-                    if (fp) {
-                        const parts = data.fecha_nacimiento.split('-');
-                        if (parts.length === 3) {
-                            const formatted = `${parts[2]}/${parts[1]}/${parts[0]}`;
-                            fp.setDate(formatted, true, "d/m/Y");
-                        }
-                    }
+            // 3. Rellenar Fecha
+            if (data.fecha_nacimiento) {
+                const parts = data.fecha_nacimiento.split('-');
+                if (parts.length === 3) {
+                    fnacInput.value = `${parts[2]}/${parts[1]}/${parts[0]}`;
                 }
-            }, 300);
+            }
 
             if (window.showSystemTooltip) {
                 window.showSystemTooltip('Datos importados desde Consulta de Datos');
@@ -273,50 +279,72 @@ document.addEventListener('DOMContentLoaded', async () => {
     // checkAutoFill() se ejecutará al final de la inicialización
 
 
-    // Inicializar Flatpickr con m\u00e1scara autom\u00e1tica dd/mm/yyyy
-    const fpInstance = flatpickr("#paciente-fecha-nac", {
-        locale: "es",
-        dateFormat: "d/m/Y",
-        allowInput: true,
-        maxDate: "today",
-        // Parsear siempre en formato d/m/Y sin depender de la locale del OS
-        parseDate: (dateStr, format) => {
-            const parts = dateStr.split('/');
-            if (parts.length === 3) {
-                const day = parseInt(parts[0], 10);
-                const month = parseInt(parts[1], 10) - 1; // meses 0-indexed
-                const year = parseInt(parts[2], 10);
-                if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
-                    return new Date(year, month, day);
-                }
-            }
-            return null;
-        },
-        onReady(_, __, instance) {
-            // M\u00e1scara: inserta '/' autom\u00e1ticamente al escribir d\u00edgitos
-            instance.input.addEventListener('input', function (e) {
-                // Si el usuario est\u00e1 borrando, no interferir
-                if (e.inputType && e.inputType.startsWith('delete')) return;
+    // ── Máscara automática dd/mm/yyyy ──
+    fnacInput.addEventListener('input', function (e) {
+        if (e.inputType && e.inputType.startsWith('delete')) return;
+        let digits = this.value.replace(/\D/g, '').slice(0, 8);
+        let masked = digits;
+        if (digits.length > 2) masked = digits.slice(0, 2) + '/' + digits.slice(2);
+        if (digits.length > 4) masked = digits.slice(0, 2) + '/' + digits.slice(2, 4) + '/' + digits.slice(4, 8);
+        this.value = masked;
+    });
 
-                let digits = e.target.value.replace(/\D/g, '').slice(0, 8);
-                let masked = digits;
+    // ── Conversión DD/MM/YYYY → YYYY-MM-DD ──
+    const parseDisplayToISO = (val) => {
+        const p = val.split('/');
+        return p.length === 3 ? `${p[2]}-${p[1]}-${p[0]}` : val;
+    };
 
-                if (digits.length > 2) {
-                    masked = digits.slice(0, 2) + '/' + digits.slice(2);
-                }
-                if (digits.length > 4) {
-                    masked = digits.slice(0, 2) + '/' + digits.slice(2, 4) + '/' + digits.slice(4, 8);
-                }
+    // ── Calendario popover para Fecha de Nacimiento ──
+    let fnacPopoverOpen = false;
+    let fnacSelectedDate = null;
 
-                e.target.value = masked;
-
-                // Si ya tiene 10 caracteres (dd/mm/yyyy), forzar parseo en Flatpickr
-                if (masked.length === 10 && e.isTrusted) {
-                    instance.setDate(masked, true, 'd/m/Y');
-                }
-            });
+    const fnacCal = window.crearCalendario({
+        mode: 'single',
+        grid: fnacGrid,
+        title: fnacTitle,
+        month: fnacMonth,
+        year: fnacYear,
+        prev: fnacPrev,
+        next: fnacNext,
+        today: fnacToday,
+        selectedDate: null,
+        onDayClick: (d) => {
+            fnacSelectedDate = d;
+            fnacInput.value = fmtDate(d);
+            closeFnacPopover();
         }
     });
+
+    function openFnacPopover() {
+        if (fnacPopoverOpen) { closeFnacPopover(); return; }
+        fnacPopoverOpen = true;
+        if (fnacSelectedDate) fnacCal.setView(fnacSelectedDate.getFullYear(), fnacSelectedDate.getMonth());
+        fnacCal.render();
+        const r = fnacInput.getBoundingClientRect();
+        const popH = 350;
+        const spaceBelow = window.innerHeight - r.bottom - 8;
+        if (spaceBelow >= popH) {
+            fnacPopover.style.top = (r.bottom + 6) + 'px';
+            fnacPopover.style.left = Math.min(r.left, window.innerWidth - 330) + 'px';
+        } else {
+            fnacPopover.style.top = Math.max(8, r.top - popH) + 'px';
+            fnacPopover.style.left = Math.min(r.left, window.innerWidth - 330) + 'px';
+        }
+        fnacPopover.style.display = 'block';
+    }
+
+    function closeFnacPopover() {
+        fnacPopover.style.display = 'none';
+        fnacPopoverOpen = false;
+    }
+
+    fnacTrigger.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openFnacPopover();
+    });
+
+    fnacInput.addEventListener('focus', openFnacPopover);
 
     // Variables de Paginación Inteligente y DB
     let currentPage = 1;
@@ -450,7 +478,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     };
 
-    const openEditForm = (p) => {
+    const openEditForm = async (p) => {
         form.reset();
         document.getElementById('paciente-id').value = p.id;
         document.getElementById('btn-obtener-fnac').style.display = 'none';
@@ -472,13 +500,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('paciente-dni').value = p.dni;
         document.getElementById('paciente-hc').value = p.historia_clinica;
 
-        // Formatear fecha para Flatpickr
-        if (fpInstance && p.fecha_nacimiento) {
-            const dateParts = p.fecha_nacimiento.split('-');
-            const dateObj = new Date(dateParts[0], dateParts[1] - 1, dateParts[2]);
-            fpInstance.setDate(dateObj, true);
+        // Formatear fecha de nacimiento
+        if (p.fecha_nacimiento) {
+            const parts = p.fecha_nacimiento.split('-');
+            fnacInput.value = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : p.fecha_nacimiento;
         } else {
-            document.getElementById('paciente-fecha-nac').value = p.fecha_nacimiento || '';
+            fnacInput.value = '';
         }
 
         document.getElementById('paciente-apellidos').value = p.apellidos || '';
@@ -516,6 +543,23 @@ document.addEventListener('DOMContentLoaded', async () => {
             '| FechaNac value:', document.getElementById('paciente-fecha-nac').value,
             '| Apellidos value:', document.getElementById('paciente-apellidos').value,
             '| Nombres value:', document.getElementById('paciente-nombres').value);
+
+        // ── Cargar hospitalización existente para Fecha de Ingreso ──
+        try {
+            const { data: hospData } = await client
+                .from('hospitalizaciones')
+                .select('fecha_ingreso, hora_ingreso')
+                .eq('paciente_id', p.id)
+                .order('numero_registro', { ascending: false })
+                .limit(1);
+            if (hospData && hospData.length > 0) {
+                setFiStateFromDB(hospData[0].fecha_ingreso, hospData[0].hora_ingreso);
+            } else {
+                resetFiState();
+            }
+        } catch {
+            resetFiState();
+        }
 
         // Si falleció, NO permitir editar nada (Comparación insensible)
         const isFallecido = p.condicion && p.condicion.toUpperCase() === 'FALLECIDO';
@@ -734,16 +778,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             const result = await response.json();
 
             if (result.success && result.fecha_nac) {
-                // Rellenar el campo visual con dd/mm/yyyy usando Flatpickr
-                const fechaInput = document.getElementById('paciente-fecha-nac');
-                fechaInput.value = result.fecha_nac;
+                fnacInput.value = result.fecha_nac;
+                fnacSelectedDate = null;
 
-                // Parsear y setear en Flatpickr para que lo reconozca internamente
-                if (fpInstance) {
-                    fpInstance.setDate(result.fecha_nac, true, 'd/m/Y');
-                }
-
-                // Toast de éxito
                 if(window.showSystemTooltip) window.showSystemTooltip(`Fecha obtenida: ${result.fecha_nac}`);
             } else {
                 if(window.showSystemTooltip) window.showSystemTooltip(result.error || 'No se encontró fecha para este DNI', true);
@@ -765,19 +802,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('paciente-id').value = '';
         document.getElementById('btn-obtener-fnac').style.display = 'flex';
 
-        // Limpiar flatpickr
-        const fp = document.getElementById('paciente-fecha-nac')._flatpickr;
-        if (fp) fp.clear();
+        // Limpiar fecha de nacimiento
+        fnacInput.value = '';
+        fnacSelectedDate = null;
 
         // Reset disabled states uniformly
         document.querySelectorAll('.standard-input').forEach(el => el.disabled = false);
 
-        // Reset tipo_documento a DNI
+        // Reset tipo_documento a DNI y habilitar
         if (tipoDocumento) {
             tipoDocumento.value = 'DNI';
+            tipoDocumento.disabled = false;
             handleTipoDocumentoChange();
             if (tipoDocumento.customDropdownUpdate) tipoDocumento.customDropdownUpdate();
         }
+
+        // Resetear Fecha de Ingreso
+        resetFiState();
 
         // Resetear y habilitar selects del formulario
         selectSeguro.disabled = false;
@@ -832,81 +873,54 @@ document.addEventListener('DOMContentLoaded', async () => {
     let pendingRetryFecha = null;
     let pendingRetryHora = null;
 
-    const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Setiembre','Octubre','Noviembre','Diciembre'];
-    let fiViewMonth = new Date().getMonth();
-    let fiViewYear = new Date().getFullYear();
-    const fiToday = (() => { const d = new Date(); d.setHours(0,0,0,0); return d; })();
-
     const toIso = (y, m, d) => `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const isSameDay = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
     const getPeruDate = () => new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Lima' }));
     const getPeruTimeNow = () => new Date().toLocaleTimeString('en-GB', { timeZone: 'America/Lima', hour: '2-digit', minute: '2-digit', hour12: false });
     const fmtDate = (d) => d ? `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}` : '';
 
-    // ── Shared calendar helpers ──
-    function populateFiMonths(sel) {
-        MONTHS.forEach((n, i) => { const o = document.createElement('option'); o.value = i; o.textContent = n; sel.appendChild(o); });
-    }
-    function populateFiYears(sel) {
-        const y = fiToday.getFullYear();
-        for (let i = y - 5; i <= y + 5; i++) { const o = document.createElement('option'); o.value = i; o.textContent = i; sel.appendChild(o); }
-    }
-    function syncFiFilters(monthSel, yearSel) { monthSel.value = fiViewMonth; yearSel.value = fiViewYear; }
-
     let fiSelectedDate = null; // shared selected date
 
-    function renderFiCalendar(grid, titleEl, monthSel, yearSel, direction, onSelect) {
-        const firstDay = new Date(fiViewYear, fiViewMonth, 1);
-        const lastDay = new Date(fiViewYear, fiViewMonth + 1, 0);
-        const startDow = firstDay.getDay();
-        const daysInMonth = lastDay.getDate();
-        const daysInPrev = new Date(fiViewYear, fiViewMonth, 0).getDate();
-        const totalCells = Math.ceil((startDow + daysInMonth) / 7) * 7;
+    // ── Helpers para gestionar el estado de Fecha de Ingreso ──
+    function resetFiState() {
+        fiSelectedDate = null;
+        fechaIngresoData.value = '';
+        horaIngresoData.value = '';
+        rpFiDisplay.textContent = 'Opcional';
+        rpFiDisplay.style.color = '#94a3b8';
+        delete rpFiTrigger.dataset.fiLocked;
+        rpFiTrigger.style.pointerEvents = '';
+        rpFiTrigger.style.cursor = '';
+        rpFiTrigger.style.background = '#ffffff';
+        rpFiTrigger.style.borderColor = '#e2e8f0';
+        rpFiTrigger.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.05)';
+        const icons = rpFiTrigger.querySelectorAll('i');
+        icons.forEach(ic => ic.style.color = '');
+    }
 
-        titleEl.textContent = `${MONTHS[fiViewMonth]}, ${fiViewYear}`;
-        syncFiFilters(monthSel, yearSel);
-
-        grid.className = 'cal-days-grid' + (direction ? ' cal-slide-' + direction : '');
-        grid.innerHTML = '';
-
-        let dayIdx = 0;
-        for (let i = 0; i < totalCells; i++) {
-            const el = document.createElement('div');
-            el.className = 'cal-day';
-            let num, isCur = true;
-            if (i < startDow) { num = daysInPrev - startDow + i + 1; isCur = false; el.classList.add('cal-day-other'); }
-            else if (dayIdx >= daysInMonth) { num = i - startDow - daysInMonth + 1; isCur = false; el.classList.add('cal-day-other'); }
-            else { num = dayIdx + 1; }
-
-            if (!isCur) { el.textContent = num; grid.appendChild(el); if (i >= startDow) dayIdx++; continue; }
-
-            el.textContent = num;
-            const dateObj = new Date(fiViewYear, fiViewMonth, num);
-            const dateStr = toIso(fiViewYear, fiViewMonth, num);
-            el.dataset.date = dateStr;
-
-            if (isSameDay(dateObj, fiToday)) el.classList.add('cal-day-today');
-            if (dateObj > fiToday) el.classList.add('cal-day-disabled');
-            if (fiSelectedDate && isSameDay(dateObj, fiSelectedDate)) el.classList.add('cal-day-selected');
-
-            el.addEventListener('click', (e) => {
-                e.stopPropagation();
-                if (el.classList.contains('cal-day-disabled') || el.classList.contains('cal-day-other')) return;
-                fiSelectedDate = dateObj;
-                if (onSelect) onSelect(dateObj);
-                renderFiCalendar(grid, titleEl, monthSel, yearSel, null, onSelect);
-            });
-
-            grid.appendChild(el);
-            dayIdx++;
-        }
-
-        const days = grid.querySelectorAll('.cal-day:not(.cal-day-empty)');
-        days.forEach((el2, idx) => { el2.style.animationDelay = `${idx * 15}ms`; el2.classList.add('cal-day-animate'); });
+    function setFiStateFromDB(dateStr, timeStr) {
+        if (!dateStr) { resetFiState(); return; }
+        const parts = dateStr.split('-');
+        fiSelectedDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        fechaIngresoData.value = dateStr;
+        horaIngresoData.value = timeStr || '08:00';
+        rpFiDisplay.textContent = fmtDate(fiSelectedDate);
+        rpFiDisplay.style.color = '#64748b';
+        rpFiTrigger.dataset.fiLocked = 'true';
+        rpFiTrigger.style.pointerEvents = 'none';
+        rpFiTrigger.style.cursor = 'not-allowed';
+        rpFiTrigger.style.background = '#f1f5f9';
+        rpFiTrigger.style.borderColor = 'transparent';
+        rpFiTrigger.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.02)';
+        const icons = rpFiTrigger.querySelectorAll('i');
+        icons.forEach(ic => ic.style.color = '#94a3b8');
     }
 
     // ── Form trigger: abre el modal directamente ──
     rpFiTrigger.addEventListener('click', (e) => {
+        if (rpFiTrigger.dataset.fiLocked === 'true') {
+            e.stopPropagation();
+            return;
+        }
         e.stopPropagation();
         const nombres = document.getElementById('paciente-nombres').value.trim();
         const apellidos = document.getElementById('paciente-apellidos').value.trim();
@@ -915,28 +929,38 @@ document.addEventListener('DOMContentLoaded', async () => {
         const now = getPeruDate();
         fiSelectedDate = now;
         mFiDisplay.textContent = fmtDate(now);
-        mFiDisplay.style.color = '#1e293b';
+        mFiDisplay.style.color = '#0f172a';
         modalHora.value = getPeruTimeNow();
         modalOverlay.style.display = 'flex';
     });
 
-    // ── Modal popover ──
+    // ── Modal popover (usando calendario compartido) ──
     let mFiOpen = false;
-    populateFiMonths(mFiMonth);
-    populateFiYears(mFiYear);
 
-    const onMfiSelect = (d) => {
-        mFiDisplay.textContent = fmtDate(d);
-        mFiDisplay.style.color = '#1e293b';
-        mFiTrigger.classList.remove('is-open');
-        mFiPopover.style.display = 'none';
-        mFiOpen = false;
-    };
+    const mFiCal = window.crearCalendario({
+        mode: 'single',
+        grid: mFiGrid,
+        title: mFiTitle,
+        month: mFiMonth,
+        year: mFiYear,
+        prev: mFiPrev,
+        next: mFiNext,
+        today: mFiToday,
+        selectedDate: fiSelectedDate,
+        onDayClick: (d) => {
+            fiSelectedDate = d;
+            mFiDisplay.textContent = fmtDate(d);
+            mFiDisplay.style.color = '#0f172a';
+            mFiTrigger.classList.remove('is-open');
+            mFiPopover.style.display = 'none';
+            mFiOpen = false;
+        }
+    });
 
     function openMFiPopover() {
         mFiOpen = true;
-        if (fiSelectedDate) { fiViewMonth = fiSelectedDate.getMonth(); fiViewYear = fiSelectedDate.getFullYear(); }
-        renderFiCalendar(mFiGrid, mFiTitle, mFiMonth, mFiYear, null, onMfiSelect);
+        if (fiSelectedDate) mFiCal.setView(fiSelectedDate.getFullYear(), fiSelectedDate.getMonth());
+        mFiCal.render();
         const r = mFiTrigger.getBoundingClientRect();
         const popH = 350;
         const spaceBelow = window.innerHeight - r.bottom - 8;
@@ -958,11 +982,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     mFiTrigger.addEventListener('click', (e) => { e.stopPropagation(); if (mFiOpen) closeMFiPopover(); else openMFiPopover(); });
-    mFiPrev.addEventListener('click', () => { fiViewMonth--; if (fiViewMonth < 0) { fiViewMonth = 11; fiViewYear--; } renderFiCalendar(mFiGrid, mFiTitle, mFiMonth, mFiYear, 'left', onMfiSelect); });
-    mFiNext.addEventListener('click', () => { fiViewMonth++; if (fiViewMonth > 11) { fiViewMonth = 0; fiViewYear++; } renderFiCalendar(mFiGrid, mFiTitle, mFiMonth, mFiYear, 'right', onMfiSelect); });
-    mFiMonth.addEventListener('change', () => { fiViewMonth = parseInt(mFiMonth.value, 10); renderFiCalendar(mFiGrid, mFiTitle, mFiMonth, mFiYear, null, onMfiSelect); });
-    mFiYear.addEventListener('change', () => { fiViewYear = parseInt(mFiYear.value, 10); renderFiCalendar(mFiGrid, mFiTitle, mFiMonth, mFiYear, null, onMfiSelect); });
-    mFiToday.addEventListener('click', () => { fiViewMonth = fiToday.getMonth(); fiViewYear = fiToday.getFullYear(); renderFiCalendar(mFiGrid, mFiTitle, mFiMonth, mFiYear, null, onMfiSelect); });
 
     // ── Modal overlay ──
     const closeModalIngreso = () => {
@@ -981,7 +1000,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const now = getPeruDate();
         fiSelectedDate = now;
         mFiDisplay.textContent = fmtDate(now);
-        mFiDisplay.style.color = '#1e293b';
+        mFiDisplay.style.color = '#0f172a';
         modalHora.value = getPeruTimeNow();
         modalOverlay.style.display = 'flex';
     };
@@ -998,7 +1017,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Sincronizar display del form trigger
         rpFiDisplay.textContent = fmtDate(fiSelectedDate);
-        rpFiDisplay.style.color = '#1e293b';
+        rpFiDisplay.style.color = '#0f172a';
 
         closeModalIngreso();
     });
@@ -1006,6 +1025,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Click fuera de los popovers para cerrarlos
     document.addEventListener('click', (e) => {
         if (mFiOpen && !e.target.closest('#modal-fi-trigger') && !e.target.closest('#modal-fi-popover')) closeMFiPopover();
+        if (fnacPopoverOpen && !e.target.closest('#fnac-trigger') && !e.target.closest('#paciente-fecha-nac') && !e.target.closest('#fnac-popover')) closeFnacPopover();
     });
 
     // ============================================
@@ -1046,12 +1066,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!objectId) {
             payload.dni = getRawDni();
 
-            // Obtener fecha en formato ISO (Y-m-d) para Supabase desde Flatpickr
-            const fp = document.getElementById('paciente-fecha-nac')._flatpickr;
-            if (fp && fp.selectedDates.length > 0) {
-                payload.fecha_nacimiento = fp.formatDate(fp.selectedDates[0], "Y-m-d");
+            // Obtener fecha en formato ISO (Y-m-d) para Supabase
+            const fnacVal = fnacInput.value.trim();
+            if (fnacVal && fnacVal.length === 10) {
+                payload.fecha_nacimiento = parseDisplayToISO(fnacVal);
             } else {
-                payload.fecha_nacimiento = document.getElementById('paciente-fecha-nac').value; // fallback
+                payload.fecha_nacimiento = fnacVal;
             }
 
             payload.apellidos = normalizeText(document.getElementById('paciente-apellidos').value.trim());

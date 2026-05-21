@@ -7,8 +7,8 @@
     <title>Registro de Pacientes - Hospital San José</title>
     <link rel="stylesheet" href="../../css/styles.css">
     <link rel="stylesheet" href="../../css/registro-pacientes.css">
+    <link rel="stylesheet" href="../../css/calendario-popover.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         /* Estilos para cuando se abre como modal */
@@ -31,40 +31,9 @@
             to { transform: translateY(0); opacity: 1; }
         }
 
-        /* ── Calendar Popover (mismo diseño que consulta-rapida) ── */
-        .cr-date-trigger:hover { border-color: #cbd5e1 !important; }
+        /* ── Calendar trigger hover/open ── */
+        .cr-date-trigger:hover { border-color: #e2e8f0 !important; }
         .cr-date-trigger.is-open { border-color: #3b82f6 !important; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
-        .filter-select {
-            padding: 6px 10px; font-size: 13px; font-weight: 500; color: #1e293b;
-            background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;
-            outline: none; cursor: pointer; transition: border-color 0.2s ease, box-shadow 0.2s ease;
-            min-width: 0; width: 100%;
-        }
-        .filter-select:hover { border-color: #cbd5e1; }
-        .filter-select:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); background: #ffffff; }
-        .cal-nav-btn:hover { background: #f8fafc; color: #3b82f6; border-color: #cbd5e1; }
-        .cal-days-grid .cal-day {
-            aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
-            font-size: 13px; font-weight: 500; color: #1e293b; background: #ffffff;
-            border-radius: 6px; cursor: pointer; transition: background 0.12s;
-            position: relative;
-        }
-        .cal-days-grid .cal-day:hover:not(.cal-day-empty):not(.cal-day-other):not(.cal-day-disabled) { background: #f8fafc; color: #0284c7; }
-        .cal-days-grid .cal-day:active:not(.cal-day-empty):not(.cal-day-other):not(.cal-day-disabled) { background: #f1f5f9; }
-        .cal-days-grid .cal-day-empty { cursor: default; }
-        .cal-days-grid .cal-day-other { color: #cbd5e1; cursor: default; }
-        .cal-days-grid .cal-day-other:hover { background: transparent; }
-        .cal-days-grid .cal-day-today { background: rgba(59,130,246,0.08); font-weight: 700; color: #3b82f6; }
-        .cal-days-grid .cal-day-today:hover { background: rgba(59,130,246,0.14); }
-        .cal-days-grid .cal-day-selected { background: #3b82f6 !important; color: #ffffff !important; font-weight: 700; box-shadow: 0 2px 8px rgba(59,130,246,0.3); }
-        .cal-days-grid .cal-day-disabled { cursor: not-allowed; opacity: 0.4; }
-        .cal-slide-left { animation: slideInLeft 0.25s cubic-bezier(0.16,1,0.3,1) forwards; }
-        .cal-slide-right { animation: slideInRight 0.25s cubic-bezier(0.16,1,0.3,1) forwards; }
-        @keyframes slideInLeft { from { opacity:0; transform:translateX(-20px) scale(0.97); } to { opacity:1; transform:translateX(0) scale(1); } }
-        @keyframes slideInRight { from { opacity:0; transform:translateX(20px) scale(0.97); } to { opacity:1; transform:translateX(0) scale(1); } }
-        @keyframes popoverIn { from { opacity:0; transform:translateY(4px) scale(0.96); } to { opacity:1; transform:translateY(0) scale(1); } }
-        .cal-day-animate { animation: dayPop 0.25s cubic-bezier(0.16,1,0.3,1) both; }
-        @keyframes dayPop { from { opacity:0; transform:scale(0.7); } to { opacity:1; transform:scale(1); } }
     </style>
     <script>
         if (new URLSearchParams(window.location.search).get('view') === 'modal') {
@@ -195,10 +164,47 @@
                         </div>
 
                         <!-- FECHA NACIMIENTO -->
-                        <div class="input-stacked col-span-2">
+                        <div class="input-stacked col-span-2" style="position:relative;">
                             <label>Fecha de Nacimiento</label>
-                            <input type="text" id="paciente-fecha-nac" class="standard-input" placeholder="dd/mm/aaaa"
-                                required>
+                            <div style="position:relative;">
+                                <input type="text" id="paciente-fecha-nac" class="standard-input" placeholder="dd/mm/aaaa"
+                                    required style="padding-right:40px;">
+                                <div id="fnac-trigger" style="position:absolute; right:0; top:0; bottom:0; width:40px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#94a3b8;">
+                                    <i class="fa-regular fa-calendar"></i>
+                                </div>
+                            </div>
+                            <div class="cr-date-popover" id="fnac-popover" style="display:none; position:fixed; z-index:10003; background:#ffffff; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.12),0 2px 8px rgba(0,0,0,0.06); padding:16px 20px; width:320px; animation:popoverIn 0.2s cubic-bezier(0.16,1,0.3,1) forwards;">
+                                <div class="cal-filters" style="display:flex; gap:8px; align-items:flex-end; margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid #f1f5f9;">
+                                    <div class="filter-group" style="display:flex; flex-direction:column; gap:3px; flex:1;">
+                                        <label style="font-size:10px; font-weight:600; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em;">Mes</label>
+                                        <select id="fnac-month" class="filter-select"></select>
+                                    </div>
+                                    <div class="filter-group" style="display:flex; flex-direction:column; gap:3px; flex:1;">
+                                        <label style="font-size:10px; font-weight:600; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em;">Año</label>
+                                        <select id="fnac-year" class="filter-select"></select>
+                                    </div>
+                                    <button id="fnac-today" class="btn-module btn-clear-hover" style="padding:5px 12px; font-size:11px; white-space:nowrap; height:fit-content;">Hoy</button>
+                                </div>
+                                <div class="calendar-header" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+                                    <button class="cal-nav-btn" id="fnac-prev" style="width:30px; height:30px; border-radius:6px; border:1px solid #e2e8f0; background:#ffffff; color:#64748b; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; font-size:12px;">
+                                        <i class="fa-solid fa-chevron-left"></i>
+                                    </button>
+                                    <div class="cal-title" id="fnac-title" style="font-size:14px; font-weight:700; color:#0f172a;"></div>
+                                    <button class="cal-nav-btn" id="fnac-next" style="width:30px; height:30px; border-radius:6px; border:1px solid #e2e8f0; background:#ffffff; color:#64748b; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; font-size:12px;">
+                                        <i class="fa-solid fa-chevron-right"></i>
+                                    </button>
+                                </div>
+                                <div class="cal-weekdays" style="display:grid; grid-template-columns:repeat(7,1fr); gap:3px; margin-bottom:6px;">
+                                    <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">D</span>
+                                    <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">L</span>
+                                    <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">M</span>
+                                    <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">MI</span>
+                                    <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">J</span>
+                                    <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">V</span>
+                                    <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">S</span>
+                                </div>
+                                <div class="cal-days-grid" id="fnac-days-grid" style="display:grid; grid-template-columns:repeat(7,1fr); gap:3px;"></div>
+                            </div>
                         </div>
 
                         <!-- FILA 2: APELLIDOS | NOMBRES (3+3) -->
@@ -260,9 +266,9 @@
                         <!-- FECHA INGRESO -->
                         <div class="input-stacked col-span-2" style="position:relative;">
                             <label>Fecha de Ingreso</label>
-                            <div class="cr-date-trigger" id="rp-fi-trigger" style="height:42px; display:flex; align-items:center; background:#ffffff; border-radius:8px; border:1px solid #e2e8f0; padding:0 15px; cursor:pointer; gap:8px; transition:border-color 0.2s;">
+                            <div class="cr-date-trigger" id="rp-fi-trigger" style="height:42px; display:flex; align-items:center; background:#ffffff; border-radius:8px; border:1px solid #e2e8f0; padding:0 15px; cursor:pointer; gap:8px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05); overflow:hidden; position:relative;">
                                 <i class="fa-regular fa-calendar" style="color:#64748b;"></i>
-                                <span id="rp-fi-display" style="flex:1; font-size:13px; color:#94a3b8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Seleccionar</span>
+                                <span id="rp-fi-display" style="flex:1; font-size:14px; color:#94a3b8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Opcional</span>
                                 <i class="fa-solid fa-chevron-down" style="color:#94a3b8; font-size:11px;"></i>
                             </div>
                         </div>
@@ -439,9 +445,8 @@
         }
     </script>
     <!-- SCRIPTS -->
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <script src="https://npmcdn.com/flatpickr/dist/l10n/es.js"></script>
     <script src="../../js/supabase-config.js"></script>
+    <script src="../../js/calendario-popover.js"></script>
     <script src="../../js/servicios.js"></script>
     <script src="../../js/custom-select.js"></script>
     <script src="../../js/layout.js"></script>

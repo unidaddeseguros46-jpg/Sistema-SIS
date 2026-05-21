@@ -7,12 +7,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const charts = {};
     let crRangeStart = null;
     let crRangeEnd = null;
-    let crViewMonth = new Date().getMonth();
-    let crViewYear = new Date().getFullYear();
-    const crToday = (() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; })();
     let hastaHoyActive = false;
-
-    const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Setiembre','Octubre','Noviembre','Diciembre'];
     const BAR_COLORS = ['#2563eb','#7c3aed','#db2777','#dc2626','#ea580c','#ca8a04','#16a34a','#0891b2','#4f46e5','#9333ea','#e11d48','#d97706'];
     const SERVICE_ICONS = {
         'MEDICINA': 'fa-stethoscope',
@@ -78,130 +73,38 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.querySelectorAll('.chart-card canvas').forEach(c => c.style.display = 'block');
     };
 
-    // ── Calendar ──
-    function populateCalFilters() {
-        MONTHS.forEach((name, i) => {
-            const opt = document.createElement('option');
-            opt.value = i; opt.textContent = name;
-            DOM.calMonth.appendChild(opt);
-        });
-        const now = getPeruDate();
-        for (let y = now.getFullYear() - 5; y <= now.getFullYear() + 5; y++) {
-            const opt = document.createElement('option');
-            opt.value = y; opt.textContent = y;
-            DOM.calYear.appendChild(opt);
+    // ── Calendar (shared) ──
+    const rpCal = window.crearCalendario({
+        mode: 'range',
+        grid: DOM.calGrid,
+        title: DOM.calTitle,
+        month: DOM.calMonth,
+        year: DOM.calYear,
+        prev: DOM.calPrev,
+        next: DOM.calNext,
+        today: DOM.calToday,
+        rangeStart: crRangeStart,
+        rangeEnd: crRangeEnd,
+        onDayClick: ({ start }) => {
+            if (hastaHoyActive) {
+                hastaHoyActive = false;
+                DOM.hastaHoy.classList.remove('active');
+            }
+            crRangeStart = start;
+            crRangeEnd = null;
+            updateDateDisplay();
+        },
+        onRangeComplete: ({ start, end }) => {
+            if (hastaHoyActive) {
+                hastaHoyActive = false;
+                DOM.hastaHoy.classList.remove('active');
+            }
+            crRangeStart = start;
+            crRangeEnd = end;
+            updateDateDisplay();
+            closeDatePopover();
         }
-        syncCalFilters();
-    }
-
-    function syncCalFilters() {
-        DOM.calMonth.value = crViewMonth;
-        DOM.calYear.value = crViewYear;
-    }
-
-    let calGridEl = DOM.calGrid;
-
-    function renderCalendar(direction) {
-        const firstDay = new Date(crViewYear, crViewMonth, 1);
-        const lastDay = new Date(crViewYear, crViewMonth + 1, 0);
-        const startDow = firstDay.getDay();
-        const daysInMonth = lastDay.getDate();
-        const daysInPrev = new Date(crViewYear, crViewMonth, 0).getDate();
-
-        DOM.calTitle.textContent = `${MONTHS[crViewMonth]}, ${crViewYear}`;
-        syncCalFilters();
-
-        const grid = document.createElement('div');
-        grid.className = 'cal-days-grid';
-        if (direction === 'prev') grid.classList.add('cal-slide-left');
-        else if (direction === 'next') grid.classList.add('cal-slide-right');
-
-        const totalCells = Math.ceil((startDow + daysInMonth) / 7) * 7;
-        let dayIdx = 0;
-
-        for (let i = 0; i < totalCells; i++) {
-            const el = document.createElement('div');
-            el.className = 'cal-day';
-            let dayNum, isCurrent = true;
-
-            if (i < startDow) {
-                dayNum = daysInPrev - startDow + i + 1;
-                isCurrent = false;
-                el.classList.add('cal-day-other');
-            } else if (dayIdx >= daysInMonth) {
-                dayNum = i - startDow - daysInMonth + 1;
-                isCurrent = false;
-                el.classList.add('cal-day-other');
-            } else {
-                dayNum = dayIdx + 1;
-            }
-
-            if (!isCurrent) {
-                el.textContent = dayNum;
-                grid.appendChild(el);
-                if (i >= startDow) dayIdx++;
-                continue;
-            }
-
-            el.textContent = dayNum;
-            const thisDate = new Date(crViewYear, crViewMonth, dayNum);
-            const dateStr = toISODate(thisDate);
-            el.dataset.date = dateStr;
-
-            if (thisDate.getTime() === crToday.getTime()) el.classList.add('cal-day-today');
-
-            if (crRangeStart && crRangeEnd) {
-                const sStr = toISODate(crRangeStart);
-                const eStr = toISODate(crRangeEnd);
-                if (dateStr === sStr) el.classList.add('cal-day-range-start');
-                if (dateStr === eStr) el.classList.add('cal-day-range-end');
-                if (dateStr > sStr && dateStr < eStr) el.classList.add('cal-day-range-between');
-                if (sStr === eStr && dateStr === sStr) el.classList.add('cal-day-range-end');
-            } else if (crRangeStart) {
-                if (dateStr === toISODate(crRangeStart)) el.classList.add('cal-day-range-start', 'cal-day-range-end');
-            }
-
-            if (thisDate.getTime() > crToday.getTime()) el.classList.add('cal-day-disabled');
-
-            el.addEventListener('click', (e) => {
-                e.stopPropagation();
-                if (el.classList.contains('cal-day-disabled') || el.classList.contains('cal-day-other')) return;
-
-                if (hastaHoyActive) {
-                    hastaHoyActive = false;
-                    DOM.hastaHoy.classList.remove('active');
-                }
-
-                if (!crRangeStart || (crRangeStart && crRangeEnd)) {
-                    crRangeStart = thisDate;
-                    crRangeEnd = null;
-                } else {
-                    if (thisDate < crRangeStart) {
-                        crRangeStart = thisDate;
-                    } else {
-                        crRangeEnd = thisDate;
-                        updateDateDisplay();
-                        closeDatePopover();
-                        renderCalendar();
-                        return;
-                    }
-                }
-                updateDateDisplay();
-                renderCalendar();
-            });
-
-            grid.appendChild(el);
-            dayIdx++;
-        }
-
-        grid.querySelectorAll('.cal-day:not(.cal-day-empty)').forEach((el, idx) => {
-            el.style.animationDelay = `${idx * 20}ms`;
-            el.classList.add('cal-day-animate');
-        });
-
-        calGridEl.replaceWith(grid);
-        calGridEl = grid;
-    }
+    });
 
     function updateDateDisplay() {
         const fmtDate = (d) => {
@@ -241,9 +144,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (window.showSystemTooltip) window.showSystemTooltip('Desactive «Hasta hoy» para usar el rango de fechas', true);
             return;
         }
+        if (crRangeStart) rpCal.setView(crRangeStart.getFullYear(), crRangeStart.getMonth());
+        rpCal.render();
         DOM.popover.style.display = 'block';
         DOM.trigger.classList.add('is-open');
-        renderCalendar();
     }
 
     function closeDatePopover() {
@@ -257,6 +161,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (hastaHoyActive) {
             crRangeStart = null;
             crRangeEnd = null;
+            rpCal.setRange(null, null);
             closeDatePopover();
         }
         updateDateDisplay();
@@ -546,31 +451,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }, 0);
 
-    // Calendar nav
-    DOM.calPrev.addEventListener('click', () => {
-        crViewMonth--;
-        if (crViewMonth < 0) { crViewMonth = 11; crViewYear--; }
-        renderCalendar('prev');
-    });
-    DOM.calNext.addEventListener('click', () => {
-        crViewMonth++;
-        if (crViewMonth > 11) { crViewMonth = 0; crViewYear++; }
-        renderCalendar('next');
-    });
-    DOM.calMonth.addEventListener('change', () => {
-        crViewMonth = parseInt(DOM.calMonth.value, 10);
-        renderCalendar();
-    });
-    DOM.calYear.addEventListener('change', () => {
-        crViewYear = parseInt(DOM.calYear.value, 10);
-        renderCalendar();
-    });
-    DOM.calToday.addEventListener('click', () => {
-        crViewMonth = crToday.getMonth();
-        crViewYear = crToday.getFullYear();
-        renderCalendar();
-    });
-
     DOM.trigger.addEventListener('click', (e) => {
         e.stopPropagation();
         if (DOM.popover.style.display === 'block') closeDatePopover();
@@ -582,7 +462,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     DOM.btnExcel.addEventListener('click', exportExcel);
     DOM.btnPrint.addEventListener('click', printReport);
 
-    populateCalFilters();
     updateDateDisplay();
     await generateReport();
 });

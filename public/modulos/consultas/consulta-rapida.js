@@ -27,13 +27,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const crCalPrev = document.getElementById('cr-cal-prev');
     const crCalNext = document.getElementById('cr-cal-next');
     const crCalToday = document.getElementById('cr-cal-today');
-    const monthNames = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Setiembre','Octubre','Noviembre','Diciembre'];
-    let crRangeStart = null; // Date object
-    let crRangeEnd = null;   // Date object
-    let crViewMonth = new Date().getMonth();
-    let crViewYear = new Date().getFullYear();
-    const crToday = new Date();
-    crToday.setHours(0,0,0,0);
+    let crRangeStart = null;
+    let crRangeEnd = null;
 
     let isValidating = false;
     let currentSearchController = null;
@@ -104,6 +99,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (savedDesde) {
             crRangeStart = new Date(savedDesde + 'T00:00:00');
             if (savedHasta) crRangeEnd = new Date(savedHasta + 'T00:00:00');
+            if (crCal) crCal.setRange(crRangeStart, crRangeEnd);
             updateDateDisplay();
         }
     };
@@ -209,126 +205,37 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (hastaHoyActive) {
             crRangeStart = null;
             crRangeEnd = null;
+            if (crCal) crCal.setRange(null, null);
             updateDateDisplay();
             triggerActionsSearch();
         }
     });
 
-    // ── Datepicker: Calendar Render ──
-    const toIso = (y, m, d) => `${y}-${String(m+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const isSameDay = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-
-    function populateMonths() {
-        monthNames.forEach((name, i) => {
-            const opt = document.createElement('option');
-            opt.value = i; opt.textContent = name;
-            crFilterMonth.appendChild(opt);
-        });
-    }
-    function populateYears() {
-        const y = crToday.getFullYear();
-        for (let i = y - 5; i <= y + 5; i++) {
-            const opt = document.createElement('option');
-            opt.value = i; opt.textContent = i;
-            crFilterYear.appendChild(opt);
+    // ── Datepicker: Shared Calendar ──
+    const crCal = window.crearCalendario({
+        mode: 'range',
+        grid: crCalGrid,
+        title: crCalTitle,
+        month: crFilterMonth,
+        year: crFilterYear,
+        prev: crCalPrev,
+        next: crCalNext,
+        today: crCalToday,
+        rangeStart: crRangeStart,
+        rangeEnd: crRangeEnd,
+        onDayClick: ({ start, end }) => {
+            crRangeStart = start;
+            crRangeEnd = end;
+            updateDateDisplay();
+        },
+        onRangeComplete: ({ start, end }) => {
+            crRangeStart = start;
+            crRangeEnd = end;
+            updateDateDisplay();
+            closeDatePopover();
+            triggerActionsSearch();
         }
-    }
-    function syncCalFilters() {
-        crFilterMonth.value = crViewMonth;
-        crFilterYear.value = crViewYear;
-    }
-
-    function renderCalendar(direction) {
-        const firstDay = new Date(crViewYear, crViewMonth, 1);
-        const lastDay = new Date(crViewYear, crViewMonth + 1, 0);
-        const startDow = firstDay.getDay();
-        const daysInMonth = lastDay.getDate();
-        const daysInPrev = new Date(crViewYear, crViewMonth, 0).getDate();
-        const totalCells = Math.ceil((startDow + daysInMonth) / 7) * 7;
-
-        crCalTitle.textContent = `${monthNames[crViewMonth]}, ${crViewYear}`;
-        syncCalFilters();
-
-        crCalGrid.className = 'cal-days-grid' + (direction ? ' cal-slide-' + direction : '');
-        crCalGrid.innerHTML = '';
-
-        let dayIdx = 0;
-        for (let i = 0; i < totalCells; i++) {
-            const el = document.createElement('div');
-            el.className = 'cal-day';
-            let num, isCur = true;
-
-            if (i < startDow) {
-                num = daysInPrev - startDow + i + 1;
-                isCur = false;
-                el.classList.add('cal-day-other');
-            } else if (dayIdx >= daysInMonth) {
-                num = i - startDow - daysInMonth + 1;
-                isCur = false;
-                el.classList.add('cal-day-other');
-            } else {
-                num = dayIdx + 1;
-            }
-
-            if (!isCur) {
-                el.textContent = num;
-                crCalGrid.appendChild(el);
-                if (i >= startDow) dayIdx++;
-                continue;
-            }
-
-            el.textContent = num;
-            const dateObj = new Date(crViewYear, crViewMonth, num);
-            const dateStr = toIso(crViewYear, crViewMonth, num);
-            el.dataset.date = dateStr;
-
-            if (isSameDay(dateObj, crToday)) el.classList.add('cal-day-today');
-            if (dateObj > crToday) el.classList.add('cal-day-disabled');
-
-            if (crRangeStart && isSameDay(dateObj, crRangeStart)) {
-                el.classList.add('cal-day-selected', 'cal-day-range-start');
-            }
-            if (crRangeEnd && isSameDay(dateObj, crRangeEnd)) {
-                el.classList.add('cal-day-selected', 'cal-day-range-end');
-            }
-            if (crRangeStart && crRangeEnd && dateObj > crRangeStart && dateObj < crRangeEnd) {
-                el.classList.add('cal-day-range-between');
-            }
-            if (crRangeStart && crRangeEnd && isSameDay(dateObj, crRangeStart) && isSameDay(dateObj, crRangeEnd)) {
-                el.classList.add('cal-day-range-start', 'cal-day-range-end');
-            }
-
-            el.addEventListener('click', (e) => {
-                e.stopPropagation();
-                if (el.classList.contains('cal-day-disabled') || el.classList.contains('cal-day-other')) return;
-                if (!crRangeStart || (crRangeStart && crRangeEnd)) {
-                    crRangeStart = dateObj;
-                    crRangeEnd = null;
-                } else {
-                    if (dateObj < crRangeStart) {
-                        crRangeStart = dateObj;
-                    } else {
-                        crRangeEnd = dateObj;
-                        updateDateDisplay();
-                        closeDatePopover();
-                        triggerActionsSearch();
-                        return;
-                    }
-                }
-                updateDateDisplay();
-                renderCalendar();
-            });
-
-            crCalGrid.appendChild(el);
-            dayIdx++;
-        }
-
-        const days = crCalGrid.querySelectorAll('.cal-day:not(.cal-day-empty)');
-        days.forEach((el, idx) => {
-            el.style.animationDelay = `${idx * 15}ms`;
-            el.classList.add('cal-day-animate');
-        });
-    }
+    });
 
     function closeDatePopover() {
         crDatePopover.style.display = 'none';
@@ -341,18 +248,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             closeDatePopover();
         } else {
             if (crRangeStart) {
-                crViewMonth = crRangeStart.getMonth();
-                crViewYear = crRangeStart.getFullYear();
+                crCal.setView(crRangeStart.getFullYear(), crRangeStart.getMonth());
             }
-            renderCalendar();
+            crCal.render();
             crDatePopover.style.display = 'block';
             crDateTrigger.classList.add('is-open');
         }
     }
 
-    // ── Datepicker: Init ──
-    populateMonths();
-    populateYears();
     crDateTrigger.addEventListener('click', (e) => {
         if (hastaHoyActive) {
             e.stopPropagation();
@@ -363,11 +266,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         toggleDatePopover();
     });
-    crCalPrev.addEventListener('click', () => { crViewMonth--; if (crViewMonth < 0) { crViewMonth = 11; crViewYear--; } renderCalendar('left'); });
-    crCalNext.addEventListener('click', () => { crViewMonth++; if (crViewMonth > 11) { crViewMonth = 0; crViewYear++; } renderCalendar('right'); });
-    crFilterMonth.addEventListener('change', () => { crViewMonth = parseInt(crFilterMonth.value, 10); renderCalendar(); });
-    crFilterYear.addEventListener('change', () => { crViewYear = parseInt(crFilterYear.value, 10); renderCalendar(); });
-    crCalToday.addEventListener('click', () => { crViewMonth = crToday.getMonth(); crViewYear = crToday.getFullYear(); renderCalendar(); });
 
     // Close popover on click outside
     document.addEventListener('click', (e) => {

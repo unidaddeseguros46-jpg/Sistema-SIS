@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="../../css/styles.css">
     <link rel="stylesheet" href="../../css/registro-pacientes.css">
     <link rel="stylesheet" href="../../css/seguimiento-pacientes.css">
+    <link rel="stylesheet" href="../../css/calendario-popover.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -287,51 +288,16 @@
         @keyframes btnPulse { 0%,100% { border-color:#e2e8f0; box-shadow:0 0 0 0 rgba(64,64,64,0.2); } 50% { border-color:#404040; box-shadow:0 0 0 6px rgba(64,64,64,0.1); } }
         .btn-pulse { animation: btnPulse 0.5s ease-in-out 4; }
 
-        /* ── Datepicker Calendar ── */
+        /* ── Date trigger ── */
         .cr-date-trigger:hover { border-color: #cbd5e1 !important; }
         .cr-date-trigger.is-open { border-color: #3b82f6 !important; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
-        .filter-select {
-            padding: 6px 10px; font-size: 13px; font-weight: 500; color: #1e293b;
-            background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px;
-            outline: none; cursor: pointer; transition: border-color 0.2s ease, box-shadow 0.2s ease;
-            min-width: 0; width: 100%;
-        }
-        .filter-select:hover { border-color: #cbd5e1; }
-        .filter-select:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); background: #ffffff; }
-        .cal-nav-btn:hover { background: #f8fafc; color: #3b82f6; border-color: #cbd5e1; }
-        #cr-cal-today:hover { background: #e2e8f0 !important; }
-        .cal-days-grid .cal-day {
-            aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
-            font-size: 13px; font-weight: 500; color: #1e293b; background: #ffffff;
-            border-radius: 6px; cursor: pointer; transition: background 0.12s;
-            position: relative;
-        }
-        .cal-days-grid .cal-day:hover:not(.cal-day-empty):not(.cal-day-other):not(.cal-day-disabled) { background: #f8fafc; color: #0284c7; }
-        .cal-days-grid .cal-day:active:not(.cal-day-empty):not(.cal-day-other):not(.cal-day-disabled) { background: #f1f5f9; }
-        .cal-days-grid .cal-day-empty { cursor: default; }
-        .cal-days-grid .cal-day-other { color: #cbd5e1; cursor: default; }
-        .cal-days-grid .cal-day-other:hover { background: transparent; }
-        .cal-days-grid .cal-day-today { background: rgba(59,130,246,0.08); font-weight: 700; color: #3b82f6; }
-        .cal-days-grid .cal-day-today:hover { background: rgba(59,130,246,0.14); }
-        .cal-days-grid .cal-day-selected { background: #3b82f6 !important; color: #ffffff !important; font-weight: 700; box-shadow: 0 2px 8px rgba(59,130,246,0.3); }
-        .cal-days-grid .cal-day-range-start { background: #3b82f6 !important; color: #ffffff !important; font-weight: 700; border-radius: 6px 0 0 6px; }
-        .cal-days-grid .cal-day-range-end { background: #3b82f6 !important; color: #ffffff !important; font-weight: 700; border-radius: 0 6px 6px 0; }
-        .cal-days-grid .cal-day-range-between { background: rgba(59,130,246,0.1); color: #1e293b; border-radius: 0; }
-        .cal-days-grid .cal-day-range-start.cal-day-range-end { border-radius: 6px; }
-        .cal-days-grid .cal-day-disabled { cursor: not-allowed; opacity: 0.4; }
-        .cal-slide-left { animation: slideInLeft 0.25s cubic-bezier(0.16,1,0.3,1) forwards; }
-        .cal-slide-right { animation: slideInRight 0.25s cubic-bezier(0.16,1,0.3,1) forwards; }
-        @keyframes slideInLeft { from { opacity:0; transform:translateX(-20px) scale(0.97); } to { opacity:1; transform:translateX(0) scale(1); } }
-        @keyframes slideInRight { from { opacity:0; transform:translateX(20px) scale(0.97); } to { opacity:1; transform:translateX(0) scale(1); } }
-        @keyframes popoverIn { from { opacity:0; transform:translateY(4px) scale(0.96); } to { opacity:1; transform:translateY(0) scale(1); } }
-        .cal-day-animate { animation: dayPop 0.25s cubic-bezier(0.16,1,0.3,1) both; }
-        @keyframes dayPop { from { opacity:0; transform:scale(0.7); } to { opacity:1; transform:scale(1); } }
     </style>
 
     <script src="../../js/supabase-config.js"></script>
     <script src="../../js/layout.js"></script>
     <script src="../../js/servicios.js"></script>
     <script src="../../js/custom-select.js"></script>
+    <script src="../../js/calendario-popover.js"></script>
     <script src="consulta-rapida.js"></script>
 </body>
 </html>

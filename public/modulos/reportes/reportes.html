@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Reportes - Hospital San José</title>
     <link rel="stylesheet" href="../../css/styles.css">
+    <link rel="stylesheet" href="../../css/calendario-popover.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -25,7 +26,7 @@
             flex-wrap: wrap;
         }
 
-        /* ── Date trigger ── */
+        /* ── Date trigger (theme: dark blue) ── */
         .rp-date-trigger {
             height: 42px; display: flex; align-items: center;
             background: #ffffff; border-radius: 8px;
@@ -40,6 +41,15 @@
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         }
         .rp-date-hastahoy .rp-date-display { color: #1e40af; font-weight: 600; }
+        .rp-date-wrapper { position: relative; min-width: 260px; }
+
+        /* Override calendar theme for reports (dark blue) */
+        .rp-date-wrapper, .rp-date-popover {
+            --cal-primary: #1e40af;
+            --cal-primary-r: 30;
+            --cal-primary-g: 64;
+            --cal-primary-b: 175;
+        }
 
         .rp-date-popover {
             display: none; position: absolute; top: calc(100% + 6px); left: 0;
@@ -48,44 +58,6 @@
             padding: 16px 20px; width: 320px;
             animation: popoverIn 0.2s cubic-bezier(0.16,1,0.3,1) forwards;
         }
-        .rp-date-wrapper { position: relative; min-width: 260px; }
-
-        .cal-filters { display: flex; gap: 8px; align-items: flex-end; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #f1f5f9; }
-        .cal-filters .filter-group { display:flex; flex-direction:column; gap:3px; flex:1; }
-        .cal-filters .filter-group label { font-size:10px; font-weight:600; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em; }
-        .filter-select { padding:6px 10px; font-size:13px; font-weight:500; color:#0f172a; background:#f8fafc; border:1px solid #cbd5e1; border-radius:6px; outline:none; cursor:pointer; transition:border-color 0.2s,box-shadow 0.2s; min-width:0; width:100%; }
-        .filter-select:hover { border-color:#94a3b8; }
-        .filter-select:focus { border-color:#1e40af; box-shadow:0 0 0 3px rgba(30,64,175,0.12); background:#ffffff; }
-
-        .cal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
-        .cal-nav-btn { width:32px; height:32px; border-radius:8px; border:1px solid #e2e8f0; background:#ffffff; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:16px; color:#475569; transition:all 0.15s; }
-        .cal-nav-btn:hover { background:#f1f5f9; color:#1e40af; border-color:#cbd5e1; }
-        .cal-title { font-size:14px; font-weight:700; color:#0f172a; }
-        .cal-weekdays { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; margin-bottom:6px; }
-        .cal-weekdays span { text-align:center; font-size:11px; font-weight:600; color:#94a3b8; padding:4px 0; }
-
-        .cal-days-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:3px; }
-        .cal-days-grid .cal-day { aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:500; color:#0f172a; background:#ffffff; border-radius:6px; cursor:pointer; transition:background 0.12s; position:relative; }
-        .cal-days-grid .cal-day:hover:not(.cal-day-empty):not(.cal-day-other):not(.cal-day-disabled) { background:#f1f5f9; color:#1e40af; }
-        .cal-days-grid .cal-day-empty { cursor:default; }
-        .cal-days-grid .cal-day-other { color:#cbd5e1; cursor:default; }
-        .cal-days-grid .cal-day-other:hover { background:transparent; }
-        .cal-days-grid .cal-day-today { background:rgba(30,64,175,0.08); font-weight:700; color:#1e40af; }
-        .cal-days-grid .cal-day-today:hover { background:rgba(30,64,175,0.14); }
-        .cal-days-grid .cal-day-selected { background:#1e40af !important; color:#ffffff !important; font-weight:700; box-shadow:0 2px 8px rgba(30,64,175,0.3); }
-        .cal-days-grid .cal-day-range-start { background:#1e40af !important; color:#ffffff !important; font-weight:700; border-radius:6px 0 0 6px; }
-        .cal-days-grid .cal-day-range-end { background:#1e40af !important; color:#ffffff !important; font-weight:700; border-radius:0 6px 6px 0; }
-        .cal-days-grid .cal-day-range-between { background:rgba(30,64,175,0.1); color:#0f172a; border-radius:0; }
-        .cal-days-grid .cal-day-range-start.cal-day-range-end { border-radius:6px; }
-        .cal-days-grid .cal-day-disabled { cursor:not-allowed; opacity:0.4; }
-        .cal-day-animate { animation:dayPop 0.25s cubic-bezier(0.16,1,0.3,1) both; }
-        .cal-slide-left { animation:slideInLeft 0.25s cubic-bezier(0.16,1,0.3,1) forwards; }
-        .cal-slide-right { animation:slideInRight 0.25s cubic-bezier(0.16,1,0.3,1) forwards; }
-
-        @keyframes slideInLeft { from { opacity:0; transform:translateX(-20px) scale(0.97); } to { opacity:1; transform:translateX(0) scale(1); } }
-        @keyframes slideInRight { from { opacity:0; transform:translateX(20px) scale(0.97); } to { opacity:1; transform:translateX(0) scale(1); } }
-        @keyframes popoverIn { from { opacity:0; transform:translateY(4px) scale(0.96); } to { opacity:1; transform:translateY(0) scale(1); } }
-        @keyframes dayPop { from { opacity:0; transform:scale(0.7); } to { opacity:1; transform:scale(1); } }
 
         /* ── Hasta hoy ── */
         .rp-hastahoy-btn { height:42px; padding:0 16px; font-size:13px; font-weight:600; display:flex; align-items:center; gap:6px; border-radius:8px; border:1px solid #cbd5e1; background:#f8fafc; color:#475569; cursor:pointer; transition:all 0.2s; white-space:nowrap; }
@@ -299,6 +271,7 @@
     <script src="../../js/layout.js"></script>
     <script src="../../js/servicios.js"></script>
     <script src="../../js/custom-select.js"></script>
+    <script src="../../js/calendario-popover.js"></script>
     <script src="../../js/reportes.js"></script>
 </body>
 </html>
