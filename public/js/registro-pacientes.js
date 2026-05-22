@@ -352,6 +352,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let totalRecords = 0;
     let searchQuery = '';
     let filterQuery = ''; // Variable para almacenar el filtro de Servicio
+    const pageCache = new Map();
 
     // ============================================
     // CARGA DE FILTRO PREVIO
@@ -373,6 +374,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     // CARGA DE DATOS LOCALES VS SERVIDOR (PAGINACIÓN)
     // ============================================
     const loadPacientes = async () => {
+        const cacheKey = `${currentPage}|${searchQuery}|${filterQuery}`;
+        if (pageCache.has(cacheKey)) {
+            const cached = pageCache.get(cacheKey);
+            totalRecords = cached.count;
+            renderTable(cached.data, (currentPage - 1) * rowsPerPage);
+            renderPagination();
+            return;
+        }
+
         try {
             loadingIndicator.style.display = 'block';
             tableElement.style.display = 'none';
@@ -400,6 +410,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (error) throw error;
             totalRecords = count || 0;
+            pageCache.set(cacheKey, { data, count: totalRecords });
             renderTable(data, startRange);
             renderPagination();
         } catch (error) {
@@ -612,6 +623,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             searchQuery = val;
             sessionStorage.setItem('rp_search_query', val);
             currentPage = 1;
+            pageCache.clear();
             loadPacientes();
         }
     };
@@ -632,12 +644,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             sessionStorage.setItem('rp_filter_servicio', val);
             currentPage = 1;
             filterServicio.style.color = "#1e293b"; // Color activo
+            pageCache.clear();
             loadPacientes();
         } else {
             filterQuery = '';
             sessionStorage.removeItem('rp_filter_servicio');
             filterServicio.style.color = "#94a3b8"; // Color placeholder
             currentPage = 1;
+            pageCache.clear();
             loadPacientes();
         }
     };
@@ -662,6 +676,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         sessionStorage.removeItem('rp_search_query');
 
         currentPage = 1;
+        pageCache.clear();
         loadPacientes();
     });
 

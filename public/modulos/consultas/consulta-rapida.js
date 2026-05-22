@@ -39,6 +39,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let hastaHoyActive = false;
     let crCurrentPage = 1;
     let crRowsPerPage = 20;
+    const pageCache = new Map();
     let modalPacienteActual = null;
     let susaludCreds = null;
 
@@ -182,6 +183,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
         crCurrentPage = 1;
+        pageCache.clear();
         loadPacientes();
     };
 
@@ -526,12 +528,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         const dni = inputDNI.value.trim();
         const hc = inputHC.value.trim();
         const apellidos = inputApellidos.value.trim();
-        const { start: fechaDesde, end: fechaHasta } = getDateRangeValues();
         const condicionVal = filterCondicion.value;
         const servicioVal = filterServicio.value;
+        const { start: fechaDesde, end: fechaHasta } = getDateRangeValues();
+
+        const cacheKey = `${crCurrentPage}|${dni}|${hc}|${apellidos}|${condicionVal}|${servicioVal}|${fechaDesde || ''}|${fechaHasta || ''}|${hastaHoyActive}`;
+        if (pageCache.has(cacheKey)) {
+            const cached = pageCache.get(cacheKey);
+            currentPagePatients = cached.data;
+            totalPatients = cached.count;
+            if (currentPagePatients.length === 0) {
+                showToast('No se encontraron pacientes.');
+            }
+            renderTable();
+            renderPagination();
+            return;
+        }
 
         selectedDNIs = [];
         updateActionsBar();
+
+        const { start: fechaDesde, end: fechaHasta } = getDateRangeValues();
 
         sessionStorage.setItem('cr_filter_dni', dni);
         sessionStorage.setItem('cr_filter_hc', hc);
@@ -577,6 +594,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             currentPagePatients = data || [];
             totalPatients = count || 0;
+            pageCache.set(cacheKey, { data: currentPagePatients, count: totalPatients });
 
             if (data.length === 0) {
                 showToast('No se encontraron pacientes.');
@@ -593,6 +611,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     btnSearch.addEventListener('click', () => {
         crCurrentPage = 1;
+        pageCache.clear();
         loadPacientes();
     });
 
@@ -600,6 +619,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         input.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 crCurrentPage = 1;
+                pageCache.clear();
                 loadPacientes();
             }
         });
@@ -627,6 +647,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         sessionStorage.removeItem('cr_filter_servicio');
         sessionStorage.removeItem('cr_hasta_hoy');
         sessionStorage.removeItem('cr_accumulated');
+        pageCache.clear();
         currentPagePatients = [];
         totalPatients = 0;
         selectedDNIs = [];
