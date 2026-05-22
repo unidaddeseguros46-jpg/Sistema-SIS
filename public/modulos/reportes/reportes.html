@@ -25,6 +25,17 @@
             gap: 12px;
             flex-wrap: wrap;
         }
+        .rp-actions-bar .btn-clear {
+            height: 42px; padding: 0 16px;
+            background: #ffffff; border: 1px solid #e2e8f0;
+            border-radius: 8px; color: #64748b;
+            font-size: 13px; font-weight: 600;
+            cursor: pointer; display: flex; align-items: center;
+            gap: 6px; transition: all 0.2s;
+        }
+        .rp-actions-bar .btn-clear:hover {
+            background: #fef2f2; border-color: #fecaca; color: #dc2626;
+        }
 
         /* ── Date trigger (theme: dark blue) ── */
         .rp-date-trigger {
@@ -66,74 +77,95 @@
         @keyframes btnPulse { 0%,100% { border-color:#cbd5e1; box-shadow:0 0 0 0 rgba(30,64,175,0.2); } 50% { border-color:#1e40af; box-shadow:0 0 0 6px rgba(30,64,175,0.12); } }
         .btn-pulse { animation:btnPulse 0.5s ease-in-out 4; }
 
-        /* ── Generate button ── */
+        /* ── Generate / Refresh button ── */
         .rp-generate-btn { height:42px; padding:0 24px; background:#1e40af; color:#ffffff; border:none; border-radius:8px; font-size:14px; font-weight:600; cursor:pointer; display:flex; align-items:center; gap:8px; transition:background 0.2s,transform 0.15s; white-space:nowrap; }
         .rp-generate-btn:hover { background:#1e3a8a; transform:translateY(-1px); }
         .rp-generate-btn:active { transform:translateY(0); }
         .rp-generate-btn:disabled { opacity:0.6; cursor:not-allowed; transform:none; }
 
-        /* ── Main layout 3/8 + 5/8 ── */
-        .rp-reports-layout { display: flex; gap: 20px; align-items: flex-start; }
-        .rp-layout-left { flex: 2.5; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
-        .rp-layout-right { flex: 7.5; min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+        /* ── CSS Grid layout (2 cols × 3 rows, all cards same height) ── */
+        .rp-reports-layout {
+            display: grid;
+            grid-template-columns: 3fr 7fr;
+            grid-template-rows: 1fr 1fr 1fr;
+            gap: 16px;
+            align-items: stretch;
+        }
+        [data-area="score"] { grid-row: 1; grid-column: 1; }
+        [data-area="condicion"] { grid-row: 2; grid-column: 1; }
+        [data-area="seguro"] { grid-row: 3; grid-column: 1; }
+        [data-area="trends"] { grid-row: 1; grid-column: 2; }
+        [data-area="servicios"] { grid-row: 2; grid-column: 2; }
+        [data-area="export"] { grid-row: 3; grid-column: 2; }
 
         .chart-card {
             background: #ffffff;
             border-radius: 12px;
-            padding: 20px;
+            padding: 14px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.06);
             border: 1px solid #cbd5e1;
+            display: flex;
+            flex-direction: column;
+        }
+        .chart-card > h3 {
+            flex-shrink: 0;
+        }
+        .chart-card > .chart-wrapper {
+            flex: 0 0 auto;
+            height: 80px;
+        }
+        .chart-card > .stat-bars {
+            flex: 0 0 auto;
         }
         .chart-card h3 {
-            font-size: 14px; font-weight: 700; color: #0f172a;
-            margin: 0 0 16px 0; display: flex; align-items: center; gap: 8px;
+            font-size: 13px; font-weight: 700; color: #0f172a;
+            margin: 0 0 10px 0; display: flex; align-items: center; gap: 8px;
         }
         .chart-card h3 i { color: #1e40af; font-size: 15px; }
 
         .chart-wrapper { position: relative; width: 100%; }
-        .chart-wrapper.score-size { height: 200px; max-width: 200px; margin: 0 auto; }
-        .sc-icon { font-size: 28px; color: #475569; display: block; text-align: center; margin: 6px 0; }
+        .chart-wrapper canvas { display: block; max-width: 100%; max-height: 100%; }
+        .chart-wrapper.score-size { max-width: 130px; margin: 0 auto; }
 
-        /* ── Service cards grid ── */
-        #service-list {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
+        /* ── Doughnut with legend right + bars below ── */
+        .chart-wrapper.doughnut-right {
+            margin-bottom: 4px;
         }
-        .service-card {
-            background: #ffffff;
-            border-radius: 10px;
-            padding: 16px;
-            border-top: 3px solid var(--scolor, #2563eb);
-            box-shadow: 0 1px 3px rgba(0,0,0,0.04);
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-        .sc-title { font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.03em; text-align: center; }
-        .sc-value { font-size: 28px; font-weight: 700; color: #0f172a; line-height: 1.1; text-align: center; }
-        .sc-pct { font-size: 12px; color: #64748b; font-weight: 500; text-align: center; }
-        .sc-bar { height: 4px; background: #f1f5f9; border-radius: 4px; overflow: hidden; }
-        .sc-bar-fill { height: 100%; border-radius: 4px; background: var(--scolor, #2563eb); }
 
-        /* ── Seguro list ── */
-        #seguro-cards {
+        .stat-bars {
             display: flex;
             flex-direction: column;
             gap: 4px;
+            max-width: 80%;
+            margin: 0 auto;
+            width: 100%;
         }
-        .seguro-list-item {
-            display: flex; align-items: center; gap: 10px; padding: 5px 0;
-            border-bottom: 1px solid #f8fafc;
+        .stat-bar-item { display: flex; flex-direction: column; gap: 1px; }
+        .stat-bar-header {
+            display: flex; justify-content: space-between; align-items: center;
         }
-        .seguro-list-item:last-child { border-bottom: none; }
-        .sl-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-        .sl-name { flex: 1; font-size: 13px; font-weight: 500; color: #0f172a; }
-        .sl-count { font-size: 14px; font-weight: 700; color: #0f172a; }
-        .sl-bar {
-            width: 60px; height: 6px; background: #f1f5f9; border-radius: 4px; overflow: hidden; flex-shrink: 0;
+        .stat-bar-label {
+            font-size: 10px; font-weight: 600; color: #0f172a;
         }
-        .sl-bar-fill { height: 100%; border-radius: 4px; }
+        .stat-bar-value {
+            font-size: 10px; font-weight: 600; color: #475569;
+        }
+        .stat-bar-track {
+            height: 5px; background: #f1f5f9; border-radius: 5px;
+            overflow: hidden;
+        }
+        .stat-bar-fill {
+            height: 100%; border-radius: 7px;
+            transition: width 0.4s ease;
+        }
+
+        /* ── Trends row (admissions + discharges side by side) ── */
+        .trends-row { display: flex; gap: 0; margin: 0 -8px; }
+        .trends-row .chart-card { flex: 1; margin: 0 8px; min-width: 0; }
+        .trends-row .chart-wrapper { flex: 1; min-height: 70px; }
+
+        /* ── Service bar chart wrapper ── */
+        .chart-wrapper.service-bar { flex: 1; min-height: 100px; }
 
         /* ── Loading ── */
         .loading-overlay { display:none; align-items:center; justify-content:center; gap:12px; padding:40px; color:#64748b; font-size:15px; }
@@ -144,7 +176,7 @@
         .no-data-msg i { font-size:40px; display:block; margin-bottom:12px; color:#cbd5e1; }
         .empty-list { text-align:center; padding:20px; color:#94a3b8; font-size:13px; }
 
-        .export-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+        .export-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
         .btn-export { padding:8px 16px; border-radius:8px; font-size:13px; font-weight:600; border:none; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all 0.2s; }
         .btn-export.excel { background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; }
         .btn-export.excel:hover { background:#dcfce7; }
@@ -153,21 +185,24 @@
 
         /* ── Responsive ── */
         @media (max-width: 1100px) {
-            .rp-reports-layout { flex-direction: column; }
-            .rp-layout-left, .rp-layout-right { flex: 1; width: 100%; }
+            .rp-reports-layout {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto;
+            }
+            [data-area] { grid-row: auto; grid-column: auto; }
+            .trends-row { flex-direction: column; margin: 0; }
+            .trends-row .chart-card { margin: 0; }
         }
         @media (max-width: 768px) {
             .rp-actions-bar { flex-direction: column; align-items: stretch; }
             .rp-date-wrapper { min-width: auto; }
             .rp-date-trigger { min-width: auto; }
             .rp-generate-btn { width: 100%; justify-content: center; }
-            .chart-wrapper.score-size { height: 180px; max-width: 180px; }
-            #service-list { grid-template-columns: repeat(2, 1fr); }
+            .chart-wrapper.score-size { max-width: 110px; }
+            .chart-wrapper.doughnut-right { height: 70px; }
         }
-        @media (max-width: 480px) {
-            .chart-card { padding: 14px; }
-            .sc-value { font-size: 24px; }
-            #service-list { grid-template-columns: 1fr; }
+        @media (max-width: 560px) {
+            .chart-wrapper.doughnut-right { height: 100px; }
         }
 
         @media print {
@@ -176,12 +211,22 @@
             .main-wrapper { padding-left: 0 !important; }
             .page-content { margin-top: 0 !important; padding: 20px !important; max-width: 100% !important; }
             .reports-page { gap: 12px; }
-            .chart-card { break-inside: avoid; border: 1px solid #cbd5e1; box-shadow: none; }
-            .chart-wrapper.score-size { height: 180px; max-width: 220px; }
-            .service-card, .seguro-list-item { break-inside: avoid; }
-            .rp-reports-layout { flex-direction: row; }
-            #service-list { grid-template-columns: repeat(4, 1fr); }
-            #seguro-cards { gap: 2px; }
+            .chart-card { break-inside: avoid; border: 1px solid #cbd5e1; box-shadow: none; min-height: auto; }
+            .chart-wrapper.score-size { max-width: 160px; }
+            .chart-wrapper.doughnut-right { height: 90px; }
+            .rp-reports-layout {
+                grid-template-columns: 3fr 7fr !important;
+                grid-template-rows: 1fr 1fr 1fr !important;
+            }
+            [data-area] { grid-row: auto !important; grid-column: auto !important; }
+            [data-area="score"] { grid-row: 1 !important; grid-column: 1 !important; }
+            [data-area="condicion"] { grid-row: 2 !important; grid-column: 1 !important; }
+            [data-area="seguro"] { grid-row: 3 !important; grid-column: 1 !important; }
+            [data-area="trends"] { grid-row: 1 !important; grid-column: 2 !important; }
+            [data-area="servicios"] { grid-row: 2 !important; grid-column: 2 !important; }
+            [data-area="export"] { grid-row: 3 !important; grid-column: 2 !important; }
+            .trends-row { flex-direction: row !important; margin: 0 -8px !important; }
+            .trends-row .chart-card { margin: 0 8px !important; }
         }
     </style>
 </head>
@@ -227,6 +272,7 @@
                         </select>
                         <i class="fa-solid fa-chevron-down" style="position:absolute;right:15px;color:#64748b;font-size:12px;pointer-events:none;"></i>
                     </div>
+                    <button class="btn-clear" id="btn-clear-reportes"><i class="fa-solid fa-eraser"></i> Limpiar Filtro</button>
                     <button class="rp-generate-btn" id="btn-generate"><i class="fa-solid fa-rotate"></i> Generar Reporte</button>
                 </div>
 
@@ -236,31 +282,45 @@
                     <span>Cargando datos...</span>
                 </div>
 
-                <!-- ═══ Main layout ═══ -->
+                <!-- ═══ Main layout (CSS Grid) ═══ -->
                 <div class="rp-reports-layout">
 
-                    <!-- ─── Left (2.5/10) ─── -->
-                    <div class="rp-layout-left">
+                    <div class="chart-card" data-area="score">
+                        <h3><i class="fa-solid fa-chart-pie"></i> Score General</h3>
+                        <div class="chart-wrapper score-size"><canvas id="chart-score"></canvas></div>
+                    </div>
+
+                    <div class="chart-card" data-area="condicion">
+                        <h3><i class="fa-solid fa-bed"></i> Condición</h3>
+                        <div class="chart-wrapper doughnut-right"><canvas id="chart-condicion"></canvas></div>
+                        <div class="stat-bars" id="condicion-stats"></div>
+                    </div>
+
+                    <div class="chart-card" data-area="seguro">
+                        <h3><i class="fa-solid fa-shield"></i> Tipo Seguro</h3>
+                        <div class="chart-wrapper doughnut-right"><canvas id="chart-seguro"></canvas></div>
+                        <div class="stat-bars" id="seguro-stats"></div>
+                    </div>
+
+                    <div class="trends-row" data-area="trends">
                         <div class="chart-card">
-                            <h3><i class="fa-solid fa-chart-pie"></i> Score</h3>
-                            <div class="chart-wrapper score-size"><canvas id="chart-score"></canvas></div>
+                            <h3><i class="fa-solid fa-right-to-bracket"></i> Admisiones</h3>
+                            <div class="chart-wrapper"><canvas id="chart-admisiones"></canvas></div>
                         </div>
                         <div class="chart-card">
-                            <h3><i class="fa-solid fa-list"></i> Distribución por Seguro</h3>
-                            <div id="seguro-cards"><div class="empty-list">Cargue un reporte para ver datos</div></div>
+                            <h3><i class="fa-solid fa-right-from-bracket"></i> Altas</h3>
+                            <div class="chart-wrapper"><canvas id="chart-altas"></canvas></div>
                         </div>
                     </div>
 
-                    <!-- ─── Right (7.5/10) ─── -->
-                    <div class="rp-layout-right">
-                        <div class="chart-card" style="height:100%;">
-                            <h3><i class="fa-solid fa-bed-pulse"></i> Pacientes por Servicio</h3>
-                            <div id="service-list"><div class="empty-list">Cargue un reporte para ver datos</div></div>
-                            <div class="export-actions">
-                                <button class="btn-export excel" id="btn-export-excel"><i class="fa-solid fa-file-excel"></i> Excel</button>
-                                <button class="btn-export print" id="btn-export-print"><i class="fa-solid fa-print"></i> Imprimir / PDF</button>
-                            </div>
-                        </div>
+                    <div class="chart-card" data-area="servicios">
+                        <h3><i class="fa-solid fa-chart-column"></i> Distribución por Servicio</h3>
+                        <div class="chart-wrapper service-bar"><canvas id="chart-servicios"></canvas></div>
+                    </div>
+
+                    <div class="export-actions" data-area="export">
+                        <button class="btn-export excel" id="btn-export-excel"><i class="fa-solid fa-file-excel"></i> Excel</button>
+                        <button class="btn-export print" id="btn-export-print"><i class="fa-solid fa-print"></i> Imprimir / PDF</button>
                     </div>
 
                 </div>

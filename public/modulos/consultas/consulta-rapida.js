@@ -530,7 +530,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const apellidos = inputApellidos.value.trim();
         const condicionVal = filterCondicion.value;
         const servicioVal = filterServicio.value;
-        const { start: fechaDesde, end: fechaHasta } = getDateRangeValues();
+        let { start: fechaDesde, end: fechaHasta } = getDateRangeValues();
 
         const cacheKey = `${crCurrentPage}|${dni}|${hc}|${apellidos}|${condicionVal}|${servicioVal}|${fechaDesde || ''}|${fechaHasta || ''}|${hastaHoyActive}`;
         if (pageCache.has(cacheKey)) {
@@ -548,7 +548,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         selectedDNIs = [];
         updateActionsBar();
 
-        const { start: fechaDesde, end: fechaHasta } = getDateRangeValues();
+        ({ start: fechaDesde, end: fechaHasta } = getDateRangeValues());
 
         sessionStorage.setItem('cr_filter_dni', dni);
         sessionStorage.setItem('cr_filter_hc', hc);

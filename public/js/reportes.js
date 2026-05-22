@@ -8,21 +8,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     let crRangeStart = null;
     let crRangeEnd = null;
     let hastaHoyActive = false;
-    const BAR_COLORS = ['#2563eb','#7c3aed','#db2777','#dc2626','#ea580c','#ca8a04','#16a34a','#0891b2','#4f46e5','#9333ea','#e11d48','#d97706'];
-    const SERVICE_ICONS = {
-        'MEDICINA': 'fa-stethoscope',
-        'CIRUGÍA': 'fa-scalpel',
-        'CIRUGIA': 'fa-scalpel',
-        'UVI': 'fa-heart-pulse',
-        'PEDIATRÍA': 'fa-child',
-        'GINECOLOGÍA': 'fa-venus',
-        'NEONATOLOGÍA': 'fa-baby',
-        'PUERPERIO': 'fa-heart',
-        'SALUD MENTAL': 'fa-brain',
-        'SHOCK TRAUMA': 'fa-truck-medical',
-        'EMERGENCIA': 'fa-truck-medical',
-        'SIN SERVICIO': 'fa-circle-exclamation',
-    };
+    let generateTimer = null;
+    const CHART_COLORS = [
+        '#1976D2', '#1E88E5', '#42A5F5', '#64B5F6', '#4FC3F7',
+        '#26C6DA', '#4DD0E1', '#0097A7', '#26A69A', '#4DB6AC',
+        '#5C6BC0', '#7986CB',
+    ];
+    const LINE_BLUE = CHART_COLORS[1];
+    const LINE_GREEN = CHART_COLORS[8];
+    const COLOR_HOSP = CHART_COLORS[0];
+    const COLOR_ALTA = CHART_COLORS[8];
+    const COLOR_FALL = '#78909C';
+    const COLOR_OTROS = '#B0BEC5';
+    const SEGURO_PALETTE = ['#1e40af','#3b82f6','#059669','#8b5cf6','#0d9488','#dc2626','#1e293b','#64748b'];
 
     // ── DOM refs ──
     const DOM = {
@@ -40,6 +38,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         dateWrapper: document.querySelector('.rp-date-wrapper'),
         filterServicio: document.getElementById('filter-servicio'),
         btnGenerate: document.getElementById('btn-generate'),
+        btnClear: document.getElementById('btn-clear-reportes'),
         loadingEl: document.getElementById('loading-reports'),
         btnExcel: document.getElementById('btn-export-excel'),
         btnPrint: document.getElementById('btn-export-print'),
@@ -66,11 +65,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     const destroyCharts = () => {
         Object.values(charts).forEach(c => { if (c) c.destroy(); });
         Object.keys(charts).forEach(k => delete charts[k]);
+        document.querySelectorAll('.chart-card canvas').forEach(c => {
+            c.removeAttribute('width');
+            c.removeAttribute('height');
+            c.style.removeProperty('width');
+            c.style.removeProperty('height');
+        });
     };
 
     const resetNoData = () => {
         document.querySelectorAll('.chart-card .no-data-msg').forEach(el => el.remove());
         document.querySelectorAll('.chart-card canvas').forEach(c => c.style.display = 'block');
+    };
+
+    // ── Debounced auto-generate ──
+    const scheduleGenerate = () => {
+        clearTimeout(generateTimer);
+        generateTimer = setTimeout(generateReport, 300);
     };
 
     // ── Calendar (shared) ──
@@ -103,6 +114,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             crRangeEnd = end;
             updateDateDisplay();
             closeDatePopover();
+            scheduleGenerate();
         }
     });
 
@@ -165,6 +177,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             closeDatePopover();
         }
         updateDateDisplay();
+        scheduleGenerate();
     }
 
     // ── Filters ──
@@ -209,6 +222,32 @@ document.addEventListener('DOMContentLoaded', async () => {
         return { data: data || [], count: count || 0 };
     }
 
+    // ── Helpers to build month-grouped data ──
+    const MONTHS = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Set','Oct','Nov','Dic'];
+    function fmtMonth(ym) {
+        const [y, m] = ym.split('-');
+        return `${MONTHS[parseInt(m, 10) - 1]} ${y}`;
+    }
+    function countByMonth(dates, desde, hasta) {
+        const map = {};
+        dates.forEach(d => {
+            const key = (d.split('T')[0] || d).substring(0, 7);
+            map[key] = (map[key] || 0) + 1;
+        });
+        // Build ordered month range
+        const start = desde || Object.keys(map).sort()[0] || toISODate(getPeruDate()).substring(0, 7);
+        const end = hasta || toISODate(getPeruDate()).substring(0, 7);
+        const result = [];
+        const cur = new Date(start + '-01T00:00:00');
+        const endD = new Date(end + '-01T00:00:00');
+        while (cur <= endD) {
+            const key = toISODate(cur).substring(0, 7);
+            result.push({ month: fmtMonth(key), value: map[key] || 0 });
+            cur.setMonth(cur.getMonth() + 1);
+        }
+        return result;
+    }
+
     // ── Generate ──
     async function generateReport() {
         DOM.loadingEl.classList.add('active');
@@ -229,7 +268,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const pac = pacResult.data;
             const totalCount = pacResult.count;
 
-            // ── Score Chart ──
+            // ── 1. Score Chart ──
             const ctxScore = document.getElementById('chart-score')?.getContext('2d');
             if (ctxScore) {
                 charts.score = new Chart(ctxScore, {
@@ -238,7 +277,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         labels: ['Total'],
                         datasets: [{
                             data: [totalCount],
-                            backgroundColor: ['#2563eb'],
+                                    backgroundColor: [LINE_BLUE],
                             borderWidth: 0,
                         }]
                     },
@@ -270,11 +309,239 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
             }
 
-            // ── Service cards ──
-            renderServiceCards(pac);
+            // ── 2. Condition Doughnut ──
+            const condGroups = { HOSPITALIZADO: 0, ALTA: 0, FALLECIDO: 0 };
+            pac.forEach(p => {
+                const c = (p.condicion || '').toUpperCase();
+                if (condGroups[c] !== undefined) condGroups[c]++;
+            });
+            const condLabels = ['Hospitalizados', 'Altas', 'Fallecidos'];
+            const condData = [condGroups.HOSPITALIZADO, condGroups.ALTA, condGroups.FALLECIDO];
+            const condColors = [COLOR_HOSP, COLOR_ALTA, COLOR_FALL];
 
-            // ── Seguro list ──
-            renderSeguroList(pac);
+            const ctxCond = document.getElementById('chart-condicion')?.getContext('2d');
+            if (ctxCond) {
+                const hasData = condData.some(v => v > 0);
+                charts.condicion = new Chart(ctxCond, {
+                    type: 'doughnut',
+                    data: {
+                        labels: condLabels,
+                        datasets: [{
+                            data: hasData ? condData : [1],
+                            backgroundColor: hasData ? condColors : ['#e2e8f0'],
+                            borderWidth: 0,
+                        }]
+                    },
+                    options: {
+                        cutout: '60%',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                labels: { padding: 10, usePointStyle: true, font: { size: 11 }, boxWidth: 12 }
+                            },
+                            tooltip: { enabled: hasData }
+                        }
+                    }
+                });
+            }
+
+            renderCondicionStats(condGroups, condColors, totalCount);
+
+            // ── 3. Seguro Doughnut ──
+            const segGroups = {};
+            pac.forEach(p => {
+                const s = p.tipo_seguro || 'SIN SEGURO';
+                segGroups[s] = (segGroups[s] || 0) + 1;
+            });
+            const segSorted = Object.entries(segGroups).sort((a, b) => b[1] - a[1]);
+            const segLabels = segSorted.map(([k]) => k);
+            const segData = segSorted.map(([, v]) => v);
+            const segColors = segSorted.map((_, i) => SEGURO_PALETTE[i % SEGURO_PALETTE.length]);
+
+            const ctxSeg = document.getElementById('chart-seguro')?.getContext('2d');
+            if (ctxSeg) {
+                const hasData = segData.some(v => v > 0);
+                charts.seguro = new Chart(ctxSeg, {
+                    type: 'doughnut',
+                    data: {
+                        labels: segLabels,
+                        datasets: [{
+                            data: hasData ? segData : [1],
+                            backgroundColor: hasData ? segColors : ['#e2e8f0'],
+                            borderWidth: 0,
+                        }]
+                    },
+                    options: {
+                        cutout: '60%',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                labels: { padding: 10, usePointStyle: true, font: { size: 11 }, boxWidth: 12 }
+                            },
+                            tooltip: { enabled: hasData }
+                        }
+                    }
+                });
+            }
+
+            renderSeguroStats(segSorted, segColors, totalCount);
+
+            // ── 4. Admissions Line (by month) ──
+            const admDates = hospData.map(h => h.fecha_ingreso).filter(Boolean);
+            const admMonthly = countByMonth(admDates, filters.fecha_desde, filters.fecha_hasta);
+
+            const ctxAdm = document.getElementById('chart-admisiones')?.getContext('2d');
+            if (ctxAdm) {
+                const hasData = admMonthly.some(d => d.value > 0);
+                charts.admisiones = new Chart(ctxAdm, {
+                    type: 'line',
+                    data: {
+                        labels: hasData ? admMonthly.map(d => d.month) : [],
+                        datasets: [{
+                            label: 'Admisiones',
+                            data: hasData ? admMonthly.map(d => d.value) : [],
+                                borderColor: LINE_BLUE,
+                                backgroundColor: 'rgba(30,136,229,0.08)',
+                                fill: true,
+                                tension: 0.3,
+                                pointRadius: 4,
+                                pointHoverRadius: 6,
+                                pointBackgroundColor: LINE_BLUE,
+                            borderWidth: 2,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                        },
+                        scales: {
+                            x: {
+                                ticks: {
+                                    font: { size: 10 },
+                                    maxRotation: 45,
+                                },
+                                grid: { display: false }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    display: false,
+                                },
+                                grid: { color: '#f1f5f9' }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // ── 5. Discharges Line (by month) ──
+            const altaDates = altasResult.data.map(h => h.fecha_alta).filter(Boolean);
+            const altaMonthly = countByMonth(altaDates, filters.fecha_desde, filters.fecha_hasta);
+
+            const ctxAltas = document.getElementById('chart-altas')?.getContext('2d');
+            if (ctxAltas) {
+                const hasData = altaMonthly.some(d => d.value > 0);
+                charts.altas = new Chart(ctxAltas, {
+                    type: 'line',
+                    data: {
+                        labels: hasData ? altaMonthly.map(d => d.month) : [],
+                        datasets: [{
+                            label: 'Altas',
+                            data: hasData ? altaMonthly.map(d => d.value) : [],
+                                borderColor: LINE_GREEN,
+                                backgroundColor: 'rgba(38,166,154,0.08)',
+                                fill: true,
+                                tension: 0.3,
+                                pointRadius: 4,
+                                pointHoverRadius: 6,
+                                pointBackgroundColor: LINE_GREEN,
+                            borderWidth: 2,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                        },
+                        scales: {
+                            x: {
+                                ticks: {
+                                    maxTicksLimit: 10,
+                                    font: { size: 10 },
+                                    maxRotation: 45,
+                                },
+                                grid: { display: false }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    display: false,
+                                },
+                                grid: { color: '#f1f5f9' }
+                            }
+                        }
+                    }
+                });
+            }
+
+            // ── 6. Service Horizontal Bar ──
+            const svcGroups = {};
+            pac.forEach(p => {
+                const s = p.servicio || 'SIN SERVICIO';
+                svcGroups[s] = (svcGroups[s] || 0) + 1;
+            });
+            const svcSorted = Object.entries(svcGroups).sort((a, b) => b[1] - a[1]);
+            const svcLabels = svcSorted.map(([k]) => k);
+            const svcData = svcSorted.map(([, v]) => v);
+            const svcColors = svcSorted.map((_, i) => CHART_COLORS[i % CHART_COLORS.length]);
+
+            const ctxSvc = document.getElementById('chart-servicios')?.getContext('2d');
+            if (ctxSvc) {
+                const hasData = svcData.some(v => v > 0);
+                charts.servicios = new Chart(ctxSvc, {
+                    type: 'bar',
+                    data: {
+                        labels: hasData ? svcLabels : [],
+                        datasets: [{
+                            label: 'Pacientes',
+                            data: hasData ? svcData : [],
+                            backgroundColor: hasData ? svcColors : ['#e2e8f0'],
+                            borderWidth: 0,
+                            borderRadius: 4,
+                            categoryPercentage: 0.5,
+                            barPercentage: 0.8,
+                        }]
+                    },
+                    options: {
+                        indexAxis: 'y',
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                        },
+                        scales: {
+                            x: {
+                                beginAtZero: true,
+                                ticks: {
+                                    display: false,
+                                },
+                                grid: { color: '#f1f5f9' }
+                            },
+                            y: {
+                                ticks: { font: { size: 11 } },
+                                grid: { display: false }
+                            }
+                        }
+                    }
+                });
+            }
 
         } catch (err) {
             console.error(err);
@@ -287,72 +554,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     // ── Service cards ──
-    function renderServiceCards(pacientes) {
-        const groups = {};
-        pacientes.forEach(p => {
-            const s = p.servicio || 'SIN SERVICIO';
-            groups[s] = (groups[s] || 0) + 1;
-        });
-        const sorted = Object.entries(groups).sort((a, b) => b[1] - a[1]);
-        const total = pacientes.length || 1;
+    // ── Clear filters ──
+    function clearFilters() {
+        crRangeStart = null;
+        crRangeEnd = null;
+        hastaHoyActive = false;
+        DOM.hastaHoy.classList.remove('active');
+        rpCal.setRange(null, null);
+        updateDateDisplay();
 
-        const container = document.getElementById('service-list');
-        container.innerHTML = '';
+        DOM.filterServicio.value = '';
+        if (DOM.filterServicio.customDropdownUpdate) DOM.filterServicio.customDropdownUpdate();
 
-        if (sorted.length === 0) {
-            container.innerHTML = '<div class="empty-list">Sin datos de servicio</div>';
-            return;
-        }
-
-        sorted.forEach(([name, count], i) => {
-            const color = BAR_COLORS[i % BAR_COLORS.length];
-            const pct = ((count / total) * 100).toFixed(1);
-            const icon = SERVICE_ICONS[name] || 'fa-circle';
-            const card = document.createElement('div');
-            card.className = 'service-card';
-            card.style.setProperty('--scolor', color);
-            card.innerHTML = `
-                <span class="sc-title">${name}</span>
-                <i class="fa-solid ${icon} sc-icon"></i>
-                <span class="sc-value">${fmt(count)}</span>
-                <span class="sc-pct">${pct}% del total</span>
-                <div class="sc-bar"><div class="sc-bar-fill" style="width:${pct}%;"></div></div>
-            `;
-            container.appendChild(card);
-        });
-    }
-
-    // ── Seguro list ──
-    function renderSeguroList(pacientes) {
-        const groups = {};
-        pacientes.forEach(p => {
-            const s = p.tipo_seguro || 'SIN SEGURO';
-            groups[s] = (groups[s] || 0) + 1;
-        });
-        const sorted = Object.entries(groups).sort((a, b) => b[1] - a[1]);
-        const maxVal = sorted.length > 0 ? sorted[0][1] : 1;
-
-        const container = document.getElementById('seguro-cards');
-        container.innerHTML = '';
-
-        if (sorted.length === 0) {
-            container.innerHTML = '<div class="empty-list">Sin datos de seguro</div>';
-            return;
-        }
-
-        sorted.forEach(([name, count], i) => {
-            const color = BAR_COLORS[i % BAR_COLORS.length];
-            const pct = (count / maxVal) * 100;
-            const item = document.createElement('div');
-            item.className = 'seguro-list-item';
-            item.innerHTML = `
-                <span class="sl-dot" style="background:${color};"></span>
-                <span class="sl-name">${name}</span>
-                <div class="sl-bar"><div class="sl-bar-fill" style="width:${pct}%;background:${color};"></div></div>
-                <span class="sl-count">${fmt(count)}</span>
-            `;
-            container.appendChild(item);
-        });
+        scheduleGenerate();
     }
 
     // ── Export: Excel ──
@@ -379,7 +593,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const patients = data || [];
 
-            // Sheet 1: raw data
             const dataRows = [['DNI', 'HC', 'Apellidos', 'Nombres', 'Fecha Nac.', 'Tipo Doc.', 'Seguro', 'Servicio', 'Condición', 'Creado']];
             patients.forEach(p => {
                 dataRows.push([
@@ -396,7 +609,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 ]);
             });
 
-            // Sheet 2: service summary
             const svcGroups = {};
             patients.forEach(p => {
                 const s = p.servicio || 'SIN SERVICIO';
@@ -412,7 +624,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 sRows.push([s, c.h, c.a, c.f, c.t]);
             });
 
-            // Sheet 3: seguro distribution
             const segGroups = {};
             patients.forEach(p => {
                 const s = p.tipo_seguro || 'SIN SEGURO';
@@ -444,6 +655,55 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.print();
     }
 
+    // ── Stats helpers ──
+    function renderCondicionStats(groups, colors, total) {
+        const container = document.getElementById('condicion-stats');
+        if (!container) return;
+        container.innerHTML = '';
+        const labels = ['Hospitalizados', 'Altas', 'Fallecidos'];
+        const keys = ['HOSPITALIZADO', 'ALTA', 'FALLECIDO'];
+        const sum = total || 1;
+        labels.forEach((label, i) => {
+            const val = groups[keys[i]] || 0;
+            const pct = ((val / sum) * 100).toFixed(1);
+            const el = document.createElement('div');
+            el.className = 'stat-bar-item';
+            el.innerHTML = `
+                <div class="stat-bar-header">
+                    <span class="stat-bar-label">${label}</span>
+                    <span class="stat-bar-value">${fmt(val)} (${pct}%)</span>
+                </div>
+                <div class="stat-bar-track">
+                    <div class="stat-bar-fill" style="width:${pct}%;background:${colors[i]};"></div>
+                </div>
+            `;
+            container.appendChild(el);
+        });
+    }
+
+    function renderSeguroStats(sorted, colors, total) {
+        const container = document.getElementById('seguro-stats');
+        if (!container) return;
+        container.innerHTML = '';
+        const sum = total || 1;
+        sorted.forEach(([name, count], i) => {
+            const pct = ((count / sum) * 100).toFixed(1);
+            const color = colors[i];
+            const el = document.createElement('div');
+            el.className = 'stat-bar-item';
+            el.innerHTML = `
+                <div class="stat-bar-header">
+                    <span class="stat-bar-label">${name}</span>
+                    <span class="stat-bar-value">${fmt(count)} (${pct}%)</span>
+                </div>
+                <div class="stat-bar-track">
+                    <div class="stat-bar-fill" style="width:${pct}%;background:${color};"></div>
+                </div>
+            `;
+            container.appendChild(el);
+        });
+    }
+
     // ── Init ──
     setTimeout(() => {
         document.addEventListener('click', (e) => {
@@ -459,8 +719,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     DOM.hastaHoy.addEventListener('click', toggleHastaHoy);
     DOM.btnGenerate.addEventListener('click', generateReport);
+    DOM.btnClear.addEventListener('click', clearFilters);
     DOM.btnExcel.addEventListener('click', exportExcel);
     DOM.btnPrint.addEventListener('click', printReport);
+
+    // Auto-trigger on filter change
+    DOM.filterServicio.addEventListener('change', scheduleGenerate);
 
     updateDateDisplay();
     await generateReport();
