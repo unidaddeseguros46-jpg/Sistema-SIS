@@ -95,8 +95,7 @@
         [data-area="condicion"] { grid-row: 2; grid-column: 1; }
         [data-area="seguro"] { grid-row: 3; grid-column: 1; }
         [data-area="trends"] { grid-row: 1; grid-column: 2; }
-        [data-area="servicios"] { grid-row: 2; grid-column: 2; }
-        [data-area="export"] { grid-row: 3; grid-column: 2; }
+        [data-area="servicios"] { grid-row: 2 / 4; grid-column: 2; }
 
         .chart-card {
             background: #ffffff;
@@ -125,38 +124,79 @@
 
         .chart-wrapper { position: relative; width: 100%; }
         .chart-wrapper canvas { display: block; max-width: 100%; max-height: 100%; }
-        .chart-wrapper.score-size { max-width: 130px; margin: 0 auto; }
 
-        /* ── Doughnut with legend right + bars below ── */
-        .chart-wrapper.doughnut-right {
-            margin-bottom: 4px;
-        }
-
-        .stat-bars {
+        /* ── Score stat card ── */
+        .score-body {
+            flex: 1;
             display: flex;
             flex-direction: column;
-            gap: 4px;
-            max-width: 80%;
-            margin: 0 auto;
-            width: 100%;
+            align-items: center;
+            justify-content: center;
+            gap: 2px;
         }
-        .stat-bar-item { display: flex; flex-direction: column; gap: 1px; }
-        .stat-bar-header {
-            display: flex; justify-content: space-between; align-items: center;
+        .score-number {
+            font-size: 56px; font-weight: 800; color: #1e40af;
+            line-height: 1.1; letter-spacing: -1px;
         }
-        .stat-bar-label {
-            font-size: 10px; font-weight: 600; color: #0f172a;
+        .score-label {
+            font-size: 13px; font-weight: 600; color: #475569;
+            text-transform: uppercase; letter-spacing: 0.5px;
         }
-        .stat-bar-value {
-            font-size: 10px; font-weight: 600; color: #475569;
+        .score-period {
+            font-size: 11px; color: #94a3b8; margin-top: 4px;
         }
-        .stat-bar-track {
-            height: 5px; background: #f1f5f9; border-radius: 5px;
+
+        /* ── Condition stat cards ── */
+        .cond-stats {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 10px;
+            padding: 4px 0;
+        }
+        .cond-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .cond-dot {
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .cond-item-body {
+            flex: 1;
+            min-width: 0;
+        }
+        .cond-item-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3px;
+        }
+        .cond-item-label {
+            font-size: 12px; font-weight: 600; color: #0f172a;
+        }
+        .cond-item-value {
+            font-size: 12px; font-weight: 600; color: #475569;
+        }
+        .cond-item-track {
+            height: 6px; background: #f1f5f9; border-radius: 6px;
             overflow: hidden;
         }
-        .stat-bar-fill {
-            height: 100%; border-radius: 7px;
-            transition: width 0.4s ease;
+        .cond-item-fill {
+            height: 100%; border-radius: 6px;
+            transition: width 0.5s ease;
+        }
+
+        .seg-stats {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 8px;
+            padding: 4px 0;
         }
 
         /* ── Trends row (admissions + discharges side by side) ── */
@@ -165,7 +205,7 @@
         .trends-row .chart-wrapper { flex: 1; min-height: 70px; }
 
         /* ── Service bar chart wrapper ── */
-        .chart-wrapper.service-bar { flex: 1; min-height: 100px; }
+        .chart-wrapper.service-bar { flex: 1; min-height: 0; }
 
         /* ── Loading ── */
         .loading-overlay { display:none; align-items:center; justify-content:center; gap:12px; padding:40px; color:#64748b; font-size:15px; }
@@ -176,8 +216,7 @@
         .no-data-msg i { font-size:40px; display:block; margin-bottom:12px; color:#cbd5e1; }
         .empty-list { text-align:center; padding:20px; color:#94a3b8; font-size:13px; }
 
-        .export-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
-        .btn-export { padding:8px 16px; border-radius:8px; font-size:13px; font-weight:600; border:none; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all 0.2s; }
+        .btn-export { padding:8px 16px; border-radius:8px; font-size:13px; font-weight:600; border:none; cursor:pointer; display:flex; align-items:center; gap:6px; transition:all 0.2s; white-space:nowrap; }
         .btn-export.excel { background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; }
         .btn-export.excel:hover { background:#dcfce7; }
         .btn-export.print { background:#eff6ff; color:#1e40af; border:1px solid #bfdbfe; }
@@ -198,11 +237,9 @@
             .rp-date-wrapper { min-width: auto; }
             .rp-date-trigger { min-width: auto; }
             .rp-generate-btn { width: 100%; justify-content: center; }
-            .chart-wrapper.score-size { max-width: 110px; }
-            .chart-wrapper.doughnut-right { height: 70px; }
+            .btn-export { flex: 1; justify-content: center; }
         }
         @media (max-width: 560px) {
-            .chart-wrapper.doughnut-right { height: 100px; }
         }
 
         @media print {
@@ -212,8 +249,6 @@
             .page-content { margin-top: 0 !important; padding: 20px !important; max-width: 100% !important; }
             .reports-page { gap: 12px; }
             .chart-card { break-inside: avoid; border: 1px solid #cbd5e1; box-shadow: none; min-height: auto; }
-            .chart-wrapper.score-size { max-width: 160px; }
-            .chart-wrapper.doughnut-right { height: 90px; }
             .rp-reports-layout {
                 grid-template-columns: 3fr 7fr !important;
                 grid-template-rows: 1fr 1fr 1fr !important;
@@ -223,8 +258,7 @@
             [data-area="condicion"] { grid-row: 2 !important; grid-column: 1 !important; }
             [data-area="seguro"] { grid-row: 3 !important; grid-column: 1 !important; }
             [data-area="trends"] { grid-row: 1 !important; grid-column: 2 !important; }
-            [data-area="servicios"] { grid-row: 2 !important; grid-column: 2 !important; }
-            [data-area="export"] { grid-row: 3 !important; grid-column: 2 !important; }
+            [data-area="servicios"] { grid-row: 2 / 4 !important; grid-column: 2 !important; }
             .trends-row { flex-direction: row !important; margin: 0 -8px !important; }
             .trends-row .chart-card { margin: 0 8px !important; }
         }
@@ -273,6 +307,8 @@
                         <i class="fa-solid fa-chevron-down" style="position:absolute;right:15px;color:#64748b;font-size:12px;pointer-events:none;"></i>
                     </div>
                     <button class="btn-clear" id="btn-clear-reportes"><i class="fa-solid fa-eraser"></i> Limpiar Filtro</button>
+                    <button class="btn-export excel" id="btn-export-excel" style="height:42px;font-size:13px;"><i class="fa-solid fa-file-excel"></i> Excel</button>
+                    <button class="btn-export print" id="btn-export-print" style="height:42px;font-size:13px;"><i class="fa-solid fa-print"></i> Imprimir / PDF</button>
                     <button class="rp-generate-btn" id="btn-generate"><i class="fa-solid fa-rotate"></i> Generar Reporte</button>
                 </div>
 
@@ -287,19 +323,21 @@
 
                     <div class="chart-card" data-area="score">
                         <h3><i class="fa-solid fa-chart-pie"></i> Score General</h3>
-                        <div class="chart-wrapper score-size"><canvas id="chart-score"></canvas></div>
+                        <div class="score-body">
+                            <div class="score-number" id="score-number">0</div>
+                            <div class="score-label">Total Pacientes</div>
+                            <div class="score-period" id="score-period"></div>
+                        </div>
                     </div>
 
                     <div class="chart-card" data-area="condicion">
                         <h3><i class="fa-solid fa-bed"></i> Condición</h3>
-                        <div class="chart-wrapper doughnut-right"><canvas id="chart-condicion"></canvas></div>
-                        <div class="stat-bars" id="condicion-stats"></div>
+                        <div class="cond-stats" id="cond-stats"></div>
                     </div>
 
                     <div class="chart-card" data-area="seguro">
                         <h3><i class="fa-solid fa-shield"></i> Tipo Seguro</h3>
-                        <div class="chart-wrapper doughnut-right"><canvas id="chart-seguro"></canvas></div>
-                        <div class="stat-bars" id="seguro-stats"></div>
+                        <div class="seg-stats" id="seg-stats"></div>
                     </div>
 
                     <div class="trends-row" data-area="trends">
@@ -316,11 +354,6 @@
                     <div class="chart-card" data-area="servicios">
                         <h3><i class="fa-solid fa-chart-column"></i> Distribución por Servicio</h3>
                         <div class="chart-wrapper service-bar"><canvas id="chart-servicios"></canvas></div>
-                    </div>
-
-                    <div class="export-actions" data-area="export">
-                        <button class="btn-export excel" id="btn-export-excel"><i class="fa-solid fa-file-excel"></i> Excel</button>
-                        <button class="btn-export print" id="btn-export-print"><i class="fa-solid fa-print"></i> Imprimir / PDF</button>
                     </div>
 
                 </div>

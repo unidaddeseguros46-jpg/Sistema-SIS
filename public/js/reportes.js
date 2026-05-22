@@ -268,125 +268,32 @@ document.addEventListener('DOMContentLoaded', async () => {
             const pac = pacResult.data;
             const totalCount = pacResult.count;
 
-            // ── 1. Score Chart ──
-            const ctxScore = document.getElementById('chart-score')?.getContext('2d');
-            if (ctxScore) {
-                charts.score = new Chart(ctxScore, {
-                    type: 'doughnut',
-                    data: {
-                        labels: ['Total'],
-                        datasets: [{
-                            data: [totalCount],
-                                    backgroundColor: [LINE_BLUE],
-                            borderWidth: 0,
-                        }]
-                    },
-                    options: {
-                        cutout: '78%',
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: { display: false },
-                            tooltip: { enabled: totalCount > 0 }
-                        }
-                    },
-                    plugins: [{
-                        id: 'scoreCenter',
-                        beforeDraw(chart) {
-                            const { width, height, ctx: c } = chart;
-                            c.save();
-                            c.font = '700 36px system-ui, sans-serif';
-                            c.fillStyle = '#0f172a';
-                            c.textAlign = 'center';
-                            c.textBaseline = 'middle';
-                            c.fillText(fmt(totalCount), width / 2, height / 2 - 14);
-                            c.font = '500 13px system-ui, sans-serif';
-                            c.fillStyle = '#475569';
-                            c.fillText('Total Pacientes', width / 2, height / 2 + 24);
-                            c.restore();
-                        }
-                    }]
-                });
+            // ── 1. Score General ──
+            const scoreNumber = document.getElementById('score-number');
+            const scorePeriod = document.getElementById('score-period');
+            if (scoreNumber) scoreNumber.textContent = fmt(totalCount);
+            if (scorePeriod) {
+                const { start, end } = getDateRangeValues();
+                scorePeriod.textContent = (start && end) ? `${start} — ${end}` : '';
             }
 
-            // ── 2. Condition Doughnut ──
+            // ── 2. Condition ──
             const condGroups = { HOSPITALIZADO: 0, ALTA: 0, FALLECIDO: 0 };
             pac.forEach(p => {
                 const c = (p.condicion || '').toUpperCase();
                 if (condGroups[c] !== undefined) condGroups[c]++;
             });
-            const condLabels = ['Hospitalizados', 'Altas', 'Fallecidos'];
-            const condData = [condGroups.HOSPITALIZADO, condGroups.ALTA, condGroups.FALLECIDO];
             const condColors = [COLOR_HOSP, COLOR_ALTA, COLOR_FALL];
-
-            const ctxCond = document.getElementById('chart-condicion')?.getContext('2d');
-            if (ctxCond) {
-                const hasData = condData.some(v => v > 0);
-                charts.condicion = new Chart(ctxCond, {
-                    type: 'doughnut',
-                    data: {
-                        labels: condLabels,
-                        datasets: [{
-                            data: hasData ? condData : [1],
-                            backgroundColor: hasData ? condColors : ['#e2e8f0'],
-                            borderWidth: 0,
-                        }]
-                    },
-                    options: {
-                        cutout: '60%',
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                position: 'right',
-                                labels: { padding: 10, usePointStyle: true, font: { size: 11 }, boxWidth: 12 }
-                            },
-                            tooltip: { enabled: hasData }
-                        }
-                    }
-                });
-            }
-
             renderCondicionStats(condGroups, condColors, totalCount);
 
-            // ── 3. Seguro Doughnut ──
+            // ── 3. Seguro ──
             const segGroups = {};
             pac.forEach(p => {
                 const s = p.tipo_seguro || 'SIN SEGURO';
                 segGroups[s] = (segGroups[s] || 0) + 1;
             });
             const segSorted = Object.entries(segGroups).sort((a, b) => b[1] - a[1]);
-            const segLabels = segSorted.map(([k]) => k);
-            const segData = segSorted.map(([, v]) => v);
             const segColors = segSorted.map((_, i) => SEGURO_PALETTE[i % SEGURO_PALETTE.length]);
-
-            const ctxSeg = document.getElementById('chart-seguro')?.getContext('2d');
-            if (ctxSeg) {
-                const hasData = segData.some(v => v > 0);
-                charts.seguro = new Chart(ctxSeg, {
-                    type: 'doughnut',
-                    data: {
-                        labels: segLabels,
-                        datasets: [{
-                            data: hasData ? segData : [1],
-                            backgroundColor: hasData ? segColors : ['#e2e8f0'],
-                            borderWidth: 0,
-                        }]
-                    },
-                    options: {
-                        cutout: '60%',
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                position: 'right',
-                                labels: { padding: 10, usePointStyle: true, font: { size: 11 }, boxWidth: 12 }
-                            },
-                            tooltip: { enabled: hasData }
-                        }
-                    }
-                });
-            }
 
             renderSeguroStats(segSorted, segColors, totalCount);
 
@@ -515,8 +422,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                             backgroundColor: hasData ? svcColors : ['#e2e8f0'],
                             borderWidth: 0,
                             borderRadius: 4,
-                            categoryPercentage: 0.5,
-                            barPercentage: 0.8,
                         }]
                     },
                     options: {
@@ -525,6 +430,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                         maintainAspectRatio: false,
                         plugins: {
                             legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: (ctx) => `${ctx.parsed.x} pacientes`
+                                }
+                            }
                         },
                         scales: {
                             x: {
@@ -535,11 +445,31 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 grid: { color: '#f1f5f9' }
                             },
                             y: {
-                                ticks: { font: { size: 11 } },
+                                ticks: { font: { size: 12 } },
                                 grid: { display: false }
                             }
                         }
-                    }
+                    },
+                    plugins: [{
+                        id: 'barLabels',
+                        afterDatasetsDraw(chart) {
+                            const { ctx, chartArea: { top, bottom, left, right } } = chart;
+                            chart.data.datasets.forEach((ds, i) => {
+                                const meta = chart.getDatasetMeta(i);
+                                meta.data.forEach((bar, j) => {
+                                    const val = ds.data[j];
+                                    if (val === 0 || val === undefined || val === null) return;
+                                    ctx.save();
+                                    ctx.font = '600 12px system-ui, sans-serif';
+                                    ctx.fillStyle = '#475569';
+                                    ctx.textAlign = 'left';
+                                    ctx.textBaseline = 'middle';
+                                    ctx.fillText(fmt(val), bar.x + 6, bar.y);
+                                    ctx.restore();
+                                });
+                            });
+                        }
+                    }]
                 });
             }
 
@@ -657,7 +587,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // ── Stats helpers ──
     function renderCondicionStats(groups, colors, total) {
-        const container = document.getElementById('condicion-stats');
+        const container = document.getElementById('cond-stats');
         if (!container) return;
         container.innerHTML = '';
         const labels = ['Hospitalizados', 'Altas', 'Fallecidos'];
@@ -667,14 +597,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             const val = groups[keys[i]] || 0;
             const pct = ((val / sum) * 100).toFixed(1);
             const el = document.createElement('div');
-            el.className = 'stat-bar-item';
+            el.className = 'cond-item';
             el.innerHTML = `
-                <div class="stat-bar-header">
-                    <span class="stat-bar-label">${label}</span>
-                    <span class="stat-bar-value">${fmt(val)} (${pct}%)</span>
-                </div>
-                <div class="stat-bar-track">
-                    <div class="stat-bar-fill" style="width:${pct}%;background:${colors[i]};"></div>
+                <span class="cond-dot" style="background:${colors[i]};"></span>
+                <div class="cond-item-body">
+                    <div class="cond-item-header">
+                        <span class="cond-item-label">${label}</span>
+                        <span class="cond-item-value">${fmt(val)} (${pct}%)</span>
+                    </div>
+                    <div class="cond-item-track">
+                        <div class="cond-item-fill" style="width:${pct}%;background:${colors[i]};"></div>
+                    </div>
                 </div>
             `;
             container.appendChild(el);
@@ -682,7 +615,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     function renderSeguroStats(sorted, colors, total) {
-        const container = document.getElementById('seguro-stats');
+        const container = document.getElementById('seg-stats');
         if (!container) return;
         container.innerHTML = '';
         const sum = total || 1;
@@ -690,14 +623,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             const pct = ((count / sum) * 100).toFixed(1);
             const color = colors[i];
             const el = document.createElement('div');
-            el.className = 'stat-bar-item';
+            el.className = 'cond-item';
             el.innerHTML = `
-                <div class="stat-bar-header">
-                    <span class="stat-bar-label">${name}</span>
-                    <span class="stat-bar-value">${fmt(count)} (${pct}%)</span>
-                </div>
-                <div class="stat-bar-track">
-                    <div class="stat-bar-fill" style="width:${pct}%;background:${color};"></div>
+                <span class="cond-dot" style="background:${color};"></span>
+                <div class="cond-item-body">
+                    <div class="cond-item-header">
+                        <span class="cond-item-label">${name}</span>
+                        <span class="cond-item-value">${fmt(count)} (${pct}%)</span>
+                    </div>
+                    <div class="cond-item-track">
+                        <div class="cond-item-fill" style="width:${pct}%;background:${color};"></div>
+                    </div>
                 </div>
             `;
             container.appendChild(el);

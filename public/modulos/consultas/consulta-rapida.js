@@ -39,7 +39,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     let hastaHoyActive = false;
     let crCurrentPage = 1;
     let crRowsPerPage = 20;
-    const pageCache = new Map();
     let modalPacienteActual = null;
     let susaludCreds = null;
 
@@ -91,60 +90,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
     };
 
-    const saveState = () => {};
-
-    const restoreDateRange = () => {
-        const savedDesde = sessionStorage.getItem('cr_filter_fecha_desde');
-        const savedHasta = sessionStorage.getItem('cr_filter_fecha_hasta');
-        if (savedDesde) {
-            crRangeStart = new Date(savedDesde + 'T00:00:00');
-            if (savedHasta) crRangeEnd = new Date(savedHasta + 'T00:00:00');
-            if (crCal) crCal.setRange(crRangeStart, crRangeEnd);
-            updateDateDisplay();
-        }
-    };
-
-    const updateDateDisplay = () => {
-        const fmt = d => {
-            if (!d) return '';
-            const pad = n => String(n).padStart(2, '0');
-            return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`;
-        };
-        if (crRangeStart && crRangeEnd) {
-            crDateDisplay.textContent = `${fmt(crRangeStart)} — ${fmt(crRangeEnd)}`;
-            crDateDisplay.style.color = '#1e293b';
-        } else if (crRangeStart) {
-            crDateDisplay.textContent = `Desde: ${fmt(crRangeStart)}`;
-            crDateDisplay.style.color = '#1e293b';
-        } else {
-            crDateDisplay.textContent = 'Seleccionar rango de fechas';
-            crDateDisplay.style.color = '#94a3b8';
-        }
-    };
-
-    const restoreState = async () => {
-        try {
-            const savedDNI = sessionStorage.getItem('cr_filter_dni');
-            const savedHC = sessionStorage.getItem('cr_filter_hc');
-            const savedApellidos = sessionStorage.getItem('cr_filter_apellidos');
-            const savedCondicion = sessionStorage.getItem('cr_filter_condicion');
-            const savedServicio = sessionStorage.getItem('cr_filter_servicio');
-            const savedHastaHoy = sessionStorage.getItem('cr_hasta_hoy');
-
-            if (savedDNI) inputDNI.value = savedDNI;
-            if (savedHC) inputHC.value = savedHC;
-            if (savedApellidos) inputApellidos.value = savedApellidos;
-            if (savedCondicion) { filterCondicion.value = savedCondicion; if (filterCondicion.customDropdownUpdate) filterCondicion.customDropdownUpdate(); }
-            if (savedServicio) { filterServicio.value = savedServicio; if (filterServicio.customDropdownUpdate) filterServicio.customDropdownUpdate(); }
-            if (savedHastaHoy === 'true') {
-                hastaHoyActive = true;
-                btnHastaHoy.classList.add('active');
-            }
-
-            restoreDateRange();
-        } catch { }
-    };
-
     const showToast = (message, isError = false) => {
         if (window.showSystemTooltip) {
             window.showSystemTooltip(message, isError);
@@ -171,43 +116,28 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!crRangeStart) return { start: null, end: null };
         const pad = n => String(n).padStart(2, '0');
         const start = `${crRangeStart.getFullYear()}-${pad(crRangeStart.getMonth()+1)}-${pad(crRangeStart.getDate())}`;
-        const end = crRangeEnd
-            ? `${crRangeEnd.getFullYear()}-${pad(crRangeEnd.getMonth()+1)}-${pad(crRangeEnd.getDate())}`
-            : start;
+        const end = crRangeEnd ? `${crRangeEnd.getFullYear()}-${pad(crRangeEnd.getMonth()+1)}-${pad(crRangeEnd.getDate())}` : start;
         return { start, end };
     };
 
-    const triggerActionsSearch = () => {
-        if (!crRangeStart && !hastaHoyActive) {
-            showToast('Seleccione un rango de fechas o active "Hasta hoy" para buscar.', true);
-            return;
+    const updateDateDisplay = () => {
+        const fmt = d => {
+            if (!d) return '';
+            const pad = n => String(n).padStart(2, '0');
+            return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`;
+        };
+        if (crRangeStart && crRangeEnd) {
+            crDateDisplay.textContent = `${fmt(crRangeStart)} — ${fmt(crRangeEnd)}`;
+            crDateDisplay.style.color = '#1e293b';
+        } else if (crRangeStart) {
+            crDateDisplay.textContent = `Desde: ${fmt(crRangeStart)}`;
+            crDateDisplay.style.color = '#1e293b';
+        } else {
+            crDateDisplay.textContent = 'Seleccionar rango de fechas';
+            crDateDisplay.style.color = '#94a3b8';
         }
-        crCurrentPage = 1;
-        pageCache.clear();
-        loadPacientes();
     };
 
-    filterCondicion.addEventListener('change', () => {
-        if (crRangeStart || hastaHoyActive) triggerActionsSearch();
-    });
-
-    filterServicio.addEventListener('change', () => {
-        if (crRangeStart || hastaHoyActive) triggerActionsSearch();
-    });
-
-    btnHastaHoy.addEventListener('click', () => {
-        hastaHoyActive = !hastaHoyActive;
-        btnHastaHoy.classList.toggle('active', hastaHoyActive);
-        if (hastaHoyActive) {
-            crRangeStart = null;
-            crRangeEnd = null;
-            if (crCal) crCal.setRange(null, null);
-            updateDateDisplay();
-            triggerActionsSearch();
-        }
-    });
-
-    // ── Datepicker: Shared Calendar ──
     const crCal = window.crearCalendario({
         mode: 'range',
         grid: crCalGrid,
@@ -251,6 +181,35 @@ document.addEventListener('DOMContentLoaded', async () => {
             crDateTrigger.classList.add('is-open');
         }
     }
+
+    const triggerActionsSearch = () => {
+        if (!crRangeStart && !hastaHoyActive) {
+            showToast('Seleccione un rango de fechas o active "Hasta hoy" para buscar.', true);
+            return;
+        }
+        crCurrentPage = 1;
+        loadPacientes();
+    };
+
+    filterCondicion.addEventListener('change', () => {
+        if (crRangeStart || hastaHoyActive) triggerActionsSearch();
+    });
+
+    filterServicio.addEventListener('change', () => {
+        if (crRangeStart || hastaHoyActive) triggerActionsSearch();
+    });
+
+    btnHastaHoy.addEventListener('click', () => {
+        hastaHoyActive = !hastaHoyActive;
+        btnHastaHoy.classList.toggle('active', hastaHoyActive);
+        if (hastaHoyActive) {
+            crRangeStart = null;
+            crRangeEnd = null;
+            if (crCal) crCal.setRange(null, null);
+            updateDateDisplay();
+            triggerActionsSearch();
+        }
+    });
 
     crDateTrigger.addEventListener('click', (e) => {
         if (hastaHoyActive) {
@@ -532,32 +491,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const servicioVal = filterServicio.value;
         let { start: fechaDesde, end: fechaHasta } = getDateRangeValues();
 
-        const cacheKey = `${crCurrentPage}|${dni}|${hc}|${apellidos}|${condicionVal}|${servicioVal}|${fechaDesde || ''}|${fechaHasta || ''}|${hastaHoyActive}`;
-        if (pageCache.has(cacheKey)) {
-            const cached = pageCache.get(cacheKey);
-            currentPagePatients = cached.data;
-            totalPatients = cached.count;
-            if (currentPagePatients.length === 0) {
-                showToast('No se encontraron pacientes.');
-            }
-            renderTable();
-            renderPagination();
-            return;
-        }
-
         selectedDNIs = [];
         updateActionsBar();
 
         ({ start: fechaDesde, end: fechaHasta } = getDateRangeValues());
-
-        sessionStorage.setItem('cr_filter_dni', dni);
-        sessionStorage.setItem('cr_filter_hc', hc);
-        sessionStorage.setItem('cr_filter_apellidos', apellidos);
-        sessionStorage.setItem('cr_filter_fecha_desde', fechaDesde || '');
-        sessionStorage.setItem('cr_filter_fecha_hasta', fechaHasta || '');
-        sessionStorage.setItem('cr_filter_condicion', condicionVal);
-        sessionStorage.setItem('cr_filter_servicio', servicioVal);
-        sessionStorage.setItem('cr_hasta_hoy', hastaHoyActive);
 
         if (!dni && !hc && !apellidos && !fechaDesde && !fechaHasta && !condicionVal && !servicioVal && !hastaHoyActive) {
             showToast('Use los filtros para buscar pacientes.', true);
@@ -594,7 +531,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             currentPagePatients = data || [];
             totalPatients = count || 0;
-            pageCache.set(cacheKey, { data: currentPagePatients, count: totalPatients });
 
             if (data.length === 0) {
                 showToast('No se encontraron pacientes.');
@@ -611,7 +547,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     btnSearch.addEventListener('click', () => {
         crCurrentPage = 1;
-        pageCache.clear();
         loadPacientes();
     });
 
@@ -619,7 +554,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         input.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 crCurrentPage = 1;
-                pageCache.clear();
                 loadPacientes();
             }
         });
@@ -638,16 +572,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (filterCondicion.customDropdownUpdate) filterCondicion.customDropdownUpdate();
         filterServicio.value = '';
         if (filterServicio.customDropdownUpdate) filterServicio.customDropdownUpdate();
-        sessionStorage.removeItem('cr_filter_dni');
-        sessionStorage.removeItem('cr_filter_hc');
-        sessionStorage.removeItem('cr_filter_apellidos');
-        sessionStorage.removeItem('cr_filter_fecha_desde');
-        sessionStorage.removeItem('cr_filter_fecha_hasta');
-        sessionStorage.removeItem('cr_filter_condicion');
-        sessionStorage.removeItem('cr_filter_servicio');
-        sessionStorage.removeItem('cr_hasta_hoy');
-        sessionStorage.removeItem('cr_accumulated');
-        pageCache.clear();
         currentPagePatients = [];
         totalPatients = 0;
         selectedDNIs = [];
@@ -1075,6 +999,5 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     loadSusaludCreds();
     initSusaludCopy();
-    restoreState();
     handleAutoExecute();
 });

@@ -46,7 +46,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     let currentPage = 1;
     let rowsPerPage = 20;
     let editingUserId = null;
-    const pageCache = new Map();
 
     const showToast = (msg, type = 'success') => {
         if(window.showSystemTooltip) {
@@ -117,24 +116,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) closeModal(); });
 
     const fetchAdmins = async () => {
-        const cacheKey = `${currentPage}`;
-        if (pageCache.has(cacheKey)) {
-            const cached = pageCache.get(cacheKey);
-            currentPageAdmins = cached.data;
-            totalAdmins = cached.count;
-            totalActivos = cached.activosCount;
-            statTotal.textContent = totalAdmins;
-            statActivos.textContent = totalActivos;
-            loadingEl.style.display = 'none';
-            if (totalAdmins === 0) {
-                emptyEl.style.display = 'block';
-                return;
-            }
-            tableContainer.style.display = 'block';
-            renderTable();
-            return;
-        }
-
         loadingEl.style.display = 'block';
         tableContainer.style.display = 'none';
         emptyEl.style.display = 'none';
@@ -161,8 +142,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 .eq('activo', true);
 
             if (!countError) totalActivos = activosCount || 0;
-
-            pageCache.set(cacheKey, { data: currentPageAdmins, count: totalAdmins, activosCount: totalActivos });
 
             statTotal.textContent = totalAdmins;
             statActivos.textContent = totalActivos;

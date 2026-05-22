@@ -39,7 +39,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     let currentPage = 1;
     let rowsPerPage = 20;
     let totalRecords = 0;
-    const searchCache = new Map();
 
     const normalizeText = (text) => {
         if (!text) return '';
@@ -57,15 +56,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const apeVal = filterApellidos.value.trim();
         const seguroVal = filterSeguro.value;
         const servicioVal = filterServicio.value;
-
-        const cacheKey = `${currentPage}|${dniHcVal}|${apeVal}|${seguroVal}|${servicioVal}`;
-        if (searchCache.has(cacheKey)) {
-            const cached = searchCache.get(cacheKey);
-            totalRecords = cached.count;
-            renderTable(cached.data);
-            renderPagination();
-            return;
-        }
 
         try {
             loadingIndicator.style.display = 'block';
@@ -97,7 +87,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (error) throw error;
 
             totalRecords = count || 0;
-            searchCache.set(cacheKey, { data: pacientes || [], count: totalRecords });
             renderTable(pacientes || []);
             renderPagination();
         } catch (error) {

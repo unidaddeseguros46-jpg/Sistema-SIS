@@ -47,7 +47,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     let currentPage = 1;
     let rowsPerPage = 20;
     let editingUserId = null; // null = creating, uuid = editing
-    const pageCache = new Map();
 
     // â”€â”€ Toast â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const showToast = (msg, type = 'success') => {
@@ -114,24 +113,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // â”€â”€ Fetch users â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const fetchUsers = async () => {
-        const cacheKey = `${currentPage}`;
-        if (pageCache.has(cacheKey)) {
-            const cached = pageCache.get(cacheKey);
-            currentPageUsers = cached.data;
-            totalUsers = cached.count;
-            totalActivos = cached.activosCount;
-            statTotal.textContent = totalUsers;
-            statActivos.textContent = totalActivos;
-            loadingEl.style.display = 'none';
-            if (totalUsers === 0) {
-                emptyEl.style.display = 'block';
-                return;
-            }
-            tableContainer.style.display = 'block';
-            renderTable();
-            return;
-        }
-
         loadingEl.style.display = 'block';
         tableContainer.style.display = 'none';
         emptyEl.style.display = 'none';
@@ -159,8 +140,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 .eq('activo', true);
 
             if (!countError) totalActivos = activosCount || 0;
-
-            pageCache.set(cacheKey, { data: currentPageUsers, count: totalUsers, activosCount: totalActivos });
 
             // Update stats
             statTotal.textContent = totalUsers;
