@@ -75,46 +75,57 @@ const DynamicTable = (() => {
             return;
         }
 
-        const maxVisible = 5;
-        let startPage = Math.max(1, opts.currentPage - Math.floor(maxVisible / 2));
-        let endPage = Math.min(opts.totalPages, startPage + maxVisible - 1);
-        if (endPage - startPage < maxVisible - 1) {
-            startPage = Math.max(1, endPage - maxVisible + 1);
-        }
+        const N = opts.totalPages;
+        const cur = opts.currentPage;
 
-        let html = `
-            <button class="pagination-btn" ${opts.currentPage === 1 ? 'disabled' : ''} data-page="${opts.currentPage - 1}" title="Anterior">
+        const btn = (page) => {
+            const cls = `pagination-btn${page === cur ? ' active' : ''}`;
+            return `<button class="${cls}" data-page="${page}">${page}</button>`;
+        };
+        const ellipsis = () => `<span class="pagination-ellipsis">•••</span>`;
+
+        let html = `<div class="pagination-wrapper">
+            <button class="pagination-btn" ${cur === 1 ? 'disabled' : ''} data-page="${cur - 1}" title="Anterior">
                 <i class="fa-solid fa-chevron-left"></i>
             </button>
+            ${btn(1)}
         `;
 
-        if (startPage > 1) {
-            html += `<button class="pagination-btn" data-page="1">1</button>`;
-            if (startPage > 2) html += `<span style="color:#94a3b8; padding: 0 4px;">…</span>`;
+        const WINDOW = 3;
+        const HALF = Math.floor(WINDOW / 2);
+        let start = Math.max(1, cur - HALF);
+        let end   = Math.min(N, start + WINDOW - 1);
+        if (end - start < WINDOW - 1) {
+            start = Math.max(1, end - WINDOW + 1);
         }
 
-        for (let i = startPage; i <= endPage; i++) {
-            const isActive = i === opts.currentPage;
-            html += `<button class="pagination-btn ${isActive ? 'active' : ''}" data-page="${i}" ${isActive ? 'style="background:#3b82f6;color:white;border-color:#3b82f6;"' : ''}>${i}</button>`;
+        const showLeft  = start > 2;
+        const showRight = end < N - 1;
+
+        if (showLeft) {
+            html += ellipsis();
         }
 
-        if (endPage < opts.totalPages) {
-            if (endPage < opts.totalPages - 1) html += `<span style="color:#94a3b8; padding: 0 4px;">…</span>`;
-            html += `<button class="pagination-btn" data-page="${opts.totalPages}">${opts.totalPages}</button>`;
+        for (let i = Math.max(2, start); i <= Math.min(N - 1, end); i++) {
+            html += btn(i);
+        }
+
+        if (showRight) {
+            html += ellipsis();
+        }
+
+        if (N > 1) {
+            html += btn(N);
         }
 
         html += `
-            <button class="pagination-btn" ${opts.currentPage === opts.totalPages ? 'disabled' : ''} data-page="${opts.currentPage + 1}" title="Siguiente">
+            <button class="pagination-btn" ${cur === N ? 'disabled' : ''} data-page="${cur + 1}" title="Siguiente">
                 <i class="fa-solid fa-chevron-right"></i>
             </button>
-            <span style="font-size:12px; color:#94a3b8; margin-left:8px;">
-                Página ${opts.currentPage} de ${opts.totalPages}
-            </span>
-        `;
+        </div>`;
 
         container.innerHTML = html;
 
-        // Bind click events
         container.querySelectorAll('.pagination-btn:not(:disabled)').forEach(btn => {
             btn.addEventListener('click', () => {
                 const page = parseInt(btn.dataset.page);

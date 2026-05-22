@@ -348,7 +348,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Variables de Paginación Inteligente y DB
     let currentPage = 1;
-    let rowsPerPage = 5;
+    let rowsPerPage = 20;
     let totalRecords = 0;
     let searchQuery = '';
     let filterQuery = ''; // Variable para almacenar el filtro de Servicio
@@ -376,17 +376,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             loadingIndicator.style.display = 'block';
             tableElement.style.display = 'none';
-
-            // Cálculo Matemático (altura adaptativa) usando utilidad global
-            if (typeof DynamicTable !== 'undefined') {
-                rowsPerPage = DynamicTable.calcRowsPerPage({
-                    excludeSelectors: ['.top-header', '.module-commands', '.pagination-controls']
-                });
-            } else {
-                const availableHeight = window.innerHeight - 350;
-                let calculatedRows = Math.floor(availableHeight / 60);
-                rowsPerPage = calculatedRows > 2 ? calculatedRows : 3;
-            }
 
             const startRange = (currentPage - 1) * rowsPerPage;
             const endRange = startRange + rowsPerPage - 1;
@@ -603,68 +592,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const renderPagination = () => {
         const totalPages = Math.ceil(totalRecords / rowsPerPage);
-        const container = document.getElementById('pagination-container');
-        container.innerHTML = '';
-
-        if (totalPages <= 1) return;
-
-        if (typeof DynamicTable !== 'undefined') {
-            DynamicTable.renderPagination({
-                containerId: 'pagination-container',
-                currentPage,
-                totalPages,
-                onPageChange: (page) => {
-                    currentPage = page;
-                    loadPacientes();
-                }
-            });
-        } else {
-            const btnPrev = document.createElement('button');
-            btnPrev.className = 'pagination-btn';
-            btnPrev.innerHTML = '<i class="fa-solid fa-chevron-left"></i>';
-            btnPrev.disabled = currentPage === 1;
-            btnPrev.onclick = () => { currentPage--; loadPacientes(); };
-            container.appendChild(btnPrev);
-
-            const info = document.createElement('span');
-            info.className = 'pagination-info';
-            info.innerHTML = `Página <span class="seguro-badge">${currentPage}</span> de ${totalPages}`;
-            container.appendChild(info);
-
-            const btnNext = document.createElement('button');
-            btnNext.className = 'pagination-btn';
-            btnNext.innerHTML = '<i class="fa-solid fa-chevron-right"></i>';
-            btnNext.disabled = currentPage === totalPages;
-            btnNext.onclick = () => { currentPage++; loadPacientes(); };
-            container.appendChild(btnNext);
-        }
+        DynamicTable.renderPagination({
+            containerId: 'pagination-container',
+            currentPage,
+            totalPages,
+            onPageChange: (page) => {
+                currentPage = page;
+                loadPacientes();
+            }
+        });
     };
-
-    if (typeof DynamicTable !== 'undefined') {
-        DynamicTable.onResize(() => {
-            const oldRows = rowsPerPage;
-            const newRows = DynamicTable.calcRowsPerPage({
-                excludeSelectors: ['.top-header', '.module-commands', '.pagination-controls']
-            });
-
-            if (newRows !== oldRows) {
-                currentPage = 1;
-                loadPacientes();
-            }
-        });
-    } else {
-        window.addEventListener('resize', () => {
-            const oldRows = rowsPerPage;
-            const availableHeight = window.innerHeight - 350;
-            let calculatedRows = Math.floor(availableHeight / 60);
-            calculatedRows = calculatedRows > 2 ? calculatedRows : 3;
-
-            if (calculatedRows !== oldRows) {
-                currentPage = 1;
-                loadPacientes();
-            }
-        });
-    }
 
     // ============================================
     // BÚSQUEDA Y MANEJO DE VISTAS (SPA)

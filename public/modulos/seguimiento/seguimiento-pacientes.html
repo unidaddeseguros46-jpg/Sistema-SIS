@@ -59,6 +59,7 @@
 
             <!-- LISTA DE RESULTADOS -->
             <div id="view-resultados" style="margin-top: 20px;">
+                <div id="pagination-container" class="pagination-controls"></div>
                 <div class="data-table-container">
                     <div id="loading-indicator" style="display: none; text-align: center; padding: 40px; color: #3b82f6;">
                         <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 2rem;"></i>
@@ -79,11 +80,7 @@
                         <tbody id="tbody-pacientes"></tbody>
                     </table>
                 </div>
-                <!-- Paginación opcional si la implementas en JS -->
-                <div id="pagination-container" class="pagination-controls" style="margin-top: 20px;"></div>
             </div>
-
-
 
 
 
@@ -94,6 +91,7 @@
     <script src="../../js/servicios.js"></script>
     <script src="../../js/custom-select.js"></script>
     <script src="../../js/layout.js"></script>
+    <script src="../../js/dynamic-table.js"></script>
     <script src="../../js/seguimiento-pacientes.js"></script>
 </body>
 </html>

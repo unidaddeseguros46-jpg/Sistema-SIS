@@ -1,4 +1,4 @@
-/**
+﻿/**
  * GestiÃ³n de Usuarios â€” Hospital San JosÃ©
  * CRUD de usuarios con rol = Usuario (id_rol=3).
  * Acceso: Administrador y Desarrollador.
@@ -41,9 +41,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const inputSusaludClave = document.getElementById('input-susalud-clave');
     const toggleSusaludPass = document.getElementById('toggle-susalud-pass');
 
-    let allUsers = [];
+    let currentPageUsers = [];
+    let totalUsers = 0;
+    let totalActivos = 0;
     let currentPage = 1;
-    let rowsPerPage = 5;
+    let rowsPerPage = 20;
     let editingUserId = null; // null = creating, uuid = editing
 
     // â”€â”€ Toast â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -116,31 +118,42 @@ document.addEventListener('DOMContentLoaded', async () => {
         emptyEl.style.display = 'none';
 
         try {
-            const { data, error } = await supabaseClient
+            const startRange = (currentPage - 1) * rowsPerPage;
+            const endRange = startRange + rowsPerPage - 1;
+
+            const { data, error, count } = await supabaseClient
                 .from('perfiles')
-                .select('id_usuario, nombre_completo, nombre_usuario, email, id_rol, fecha_creacion, activo, susalud_usuario, susalud_clave, roles(nombre)')
+                .select('id_usuario, nombre_completo, nombre_usuario, email, id_rol, fecha_creacion, activo, susalud_usuario, susalud_clave, roles(nombre)', { count: 'exact' })
                 .in('id_rol', [3]) // Solo usuarios con rol=Usuario
-                .order('fecha_creacion', { ascending: false });
+                .order('fecha_creacion', { ascending: false })
+                .range(startRange, endRange);
 
             if (error) throw error;
 
-            // Get emails from auth (we'll use the user's own session context)
-            // Since we can't access auth.users from client, we store names only
-            allUsers = data || [];
+            currentPageUsers = data || [];
+            totalUsers = count || 0;
+
+            const { count: activosCount, error: countError } = await supabaseClient
+                .from('perfiles')
+                .select('id', { count: 'exact', head: true })
+                .in('id_rol', [3])
+                .eq('activo', true);
+
+            if (!countError) totalActivos = activosCount || 0;
 
             // Update stats
-            statTotal.textContent = allUsers.length;
-            statActivos.textContent = allUsers.filter(u => u.activo).length;
+            statTotal.textContent = totalUsers;
+            statActivos.textContent = totalActivos;
 
             loadingEl.style.display = 'none';
 
-            if (allUsers.length === 0) {
+            if (totalUsers === 0) {
                 emptyEl.style.display = 'block';
                 return;
             }
 
             tableContainer.style.display = 'block';
-            recalcAndRender();
+            renderTable();
         } catch (err) {
 
             loadingEl.style.display = 'none';
@@ -151,11 +164,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     // â”€â”€ Render table â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const renderTable = () => {
         const start = (currentPage - 1) * rowsPerPage;
-        const pageData = allUsers.slice(start, start + rowsPerPage);
 
         tbody.innerHTML = '';
 
-        pageData.forEach((user, idx) => {
+        currentPageUsers.forEach((user, idx) => {
             const tr = document.createElement('tr');
             const roleName = user.roles?.nombre || 'Usuario';
             const roleBadgeClass = roleName === 'Desarrollador' ? 'badge-role-dev' : roleName === 'Administrador' ? 'badge-role-admin' : 'badge-role-user';
@@ -180,7 +192,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             tr.innerHTML = `
                 <td style="font-weight:700; color:#1e293b;">${start + idx + 1}</td>
                 <td>${user.nombre_completo || 'Sin nombre'}</td>
-                <td style="color:#64748b; font-size:13px;">${user.email || 'â€”'}</td>
+                <td style="color:#64748b; font-size:13px;">${user.email || '—'}</td>
                 <td><span class="${roleBadgeClass}">${roleName.toUpperCase()}</span></td>
                 <td>${statusBadge}</td>
                 <td style="color:#64748b; font-size:13px;">${fechaStr}</td>
@@ -198,7 +210,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         // Pagination
-        const totalPages = Math.ceil(allUsers.length / rowsPerPage) || 1;
+        const totalPages = Math.ceil(totalUsers / rowsPerPage) || 1;
         DynamicTable.renderPagination({
             containerId: 'pagination-users',
             currentPage,
@@ -207,23 +219,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     };
 
-    // â”€â”€ Recalc rows and render â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    const recalcAndRender = () => {
-        rowsPerPage = DynamicTable.calcRowsPerPage({
-            tableContainerId: 'users-table-container',
-            excludeSelectors: ['.top-header', '.page-header', '.page-actions', '.pagination-controls']
-        });
-        const totalPages = Math.ceil(allUsers.length / rowsPerPage) || 1;
-        if (currentPage > totalPages) currentPage = totalPages;
-        renderTable();
-    };
-
-    DynamicTable.onResize(recalcAndRender);
-
     // â”€â”€ Handle actions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const handleAction = async (action, userId) => {
         if (action === 'edit') {
-            const user = allUsers.find(u => u.id_usuario === userId);
+            const user = currentPageUsers.find(u => u.id_usuario === userId);
             if (user) openModal('edit', user);
         } else if (action === 'deactivate' || action === 'activate') {
             const newStatus = action === 'activate';

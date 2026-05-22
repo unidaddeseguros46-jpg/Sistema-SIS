@@ -33,7 +33,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     let isValidating = false;
     let currentSearchController = null;
 
-    let accumulatedResults = [];
+    let currentPagePatients = [];
+    let totalPatients = 0;
     let selectedDNIs = [];
     let hastaHoyActive = false;
     let crCurrentPage = 1;
@@ -89,9 +90,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
     };
 
-    const saveState = () => {
-        try { sessionStorage.setItem('cr_accumulated', JSON.stringify(accumulatedResults)); } catch { }
-    };
+    const saveState = () => {};
 
     const restoreDateRange = () => {
         const savedDesde = sessionStorage.getItem('cr_filter_fecha_desde');
@@ -142,12 +141,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             restoreDateRange();
-
-            const saved = sessionStorage.getItem('cr_accumulated');
-            if (saved) {
-                accumulatedResults = JSON.parse(saved);
-                renderTable();
-            }
         } catch { }
     };
 
@@ -163,7 +156,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     const updatePatientCount = () => {
-        const total = accumulatedResults.length;
+        const total = totalPatients;
         const selected = selectedDNIs.length;
         let text = '';
         if (total > 0) {
@@ -188,7 +181,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             showToast('Seleccione un rango de fechas o active "Hasta hoy" para buscar.', true);
             return;
         }
-        loadPacientes(true);
+        crCurrentPage = 1;
+        loadPacientes();
     };
 
     filterCondicion.addEventListener('change', () => {
@@ -306,7 +300,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             let banner = document.getElementById('alerta-banner');
-            const hayAlerta = accumulatedResults.some(p => {
+            const hayAlerta = currentPagePatients.some(p => {
                 const estado = p.estado_rpa || p._estado_rpa;
                 return estado === 'ALERTA';
             });
@@ -363,7 +357,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ========== RENDER TABLE ==========
     const renderTable = () => {
         tbodyPacientes.innerHTML = '';
-        if (accumulatedResults.length === 0) {
+        if (currentPagePatients.length === 0) {
             tablePacientes.style.display = 'none';
             paginationContainer.innerHTML = '';
             updateAlertaBanner();
@@ -371,11 +365,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        const totalPages = Math.ceil(accumulatedResults.length / crRowsPerPage) || 1;
-        if (crCurrentPage > totalPages) crCurrentPage = totalPages;
-
         const start = (crCurrentPage - 1) * crRowsPerPage;
-        const pageData = accumulatedResults.slice(start, start + crRowsPerPage);
 
         const formatDniDisplay = (dni, tipo) => {
             const PREFIX_MAP = { DNI: '', DNI_TEMPORAL: 'E- ', CARNET_EXT: 'C.E ' };
@@ -383,7 +373,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             return prefix ? prefix + dni : dni;
         };
 
-        pageData.forEach(p => {
+        currentPagePatients.forEach(p => {
             const tr = document.createElement('tr');
 
             let nacFormateada = p.fecha_nacimiento || '';
@@ -489,7 +479,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (btnRevalidar) {
                 btnRevalidar.addEventListener('click', () => {
                     const dni = btnRevalidar.getAttribute('data-dni');
-                    const paciente = accumulatedResults.find(p => p.dni === dni);
+                    const paciente = currentPagePatients.find(p => p.dni === dni);
                     const estado = getEstadoEfectivo(paciente);
 
                     if (estado === 'ALERTA') {
@@ -514,29 +504,25 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         tablePacientes.style.display = 'table';
-        renderPagination(totalPages);
         updateAlertaBanner();
         updatePatientCount();
     };
 
-    const renderPagination = (totalPages) => {
-        paginationContainer.innerHTML = '';
-        if (totalPages <= 1) return;
-
-        for (let i = 1; i <= totalPages; i++) {
-            const btn = document.createElement('button');
-            btn.textContent = i;
-            btn.className = `pagination-btn ${i === crCurrentPage ? 'active' : ''}`;
-            btn.addEventListener('click', () => {
-                crCurrentPage = i;
-                renderTable();
-            });
-            paginationContainer.appendChild(btn);
-        }
+    const renderPagination = () => {
+        const totalPages = Math.ceil(totalPatients / crRowsPerPage) || 1;
+        DynamicTable.renderPagination({
+            containerId: 'pagination-consulta',
+            currentPage: crCurrentPage,
+            totalPages,
+            onPageChange: (page) => {
+                crCurrentPage = page;
+                loadPacientes();
+            }
+        });
     };
 
     // ========== BÚSQUEDA ACUMULATIVA ==========
-    const loadPacientes = async (replace = false) => {
+    const loadPacientes = async () => {
         const dni = inputDNI.value.trim();
         const hc = inputHC.value.trim();
         const apellidos = inputApellidos.value.trim();
@@ -544,11 +530,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         const condicionVal = filterCondicion.value;
         const servicioVal = filterServicio.value;
 
-        if (replace) {
-            accumulatedResults = [];
-            selectedDNIs = [];
-            updateActionsBar();
-        }
+        selectedDNIs = [];
+        updateActionsBar();
 
         sessionStorage.setItem('cr_filter_dni', dni);
         sessionStorage.setItem('cr_filter_hc', hc);
@@ -566,9 +549,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         loadingIndicator.style.display = 'block';
         tablePacientes.style.display = 'none';
+        paginationContainer.innerHTML = '';
 
         try {
-            let query = supabaseClient.from('pacientes').select('*').order('creado_en', { ascending: false });
+            const startRange = (crCurrentPage - 1) * crRowsPerPage;
+            const endRange = startRange + crRowsPerPage - 1;
+
+            let query = supabaseClient.from('pacientes').select('*', { count: 'exact' }).order('creado_en', { ascending: false }).range(startRange, endRange);
 
             if (dni) query = query.ilike('dni', `%${dni}%`);
             if (hc) query = query.ilike('historia_clinica', `%${hc}%`);
@@ -584,26 +571,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                 query = query.lte('creado_en', `${hoyStr}T23:59:59`);
             }
 
-            const { data, error } = await query;
+            const { data, error, count } = await query;
 
             if (error) throw error;
 
+            currentPagePatients = data || [];
+            totalPatients = count || 0;
+
             if (data.length === 0) {
                 showToast('No se encontraron pacientes.');
-            } else {
-                data.forEach(nuevo => {
-                    const existente = accumulatedResults.findIndex(p => p.id === nuevo.id);
-                    if (existente >= 0) {
-                        accumulatedResults[existente] = nuevo;
-                    } else {
-                        accumulatedResults.unshift(nuevo);
-                    }
-                });
-                crCurrentPage = 1;
             }
 
             renderTable();
-            saveState();
+            renderPagination();
         } catch (err) {
             showToast('Error al buscar pacientes', true);
         } finally {
@@ -611,11 +591,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    btnSearch.addEventListener('click', loadPacientes);
+    btnSearch.addEventListener('click', () => {
+        crCurrentPage = 1;
+        loadPacientes();
+    });
 
     [inputDNI, inputHC, inputApellidos].forEach(input => {
         input.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') loadPacientes();
+            if (e.key === 'Enter') {
+                crCurrentPage = 1;
+                loadPacientes();
+            }
         });
     });
 
@@ -641,9 +627,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         sessionStorage.removeItem('cr_filter_servicio');
         sessionStorage.removeItem('cr_hasta_hoy');
         sessionStorage.removeItem('cr_accumulated');
-        accumulatedResults = [];
+        currentPagePatients = [];
+        totalPatients = 0;
         selectedDNIs = [];
         updateActionsBar();
+        crCurrentPage = 1;
         renderTable();
     });
 
@@ -664,7 +652,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Verificar si hay pacientes no-DNI seleccionados
         const nonDniSelected = selectedDNIs.some(dni => {
-            const p = accumulatedResults.find(pac => pac.dni === dni);
+            const p = currentPagePatients.find(pac => pac.dni === dni);
             return p && p.tipo_documento && p.tipo_documento !== 'DNI';
         });
 
@@ -683,7 +671,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         try {
             const pacientesParaValidar = selectedDNIs.map(dni => {
-                return accumulatedResults.find(p => p.dni === dni);
+                return currentPagePatients.find(p => p.dni === dni);
             }).filter(p => p && (!p.condicion || p.condicion.toUpperCase() !== 'FALLECIDO'))
                 .map(paciente => ({
                     dni: paciente.dni,
@@ -713,7 +701,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 const ahora = new Date().toISOString();
 
                 for (const res of result.results) {
-                    const paciente = accumulatedResults.find(p => p.dni === res.dni);
+                    const paciente = currentPagePatients.find(p => p.dni === res.dni);
                     if (!paciente) continue;
 
                     const seguroDeclarado = (paciente.tipo_seguro || '').toUpperCase();
@@ -762,7 +750,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 selectedDNIs = [];
                 updateActionsBar();
                 renderTable();
-                saveState();
             }
 
         } catch (err) {
@@ -1016,7 +1003,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // 6. Re-renderizar la tabla (fila deja de estar roja si es ÉXITO)
             renderTable();
-            saveState();
 
             if (nuevoEstado === 'ÉXITO') {
                 showToast('Cobertura actualizada correctamente');
@@ -1048,8 +1034,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 // 1. Ejecutar b&#250;squeda
                 await loadPacientes();
 
-                // 2. Seleccionar el registro (el b&#250;squeda ya renderiz&#243; la tabla)
-                const pac = accumulatedResults.find(p => p.dni === autoDNI);
+                // 2. Seleccionar el registro (la b&#250;squeda ya renderiz&#243; la tabla)
+                const pac = currentPagePatients.find(p => p.dni === autoDNI);
                 if (pac && (!pac.tipo_documento || pac.tipo_documento === 'DNI') && (!pac.condicion || pac.condicion.toUpperCase() !== 'FALLECIDO')) {
                     if (!selectedDNIs.includes(autoDNI)) {
                         selectedDNIs.push(autoDNI);

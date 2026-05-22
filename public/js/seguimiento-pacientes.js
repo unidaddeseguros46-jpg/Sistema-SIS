@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // State
     let currentPage = 1;
-    let rowsPerPage = 10;
+    let rowsPerPage = 20;
     let totalRecords = 0;
 
     const normalizeText = (text) => {
@@ -159,20 +159,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const renderPagination = () => {
         const totalPages = Math.ceil(totalRecords / rowsPerPage);
-        const container = document.getElementById('pagination-container');
-        container.innerHTML = '';
-        if (totalPages <= 1) return;
-
-        for (let i = 1; i <= totalPages; i++) {
-            const btn = document.createElement('button');
-            btn.textContent = i;
-            btn.className = `pagination-btn ${i === currentPage ? 'active' : ''}`;
-            btn.addEventListener('click', () => {
-                currentPage = i;
+        DynamicTable.renderPagination({
+            containerId: 'pagination-container',
+            currentPage,
+            totalPages,
+            onPageChange: (page) => {
+                currentPage = page;
                 searchPacientes();
-            });
-            container.appendChild(btn);
-        }
+            }
+        });
     };
 
     const inputs = [filterDniHc, filterApellidos, filterSeguro, filterServicio];

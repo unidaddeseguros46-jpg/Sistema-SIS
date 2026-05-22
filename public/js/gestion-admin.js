@@ -40,9 +40,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     const inputSusaludClave = document.getElementById('input-susalud-clave');
     const toggleSusaludPass = document.getElementById('toggle-susalud-pass');
 
-    let allAdmins = [];
+    let currentPageAdmins = [];
+    let totalAdmins = 0;
+    let totalActivos = 0;
     let currentPage = 1;
-    let rowsPerPage = 5;
+    let rowsPerPage = 20;
     let editingUserId = null;
 
     const showToast = (msg, type = 'success') => {
@@ -119,27 +121,40 @@ document.addEventListener('DOMContentLoaded', async () => {
         emptyEl.style.display = 'none';
 
         try {
-            const { data, error } = await supabaseClient
+            const startRange = (currentPage - 1) * rowsPerPage;
+            const endRange = startRange + rowsPerPage - 1;
+
+            const { data, error, count } = await supabaseClient
                 .from('perfiles')
-                .select('id_usuario, nombre_completo, nombre_usuario, email, id_rol, fecha_creacion, activo, susalud_usuario, susalud_clave, roles(nombre)')
+                .select('id_usuario, nombre_completo, nombre_usuario, email, id_rol, fecha_creacion, activo, susalud_usuario, susalud_clave, roles(nombre)', { count: 'exact' })
                 .eq('id_rol', 2)
-                .order('fecha_creacion', { ascending: false });
+                .order('fecha_creacion', { ascending: false })
+                .range(startRange, endRange);
 
             if (error) throw error;
-            allAdmins = data || [];
+            currentPageAdmins = data || [];
+            totalAdmins = count || 0;
 
-            statTotal.textContent = allAdmins.length;
-            statActivos.textContent = allAdmins.filter(u => u.activo).length;
+            const { count: activosCount, error: countError } = await supabaseClient
+                .from('perfiles')
+                .select('id', { count: 'exact', head: true })
+                .eq('id_rol', 2)
+                .eq('activo', true);
+
+            if (!countError) totalActivos = activosCount || 0;
+
+            statTotal.textContent = totalAdmins;
+            statActivos.textContent = totalActivos;
 
             loadingEl.style.display = 'none';
 
-            if (allAdmins.length === 0) {
+            if (totalAdmins === 0) {
                 emptyEl.style.display = 'block';
                 return;
             }
 
             tableContainer.style.display = 'block';
-            recalcAndRender();
+            renderTable();
         } catch (err) {
 
             loadingEl.style.display = 'none';
@@ -149,10 +164,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const renderTable = () => {
         const start = (currentPage - 1) * rowsPerPage;
-        const pageData = allAdmins.slice(start, start + rowsPerPage);
         tbody.innerHTML = '';
 
-        pageData.forEach((user, idx) => {
+        currentPageAdmins.forEach((user, idx) => {
             const tr = document.createElement('tr');
             const roleName = user.roles?.nombre || 'Administrador';
             const roleBadgeClass = roleName === 'Desarrollador' ? 'badge-role-dev' : 'badge-role-admin';
@@ -180,13 +194,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                     ${toggleBtn}
                 `;
             } else {
-                actionsHTML = '<span style="color:#cbd5e1; font-size:12px;">â€”</span>';
+                actionsHTML = '<span style="color:#cbd5e1; font-size:12px;">—</span>';
             }
 
             tr.innerHTML = `
                 <td style="font-weight:700; color:#1e293b;">${start + idx + 1}</td>
                 <td>${user.nombre_completo || 'Sin nombre'}</td>
-                <td style="color:#64748b; font-size:13px;">${user.email || 'â€”'}</td>
+                <td style="color:#64748b; font-size:13px;">${user.email || '—'}</td>
                 <td><span class="${roleBadgeClass}">${roleName.toUpperCase()}</span></td>
                 <td>${statusBadge}</td>
                 <td style="color:#64748b; font-size:13px;">${fechaStr}</td>
@@ -199,7 +213,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             btn.addEventListener('click', () => handleAction(btn.dataset.action, btn.dataset.id));
         });
 
-        const totalPages = Math.ceil(allAdmins.length / rowsPerPage) || 1;
+        const totalPages = Math.ceil(totalAdmins / rowsPerPage) || 1;
         DynamicTable.renderPagination({
             containerId: 'pagination-admins',
             currentPage, totalPages,
@@ -207,21 +221,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     };
 
-    const recalcAndRender = () => {
-        rowsPerPage = DynamicTable.calcRowsPerPage({
-            tableContainerId: 'admins-table-container',
-            excludeSelectors: ['.top-header', '.page-header', '.dev-notice', '.page-actions', '.pagination-controls']
-        });
-        const totalPages = Math.ceil(allAdmins.length / rowsPerPage) || 1;
-        if (currentPage > totalPages) currentPage = totalPages;
-        renderTable();
-    };
-
-    DynamicTable.onResize(recalcAndRender);
+    
 
     const handleAction = async (action, userId) => {
         if (action === 'edit') {
-            const user = allAdmins.find(u => u.id_usuario === userId);
+            const user = currentPageAdmins.find(u => u.id_usuario === userId);
             if (user) openModal('edit', user);
         } else if (action === 'deactivate' || action === 'activate') {
             const newStatus = action === 'activate';
