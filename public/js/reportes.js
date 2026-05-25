@@ -192,7 +192,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // ── Data fetching ──
     async function fetchPacientes(filters) {
-        let q = client.from('pacientes').select('condicion, servicio, tipo_seguro', { count: 'exact' });
+        let q = client.from('pacientes').select('condicion, servicio, tipo_seguro, fecha_nacimiento', { count: 'exact' });
         if (filters.servicio) q = q.eq('servicio', filters.servicio);
         if (filters.fecha_desde) q = q.gte('creado_en', `${filters.fecha_desde}T00:00:00-05:00`);
         if (filters.fecha_hasta) q = q.lte('creado_en', `${filters.fecha_hasta}T23:59:59-05:00`);
@@ -202,24 +202,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     async function fetchHospitalizaciones(filters) {
-        let q = client.from('hospitalizaciones').select('fecha_ingreso, servicio');
+        let q = client.from('hospitalizaciones').select('fecha_ingreso, fecha_alta, servicio');
         if (filters.servicio) q = q.eq('servicio', filters.servicio);
         if (filters.fecha_desde) q = q.gte('fecha_ingreso', filters.fecha_desde);
         if (filters.fecha_hasta) q = q.lte('fecha_ingreso', filters.fecha_hasta);
         const { data, error } = await q;
         if (error) throw error;
         return data || [];
-    }
-
-    async function fetchAltas(filters) {
-        let q = client.from('hospitalizaciones').select('fecha_alta, servicio', { count: 'exact' });
-        if (filters.servicio) q = q.eq('servicio', filters.servicio);
-        if (filters.fecha_desde) q = q.gte('fecha_alta', filters.fecha_desde);
-        if (filters.fecha_hasta) q = q.lte('fecha_alta', filters.fecha_hasta);
-        q = q.not('fecha_alta', 'is', null);
-        const { data, error, count } = await q;
-        if (error) throw error;
-        return { data: data || [], count: count || 0 };
     }
 
     // ── Helpers to build month-grouped data ──
@@ -259,9 +248,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         try {
             const filters = getFilters();
-            const [pacResult, altasResult, hospData] = await Promise.all([
+            const [pacResult, hospData] = await Promise.all([
                 fetchPacientes(filters),
-                fetchAltas(filters),
                 fetchHospitalizaciones(filters)
             ]);
 
@@ -347,50 +335,55 @@ document.addEventListener('DOMContentLoaded', async () => {
                 });
             }
 
-            // ── 5. Discharges Line (by month) ──
-            const altaDates = altasResult.data.map(h => h.fecha_alta).filter(Boolean);
-            const altaMonthly = countByMonth(altaDates, filters.fecha_desde, filters.fecha_hasta);
+            // ── 5. Grupo Etario ──
+            const ageGroups = { 'Niños': 0, 'Adolescentes': 0, 'Adultos': 0, 'Adultos Mayores': 0 };
+            const ageOrder = ['Niños', 'Adolescentes', 'Adultos', 'Adultos Mayores'];
+            pac.forEach(p => {
+                if (!p.fecha_nacimiento) return;
+                const parts = p.fecha_nacimiento.split('-');
+                if (parts.length < 3) return;
+                const nac = new Date(+parts[0], +parts[1] - 1, +parts[2]);
+                const hoy = getPeruDate();
+                let edad = hoy.getFullYear() - nac.getFullYear();
+                const m = hoy.getMonth() - nac.getMonth();
+                if (m < 0 || (m === 0 && hoy.getDate() < nac.getDate())) edad--;
+                if (edad < 0) edad = 0;
+                if (edad <= 12) ageGroups['Niños']++;
+                else if (edad <= 17) ageGroups['Adolescentes']++;
+                else if (edad <= 59) ageGroups['Adultos']++;
+                else ageGroups['Adultos Mayores']++;
+            });
+            const edadLabels = ageOrder;
+            const edadData = ageOrder.map(k => ageGroups[k]);
+            const edadColors = ageOrder.map((_, i) => CHART_COLORS[i % CHART_COLORS.length]);
 
-            const ctxAltas = document.getElementById('chart-altas')?.getContext('2d');
-            if (ctxAltas) {
-                const hasData = altaMonthly.some(d => d.value > 0);
-                charts.altas = new Chart(ctxAltas, {
-                    type: 'line',
+            const ctxEdad = document.getElementById('chart-edad')?.getContext('2d');
+            if (ctxEdad) {
+                const hasData = edadData.some(v => v > 0);
+                charts.edad = new Chart(ctxEdad, {
+                    type: 'bar',
                     data: {
-                        labels: hasData ? altaMonthly.map(d => d.month) : [],
+                        labels: hasData ? edadLabels : [],
                         datasets: [{
-                            label: 'Altas',
-                            data: hasData ? altaMonthly.map(d => d.value) : [],
-                                borderColor: LINE_GREEN,
-                                backgroundColor: 'rgba(38,166,154,0.08)',
-                                fill: true,
-                                tension: 0.3,
-                                pointRadius: 4,
-                                pointHoverRadius: 6,
-                                pointBackgroundColor: LINE_GREEN,
-                            borderWidth: 2,
+                            label: 'Pacientes',
+                            data: hasData ? edadData : [],
+                            backgroundColor: hasData ? edadColors : ['#e2e8f0'],
+                            borderWidth: 0,
+                            borderRadius: 4,
                         }]
                     },
                     options: {
                         responsive: true,
                         maintainAspectRatio: false,
-                        plugins: {
-                            legend: { display: false },
-                        },
+                        plugins: { legend: { display: false } },
                         scales: {
                             x: {
-                                ticks: {
-                                    maxTicksLimit: 10,
-                                    font: { size: 10 },
-                                    maxRotation: 45,
-                                },
+                                ticks: { font: { size: 10 } },
                                 grid: { display: false }
                             },
                             y: {
                                 beginAtZero: true,
-                                ticks: {
-                                    display: false,
-                                },
+                                ticks: { display: false },
                                 grid: { color: '#f1f5f9' }
                             }
                         }

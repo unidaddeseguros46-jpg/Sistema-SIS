@@ -16,18 +16,14 @@
         <main class="page-content" id="page-content">
 
             <!-- SECCION DE FILTROS (DISEÑO SEGUIMIENTO) -->
-            <div class="search-filters-container" id="search-filters">
+            <div style="display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 20px;" id="search-filters">
                 <div class="filter-group">
-                    <label>DNI</label>
-                    <input type="text" id="filter-dni" class="filter-input" placeholder="Buscar por DNI..." oninput="this.value = this.value.replace(/[^0-9]/g, '')">
-                </div>
-                <div class="filter-group">
-                    <label>Historia Clínica</label>
-                    <input type="text" id="filter-hc" class="filter-input" placeholder="Buscar por HC..." oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                    <label>DNI o Historia Cl&#237;nica</label>
+                    <input type="text" id="filter-dni-hc" class="filter-input" placeholder="Buscar DNI o HC..." style="width: 320px;" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                 </div>
                 <div class="filter-group">
                     <label>Apellidos</label>
-                    <input type="text" id="filter-apellidos" class="filter-input" placeholder="Buscar por apellidos...">
+                    <input type="text" id="filter-apellidos" class="filter-input" placeholder="Buscar por apellidos..." style="width: 320px;">
                 </div>
                 <!-- NUEVO ENLACE A WEB SUSALUD -->
                 <div class="filter-group" style="position: relative;">
@@ -40,18 +36,18 @@
                             <i class="fa-solid fa-lock"></i>
                         </button>
                     </span>
-                    <a href="https://app1.susalud.gob.pe/registro/Account/LogOn" target="_blank" class="filter-input" style="display: flex; align-items: center; justify-content: center; text-decoration: none; color: #475569; background: #f8fafc; border: 1px solid #e2e8f0; font-weight: 600; gap: 8px; transition: all 0.2s ease;">
+                    <a href="https://app1.susalud.gob.pe/registro/Account/LogOn" target="_blank" class="filter-input btn-clear-hover" style="width: 320px; display: flex; align-items: center; justify-content: center; text-decoration: none; color: #475569; background: #f8fafc; border: 1px solid #e2e8f0; font-weight: 600; gap: 8px; transition: all 0.2s ease;">
                         <i class="fa-solid fa-external-link-alt" style="color: #64748b;"></i> Ir a SUSALUD
                     </a>
                 </div>
-                <div style="display: flex; gap: 10px;">
+                <div style="display: flex; gap: 10px; margin-left: auto;">
                     <button class="btn-module primary" id="btn-search" style="padding: 10px 20px;"><i class="fa-solid fa-magnifying-glass"></i> Buscar</button>
                     <button class="btn-module btn-clear-hover" id="btn-clear" style="padding: 8px 15px; background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; font-weight: 500;">Limpiar Filtro</button>
                 </div>
             </div>
             
             <!-- BARRA DE ACCIONES RPA -->
-            <div id="actions-bar" style="margin-top: 20px; background: white; padding: 15px 20px; border-radius: 10px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center; gap: 15px; flex-wrap: wrap;">
+            <div id="actions-bar" style="display: flex; align-items: center; gap: 15px; flex-wrap: wrap;">
                 <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                     <div class="cr-datepicker-wrapper" style="position: relative; min-width: 280px;">
                         <div class="cr-date-trigger" id="cr-date-trigger" style="height:42px; display:flex; align-items:center; background:#ffffff; border-radius:8px; border:1px solid #e2e8f0; padding:0 15px; cursor:pointer; gap:8px; transition:border-color 0.2s;">
@@ -114,7 +110,7 @@
                     </div>
                     <span id="cr-patient-count" style="font-size:14px; color:#94a3b8; white-space:nowrap; margin-left:4px; font-weight:500;"></span>
                 </div>
-                <button class="btn-module shadow btn-matte-black" id="btn-validar" disabled style="padding: 10px 20px; font-weight: 600; background: #404040 !important;">
+                <button class="btn-module shadow btn-matte-black" id="btn-validar" disabled style="margin-left: auto; padding: 10px 20px; font-weight: 600; background: #404040 !important;">
                     Ejecutar Validaci&#243;n
                     <i id="validar-spinner" class="fa-solid fa-circle-notch fa-spin" style="display:none; margin-left:8px;"></i>
                 </button>

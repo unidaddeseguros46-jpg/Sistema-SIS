@@ -1,17 +1,5 @@
 /* Modulo Verificacion Paciente - Estilos */
 
-.search-filters-container {
-    background: #ffffff;
-    padding: 20px;
-    border-radius: 10px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-    margin-bottom: 20px;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 15px;
-    align-items: end;
-}
-
 .filter-group {
     display: flex;
     flex-direction: column;
@@ -416,6 +404,22 @@
 /* ============================================
    RESPONSIVE FILTER BUTTONS
    ============================================ */
+/* Botón Dar de Alta — base + hover oscuro como .btn-module.primary */
+#btn-batch-alta {
+    background: #dcfce7 !important;
+    color: #15803d !important;
+    border: 1px solid #bbf7d0 !important;
+}
+#btn-batch-alta.btn-disabled {
+    opacity: 0.5 !important;
+    cursor: not-allowed !important;
+}
+#btn-batch-alta:hover:not(.btn-disabled) {
+    background: #a7f3d0 !important;
+    color: #166534 !important;
+    border-color: #86efac !important;
+}
+
 @media (max-width: 768px) {
     .btn-text-resp {
         display: none;
@@ -423,7 +427,7 @@
     .btn-icon-resp {
         display: inline-block !important;
     }
-    .search-filters-container .btn-module {
+    #btn-search, #btn-clear {
         padding: 10px !important;
         width: 42px;
         justify-content: center;

@@ -9,29 +9,44 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const userId = session.user.id;
 
-    // DOM - BÃºsqueda (Nuevos IDs de VerificaciÃ³n)
-    const searchFilters = document.getElementById('search-filters');
+    // DOM
     const filterDniHc = document.getElementById('filter-dni-hc');
     const filterApellidos = document.getElementById('filter-apellidos');
     const filterSeguro = document.getElementById('filter-seguro');
     const filterServicio = document.getElementById('filter-servicio');
+    const filterCondicion = document.getElementById('filter-condicion');
     const btnSearch = document.getElementById('btn-search');
     const btnClear = document.getElementById('btn-clear');
-    
+    const btnBatchAlta = document.getElementById('btn-batch-alta');
+    const altaCountEl = document.getElementById('alta-count');
+
     const viewResultados = document.getElementById('view-resultados');
     const tbodyPacientes = document.getElementById('tbody-pacientes');
     const loadingIndicator = document.getElementById('loading-indicator');
     const tablePacientes = document.getElementById('table-pacientes');
     const toast = document.getElementById('toast');
-    
-    // Tooltip logic (Est&#225;ndar del sistema)
+
+    // Modal ingreso DOM
+    const modalIngreso = document.getElementById('modal-fecha-ingreso');
+    const modalIngresoPaciente = document.getElementById('modal-ingreso-paciente');
+    const modalIngresoMes = document.getElementById('modal-ingreso-mes');
+    const modalIngresoAno = document.getElementById('modal-ingreso-ano');
+    const modalIngresoCalendar = document.getElementById('modal-ingreso-calendar');
+    const modalIngresoTituloCal = document.getElementById('modal-ingreso-titulo-cal');
+    const modalIngresoPrev = document.getElementById('modal-ingreso-prev');
+    const modalIngresoNext = document.getElementById('modal-ingreso-next');
+    const modalIngresoToday = document.getElementById('modal-ingreso-today');
+    const modalIngresoDate = document.getElementById('modal-ingreso-date');
+    const btnConfirmIngreso = document.getElementById('btn-confirm-ingreso');
+    const btnCancelIngreso = document.getElementById('btn-cancel-ingreso');
+
     if (window.showGuideTooltip) {
         window.showGuideTooltip(
-            'seguimiento_pacs', 
-            'Haga click en la fila de un paciente para actualizar su informaci&#243;n', 
-            5000, // 5 segundos de duraci&#243;n
-            true, // Mostrar checkbox "No volver a mostrar"
-            { oncePerSession: false } // Reaparece cada vez que se carga la p&#225;gina
+            'seguimiento_pacs',
+            'Haga click en la fila de un paciente para actualizar su informaci&#243;n',
+            5000,
+            true,
+            { oncePerSession: false }
         );
     }
 
@@ -39,6 +54,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     let currentPage = 1;
     let rowsPerPage = 20;
     let totalRecords = 0;
+    const selectedPacientes = new Map(); // paciente_id -> { dni, apellidos, nombres, servicio }
+
+    const getPeruDate = () => new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Lima' }));
 
     const normalizeText = (text) => {
         if (!text) return '';
@@ -46,16 +64,317 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     const showToast = (text, isError = false) => {
-        if(window.showSystemTooltip) {
-            window.showSystemTooltip(text, isError);
+        console.log('[Toast]', isError ? 'ERROR' : 'INFO', text);
+        try {
+            if (window.showSystemTooltip) {
+                window.showSystemTooltip(text, isError);
+                return;
+            }
+        } catch (e) {
+            console.warn('[Toast] showSystemTooltip falló:', e);
+        }
+        const div = document.createElement('div');
+        div.textContent = text;
+        Object.assign(div.style, {
+            position: 'fixed', bottom: '30px', right: '30px', zIndex: '99999',
+            background: isError ? '#fef2f2' : '#f0fdf4',
+            color: isError ? '#dc2626' : '#15803d',
+            borderLeft: `4px solid ${isError ? '#ef4444' : '#22c55e'}`,
+            padding: '12px 20px', borderRadius: '10px', fontWeight: '600', fontSize: '14px',
+            boxShadow: '0 10px 25px rgba(0,0,0,0.15)'
+        });
+        document.body.appendChild(div);
+        setTimeout(() => div.remove(), 3500);
+    };
+    console.log('[Debug] showToast definida, showSystemTooltip disponible:', !!window.showSystemTooltip);
+
+    // ── Checks persistence (Supabase + in-memory) ──
+
+    const loadChecks = async () => {
+        try {
+            const today = getPeruDate().toISOString().split('T')[0];
+            const { data, error } = await client
+                .from('checks_diarios')
+                .select('paciente_id')
+                .eq('usuario_id', userId)
+                .eq('fecha_check', today);
+            if (error) throw error;
+            const ids = (data || []).map(c => c.paciente_id);
+            if (ids.length === 0) return;
+            const { data: pacientes, error: pErr } = await client
+                .from('pacientes')
+                .select('id, dni, apellidos, nombres, servicio')
+                .in('id', ids);
+            if (pErr) throw pErr;
+            (pacientes || []).forEach(p => {
+                selectedPacientes.set(p.id, {
+                    dni: p.dni,
+                    apellidos: p.apellidos,
+                    nombres: p.nombres,
+                    servicio: p.servicio || ''
+                });
+            });
+        } catch (e) {
+            console.warn('Error loading checks:', e);
         }
     };
+
+    const updateAltaCount = () => {
+        const size = selectedPacientes.size;
+        altaCountEl.textContent = size > 0 ? `${size} seleccionados` : '';
+        btnBatchAlta.classList.toggle('btn-disabled', size === 0);
+    };
+
+    const toggleCheck = async (tdEl, pacienteId, dni, apellidos, nombres, servicio) => {
+        const cb = tdEl.querySelector('.patient-check');
+        if (!cb || cb.disabled) return;
+
+        if (selectedPacientes.has(pacienteId)) {
+            selectedPacientes.delete(pacienteId);
+            cb.checked = false;
+            try {
+                await client.from('checks_diarios')
+                    .delete()
+                    .eq('paciente_id', pacienteId)
+                    .eq('usuario_id', userId)
+                    .eq('fecha_check', getPeruDate().toISOString().split('T')[0]);
+            } catch (e) { console.warn(e); }
+        } else {
+            selectedPacientes.set(pacienteId, { dni, apellidos, nombres, servicio });
+            cb.checked = true;
+            try {
+                await client.from('checks_diarios')
+                    .upsert({
+                        paciente_id: pacienteId,
+                        usuario_id: userId,
+                        fecha_check: getPeruDate().toISOString().split('T')[0]
+                    }, { onConflict: 'paciente_id,usuario_id,fecha_check' });
+            } catch (e) { console.warn(e); }
+        }
+        updateAltaCount();
+    };
+
+    // ── Batch Alta ──
+
+    const processAltaPaciente = async (pacienteId, hospitalizacionId, fechaEvento) => {
+        const { error: evtErr } = await client
+            .from('historial_eventos')
+            .insert({
+                paciente_id: pacienteId,
+                hospitalizacion_id: hospitalizacionId,
+                tipo_evento: 'Alta',
+                fecha_evento: fechaEvento,
+                detalle: 'Paciente dado de alta',
+                registrado_por: userId
+            });
+        if (evtErr) throw evtErr;
+
+        if (hospitalizacionId) {
+            await client
+                .from('hospitalizaciones')
+                .update({ hora_alta: '08:00' })
+                .eq('id', hospitalizacionId);
+        }
+    };
+
+    let isAltaLoading = false;
+
+    const setBtnAltaLoading = (loading) => {
+        isAltaLoading = loading;
+        if (loading) {
+            btnBatchAlta.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Procesando...';
+            btnBatchAlta.classList.add('btn-disabled');
+            btnBatchAlta.style.opacity = '0.7';
+            btnBatchAlta.style.filter = 'grayscale(0.5)';
+        } else {
+            btnBatchAlta.innerHTML = 'Dar de Alta';
+            btnBatchAlta.style.opacity = '1';
+            btnBatchAlta.style.filter = 'none';
+            btnBatchAlta.classList.toggle('btn-disabled', selectedPacientes.size === 0);
+        }
+    };
+
+    const batchAlta = async () => {
+        const pending = [...selectedPacientes.entries()];
+        console.log('[Debug] batchAlta iniciado, pendientes:', pending.length);
+        if (pending.length === 0) return;
+
+        setBtnAltaLoading(true);
+        const fechaHoy = getPeruDate().toISOString().split('T')[0];
+        const exitosos = [];
+        let idx = 0;
+
+        const processNext = async () => {
+            if (idx >= pending.length) {
+                await cleanupAfterBatch(exitosos);
+                return;
+            }
+
+            const [pacienteId, info] = pending[idx];
+            idx++;
+
+            try {
+                const { data: hosp, error: hErr } = await client
+                    .from('hospitalizaciones')
+                    .select('id, fecha_ingreso')
+                    .eq('paciente_id', pacienteId)
+                    .eq('activa', true)
+                    .limit(1);
+
+                if (hErr) throw hErr;
+
+                if (hosp && hosp.length > 0 && hosp[0].fecha_ingreso) {
+                    await processAltaPaciente(pacienteId, hosp[0].id, fechaHoy);
+                    exitosos.push(pacienteId);
+                    await processNext();
+                } else {
+                    openIngresoModal(pacienteId, info, fechaHoy, exitosos, processNext);
+                }
+            } catch (e) {
+                console.warn('Error en alta batch para', pacienteId, e);
+                showToast(`Error al procesar ${info.apellidos || pacienteId}`, true);
+                await processNext();
+            }
+        };
+
+        await processNext();
+    };
+
+    const cleanupAfterBatch = async (pacientesIds) => {
+        try {
+            const today = getPeruDate().toISOString().split('T')[0];
+            if (pacientesIds.length > 0) {
+                await client.from('checks_diarios')
+                    .delete()
+                    .eq('usuario_id', userId)
+                    .eq('fecha_check', today)
+                    .in('paciente_id', pacientesIds);
+            }
+        } catch (e) { console.warn(e); }
+
+        selectedPacientes.clear();
+        updateAltaCount();
+        setBtnAltaLoading(false);
+        showToast(`${pacientesIds.length} pacientes dados de alta correctamente.`);
+        currentPage = 1;
+        await searchPacientes();
+    };
+
+    // ── Modal ingreso ──
+
+    let modalPacienteId = null;
+    let modalInfo = null;
+    let modalFechaHoy = '';
+    let modalExitosos = [];
+    let modalOnComplete = null;
+    let modalCalendar = null;
+
+    const openIngresoModal = (pacienteId, info, fechaHoy, exitosos, onComplete) => {
+        modalPacienteId = pacienteId;
+        modalInfo = info;
+        modalFechaHoy = fechaHoy;
+        modalExitosos = exitosos;
+        modalOnComplete = onComplete;
+
+        modalIngresoPaciente.textContent =
+            `${info.apellidos || ''}, ${info.nombres || ''}`;
+
+        // Reset calendar
+        modalIngresoMes.innerHTML = '';
+        modalIngresoAno.innerHTML = '';
+        modalIngresoCalendar.innerHTML = '';
+        modalIngresoDate.value = '';
+
+        modalCalendar = window.crearCalendario({
+            mode: 'single',
+            grid: modalIngresoCalendar,
+            title: modalIngresoTituloCal,
+            month: modalIngresoMes,
+            year: modalIngresoAno,
+            prev: modalIngresoPrev,
+            next: modalIngresoNext,
+            today: modalIngresoToday,
+            onDayClick: (dateObj) => {
+                const y = dateObj.getFullYear();
+                const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+                const d = String(dateObj.getDate()).padStart(2, '0');
+                modalIngresoDate.value = `${y}-${m}-${d}`;
+                btnConfirmIngreso.disabled = false;
+            }
+        });
+
+        btnConfirmIngreso.disabled = true;
+        modalIngreso.style.display = 'flex';
+    };
+
+    btnConfirmIngreso.addEventListener('click', async () => {
+        const fechaIngreso = modalIngresoDate.value;
+        if (!fechaIngreso) return;
+        btnConfirmIngreso.disabled = true;
+
+        try {
+            const { data: hosp, error: insErr } = await client
+                .from('hospitalizaciones')
+                .insert({
+                    paciente_id: modalPacienteId,
+                    servicio: modalInfo.servicio || 'SIN SERVICIO',
+                    fecha_ingreso: fechaIngreso,
+                    activa: true,
+                    creado_por: userId
+                })
+                .select('id')
+                .single();
+
+            if (insErr) throw insErr;
+
+            await processAltaPaciente(modalPacienteId, hosp.id, modalFechaHoy);
+            modalExitosos.push(modalPacienteId);
+            modalIngreso.style.display = 'none';
+            modalCalendar = null;
+
+            const next = modalOnComplete;
+            modalOnComplete = null;
+            if (next) await next();
+        } catch (e) {
+            console.warn(e);
+            showToast('Error al regularizar ingreso', true);
+            btnConfirmIngreso.disabled = false;
+        }
+    });
+
+    btnCancelIngreso.addEventListener('click', async () => {
+        modalIngreso.style.display = 'none';
+        modalCalendar = null;
+
+        modalExitosos.forEach(id => {
+            selectedPacientes.delete(id);
+            const cb = document.querySelector(`.patient-check[data-id="${id}"]`);
+            if (cb) cb.checked = false;
+        });
+
+        if (modalExitosos.length > 0) {
+            const today = getPeruDate().toISOString().split('T')[0];
+            try {
+                await client.from('checks_diarios')
+                    .delete()
+                    .eq('usuario_id', userId)
+                    .eq('fecha_check', today)
+                    .in('paciente_id', modalExitosos);
+            } catch (e) { console.warn(e); }
+        }
+
+        updateAltaCount();
+        setBtnAltaLoading(false);
+    });
+
+    // ── Search ──
 
     const searchPacientes = async () => {
         const dniHcVal = filterDniHc.value.trim();
         const apeVal = filterApellidos.value.trim();
         const seguroVal = filterSeguro.value;
         const servicioVal = filterServicio.value;
+        const condicionVal = filterCondicion.value;
 
         try {
             loadingIndicator.style.display = 'block';
@@ -82,6 +401,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (servicioVal) {
                 queryObj = queryObj.eq('servicio', servicioVal.toUpperCase());
             }
+            if (condicionVal) {
+                queryObj = queryObj.ilike('condicion', condicionVal);
+            }
 
             const { data: pacientes, count, error } = await queryObj;
             if (error) throw error;
@@ -90,7 +412,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             renderTable(pacientes || []);
             renderPagination();
         } catch (error) {
-
             showToast('Error al buscar pacientes', true);
         } finally {
             loadingIndicator.style.display = 'none';
@@ -98,10 +419,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
+    // ── Table rendering ──
+
     const renderTable = (items) => {
+        const selectAllCb = document.getElementById('checkbox-select-all');
+        if (selectAllCb) selectAllCb.checked = false;
+
         tbodyPacientes.innerHTML = '';
         if (items.length === 0) {
-            tbodyPacientes.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 30px; color:#94a3b8;">No se encontraron pacientes.</td></tr>';
+            tbodyPacientes.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 30px; color:#94a3b8;">No se encontraron pacientes.</td></tr>';
             return;
         }
 
@@ -114,12 +440,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         items.forEach(item => {
             const row = document.createElement('tr');
             row.style.cursor = 'pointer';
-            
+
             const condValue = (item.condicion || '').toLowerCase();
             const condClass = !condValue ? '' : (condValue === 'hospitalizado' ? 'cond-hospitalizado' : (condValue === 'fallecido' ? 'cond-fallecido' : 'cond-alta'));
             const isFallecido = condValue === 'fallecido';
 
+            const isChecked = selectedPacientes.has(item.id);
+
             row.innerHTML = `
+                <td style="text-align:center; cursor: pointer;">
+                    <input type="checkbox" class="patient-check" data-id="${item.id}"
+                        data-dni="${item.dni}"
+                        data-apellidos="${item.apellidos}"
+                        data-nombres="${item.nombres}"
+                        data-servicio="${item.servicio || ''}"
+                        ${isChecked ? 'checked' : ''}
+                        ${isFallecido ? 'disabled' : ''}>
+                </td>
                 <td>${formatDniDisplay(item.dni, item.tipo_documento)}</td>
                 <td>${item.apellidos}, ${item.nombres}</td>
                 <td>${item.historia_clinica || '—'}</td>
@@ -133,13 +470,24 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </td>
             `;
 
+            // Checkbox column toggle
+            const firstTd = row.querySelector('td:first-child');
+            firstTd.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = item.id;
+                const dni = item.dni;
+                const apellidos = item.apellidos;
+                const nombres = item.nombres;
+                const servicio = item.servicio || '';
+                toggleCheck(firstTd, id, dni, apellidos, nombres, servicio);
+            });
+
             row.addEventListener('click', (e) => {
-                // Si hizo clic en el botón de acción, no abrir el detalle
                 if (e.target.closest('.quick-query')) return;
+                if (e.target.closest('td:first-child')) return;
                 window.location.href = `detalle-paciente.html?id=${item.id}`;
             });
 
-            // Acción específica para el botón de Consulta Rápida
             row.querySelector('.quick-query').addEventListener('click', (e) => {
                 e.stopPropagation();
                 const tipoDoc = e.currentTarget.dataset.tipoDocumento || 'DNI';
@@ -170,8 +518,50 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     };
 
-    const inputs = [filterDniHc, filterApellidos, filterSeguro, filterServicio];
-    inputs.forEach(input => {
+    // ── Select All ──
+
+    document.addEventListener('change', async (e) => {
+        if (e.target.id === 'checkbox-select-all') {
+            const today = getPeruDate().toISOString().split('T')[0];
+            const checkboxes = [...document.querySelectorAll('.patient-check:not(:disabled)')];
+            const ids = checkboxes.map(cb => cb.dataset.id);
+            if (e.target.checked) {
+                checkboxes.forEach(cb => {
+                    selectedPacientes.set(cb.dataset.id, {
+                        dni: cb.dataset.dni,
+                        apellidos: cb.dataset.apellidos,
+                        nombres: cb.dataset.nombres,
+                        servicio: cb.dataset.servicio || ''
+                    });
+                    cb.checked = true;
+                });
+                try {
+                    await client.from('checks_diarios')
+                        .upsert(ids.map(id => ({
+                            paciente_id: id,
+                            usuario_id: userId,
+                            fecha_check: today
+                        })), { onConflict: 'paciente_id,usuario_id,fecha_check' });
+                } catch (e) { console.warn(e); }
+            } else {
+                selectedPacientes.clear();
+                document.querySelectorAll('.patient-check').forEach(cb => cb.checked = false);
+                try {
+                    await client.from('checks_diarios')
+                        .delete()
+                        .eq('usuario_id', userId)
+                        .eq('fecha_check', today)
+                        .in('paciente_id', ids);
+                } catch (e) { console.warn(e); }
+            }
+            updateAltaCount();
+        }
+    });
+
+    // ── Event listeners ──
+
+    const filterInputs = [filterDniHc, filterApellidos, filterSeguro, filterServicio, filterCondicion];
+    filterInputs.forEach(input => {
         input.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 currentPage = 1;
@@ -180,14 +570,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
 
-    filterSeguro.addEventListener('change', () => {
-        currentPage = 1;
-        searchPacientes();
-    });
-
-    filterServicio.addEventListener('change', () => {
-        currentPage = 1;
-        searchPacientes();
+    [filterSeguro, filterServicio, filterCondicion].forEach(el => {
+        el.addEventListener('change', () => {
+            currentPage = 1;
+            searchPacientes();
+        });
     });
 
     btnSearch.addEventListener('click', () => {
@@ -200,14 +587,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         filterApellidos.value = '';
         filterSeguro.value = '';
         filterServicio.value = '';
-        
-        // Actualizar el texto del custom dropdown si existe
+
         if (filterServicio.customDropdownUpdate) filterServicio.customDropdownUpdate();
         if (filterSeguro.customDropdownUpdate) filterSeguro.customDropdownUpdate();
-        
+
         currentPage = 1;
         searchPacientes();
     });
 
-    searchPacientes();
+    btnBatchAlta.addEventListener('click', () => {
+        if (isAltaLoading) return;
+        if (selectedPacientes.size === 0) {
+            showToast('Seleccione al menos un paciente para dar de alta.', true);
+            return;
+        }
+        batchAlta();
+    });
+
+    // ── Init ──
+
+    await loadChecks();
+    updateAltaCount();
+    await searchPacientes();
 });

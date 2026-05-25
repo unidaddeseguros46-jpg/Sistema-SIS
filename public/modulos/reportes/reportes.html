@@ -83,7 +83,7 @@
         .rp-generate-btn:active { transform:translateY(0); }
         .rp-generate-btn:disabled { opacity:0.6; cursor:not-allowed; transform:none; }
 
-        /* ── CSS Grid layout (2 cols × 3 rows, all cards same height) ── */
+        /* ── CSS Grid layout (2 cols × 4 rows) ── */
         .rp-reports-layout {
             display: grid;
             grid-template-columns: 3fr 7fr;
@@ -206,7 +206,6 @@
 
         /* ── Service bar chart wrapper ── */
         .chart-wrapper.service-bar { flex: 1; min-height: 0; }
-
         /* ── Loading ── */
         .loading-overlay { display:none; align-items:center; justify-content:center; gap:12px; padding:40px; color:#64748b; font-size:15px; }
         .loading-overlay.active { display:flex; }
@@ -346,8 +345,8 @@
                             <div class="chart-wrapper"><canvas id="chart-admisiones"></canvas></div>
                         </div>
                         <div class="chart-card">
-                            <h3><i class="fa-solid fa-right-from-bracket"></i> Altas</h3>
-                            <div class="chart-wrapper"><canvas id="chart-altas"></canvas></div>
+                            <h3><i class="fa-solid fa-chart-bar"></i> Grupo Etario</h3>
+                            <div class="chart-wrapper"><canvas id="chart-edad"></canvas></div>
                         </div>
                     </div>
 

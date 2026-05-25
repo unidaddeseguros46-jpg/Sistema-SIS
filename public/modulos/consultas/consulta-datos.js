@@ -132,6 +132,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         inputDNI.value = '';
         viewResultados.style.display = 'none';
         tbody.innerHTML = '';
+        sessionStorage.removeItem('cd_last_result');
     };
 
     // Control de cancelación de consultas
@@ -267,6 +268,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             // 5. RENDERIZAR EN TABLA
             await renderResult(dataConsolidada);
             viewResultados.style.display = 'block';
+            sessionStorage.setItem('cd_last_result', JSON.stringify(dataConsolidada));
             showToast('Consulta completada exitosamente');
 
         } catch (err) {
@@ -388,4 +390,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         }
     });
+
+    // ── Restaurar último resultado desde sessionStorage ──
+    try {
+        const saved = sessionStorage.getItem('cd_last_result');
+        if (saved) {
+            const data = JSON.parse(saved);
+            renderResult(data);
+            viewResultados.style.display = 'block';
+            inputDNI.value = data.dni || '';
+        }
+    } catch (e) { console.warn(e); }
 });

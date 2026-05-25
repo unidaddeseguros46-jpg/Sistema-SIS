@@ -189,6 +189,8 @@
       render();
     });
 
+    render();
+
     return {
       render,
       populateFilters,

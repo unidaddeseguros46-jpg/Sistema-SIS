@@ -10,7 +10,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        #search-filters { grid-template-columns: repeat(auto-fill, minmax(200px, 260px)); }
         .susalud-copy-btn[data-creds="usuario"]:hover { color: #3b82f6 !important; }
         .susalud-copy-btn[data-creds="clave"]:hover { color: #10b981 !important; }
     </style>
@@ -20,10 +19,10 @@
         <main class="page-content" id="page-content">
 
             <!-- SECCION DE FILTROS -->
-            <div class="search-filters-container" id="search-filters">
+            <div style="background: white; padding: 15px 20px; border-radius: 10px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); display: flex; gap: 15px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 20px;">
                 <div class="filter-group">
                     <label>DNI del Paciente</label>
-                    <input type="text" id="filter-dni" class="filter-input" placeholder="DNI (8 dígitos)" oninput="this.value = this.value.replace(/[^0-9]/g, '')" maxlength="8">
+                    <input type="text" id="filter-dni" class="filter-input" placeholder="DNI (8 dígitos)" style="width: 320px;" oninput="this.value = this.value.replace(/[^0-9]/g, '')" maxlength="8">
                 </div>
                 <div class="filter-group" style="position: relative;">
                     <label>Web SUSALUD</label>
@@ -35,11 +34,11 @@
                             <i class="fa-solid fa-lock"></i>
                         </button>
                     </span>
-                    <a href="https://app1.susalud.gob.pe/registro/Account/LogOn" target="_blank" class="filter-input" style="display: flex; align-items: center; justify-content: center; text-decoration: none; color: #475569; background: #f8fafc; border: 1px solid #e2e8f0; font-weight: 600; gap: 8px; transition: all 0.2s ease;">
+                    <a href="https://app1.susalud.gob.pe/registro/Account/LogOn" target="_blank" class="filter-input btn-clear-hover" style="width: 320px; display: flex; align-items: center; justify-content: center; text-decoration: none; color: #475569; background: #f8fafc; border: 1px solid #e2e8f0; font-weight: 600; gap: 8px; transition: all 0.2s ease;">
                         <i class="fa-solid fa-external-link-alt" style="color: #64748b;"></i> Ir a SUSALUD
                     </a>
                 </div>
-                <div style="display: flex; gap: 10px; align-items: flex-end;">
+                <div style="display: flex; gap: 10px; margin-left: auto;">
                     <button class="btn-module primary" id="btn-consultar" style="padding: 10px 20px;"><i class="fa-solid fa-magnifying-glass"></i> Consultar Datos</button>
                     <button class="btn-module btn-clear-hover" id="btn-clear" style="padding: 8px 15px; background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; font-weight: 500;">Limpiar</button>
                 </div>
@@ -48,11 +47,6 @@
             <!-- SECCION DE RESULTADOS -->
             <div id="view-resultados" style="margin-top: 20px; display: none;">
                 <div class="data-table-container" style="background: white; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); padding: 20px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                        <h3 style="margin: 0; color: #0f172a; font-size: 16px; font-weight: 700;">
-                            <i class="fa-solid fa-square-poll-vertical" style="color: #3b82f6; margin-right: 8px;"></i>Resultados de la Consulta
-                        </h3>
-                    </div>
                     <table class="data-table" id="table-pacientes">
                         <thead>
                             <tr>

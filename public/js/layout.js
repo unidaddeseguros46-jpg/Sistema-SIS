@@ -474,7 +474,7 @@ window.showSystemTooltip = (message, isError = false) => {
     tooltip.style.borderRadius = '10px';
     tooltip.style.boxShadow = '0 10px 25px rgba(0,0,0,0.1)';
     tooltip.style.borderLeft = `4px solid ${borderColor}`;
-    tooltip.style.zIndex = '10005';
+    tooltip.style.zIndex = '30001';
 
     const guideTip = document.querySelector('.guide-tooltip:not(.system-toast-tooltip)');
     if (guideTip && guideTip.isConnected) {

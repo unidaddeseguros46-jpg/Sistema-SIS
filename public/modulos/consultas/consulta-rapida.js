@@ -1,8 +1,7 @@
 document.addEventListener('DOMContentLoaded', async () => {
     const btnSearch = document.getElementById('btn-search');
     const btnClear = document.getElementById('btn-clear');
-    const inputDNI = document.getElementById('filter-dni');
-    const inputHC = document.getElementById('filter-hc');
+    const inputDniHc = document.getElementById('filter-dni-hc');
     const inputApellidos = document.getElementById('filter-apellidos');
 
     const tablePacientes = document.getElementById('table-pacientes');
@@ -36,7 +35,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let currentPagePatients = [];
     let totalPatients = 0;
     let selectedDNIs = [];
-    let hastaHoyActive = false;
+    let hastaHoyActive = true;
     let crCurrentPage = 1;
     let crRowsPerPage = 20;
     let modalPacienteActual = null;
@@ -484,8 +483,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // ========== BÚSQUEDA ACUMULATIVA ==========
     const loadPacientes = async () => {
-        const dni = inputDNI.value.trim();
-        const hc = inputHC.value.trim();
+        const dniHc = inputDniHc.value.trim();
         const apellidos = inputApellidos.value.trim();
         const condicionVal = filterCondicion.value;
         const servicioVal = filterServicio.value;
@@ -496,7 +494,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         ({ start: fechaDesde, end: fechaHasta } = getDateRangeValues());
 
-        if (!dni && !hc && !apellidos && !fechaDesde && !fechaHasta && !condicionVal && !servicioVal && !hastaHoyActive) {
+        if (!dniHc && !apellidos && !fechaDesde && !fechaHasta && !condicionVal && !servicioVal && !hastaHoyActive) {
             showToast('Use los filtros para buscar pacientes.', true);
             return;
         }
@@ -511,8 +509,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             let query = supabaseClient.from('pacientes').select('*', { count: 'exact' }).order('creado_en', { ascending: false }).range(startRange, endRange);
 
-            if (dni) query = query.ilike('dni', `%${dni}%`);
-            if (hc) query = query.ilike('historia_clinica', `%${hc}%`);
+            if (dniHc) query = query.or(`dni.ilike.%${dniHc}%,historia_clinica.ilike.%${dniHc}%`);
             if (apellidos) query = query.ilike('apellidos', `%${normalizeText(apellidos)}%`);
             if (fechaDesde) query = query.gte('creado_en', `${fechaDesde}T00:00:00`);
             if (fechaHasta) query = query.lte('creado_en', `${fechaHasta}T23:59:59`);
@@ -550,7 +547,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         loadPacientes();
     });
 
-    [inputDNI, inputHC, inputApellidos].forEach(input => {
+    [inputDniHc, inputApellidos].forEach(input => {
         input.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 crCurrentPage = 1;
@@ -560,8 +557,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     btnClear.addEventListener('click', () => {
-        inputDNI.value = '';
-        inputHC.value = '';
+        inputDniHc.value = '';
         inputApellidos.value = '';
         crRangeStart = null;
         crRangeEnd = null;
@@ -974,7 +970,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const autoTrigger = urlParams.get('auto') === 'true';
 
         if (autoDNI) {
-            inputDNI.value = autoDNI;
+            inputDniHc.value = autoDNI;
             if (autoTrigger) {
                 // 1. Ejecutar b&#250;squeda
                 await loadPacientes();
@@ -999,5 +995,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     loadSusaludCreds();
     initSusaludCopy();
+    btnHastaHoy.classList.add('active');
+    triggerActionsSearch();
     handleAutoExecute();
 });
