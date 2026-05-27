@@ -95,8 +95,6 @@ document.addEventListener('DOMContentLoaded', () => {
     aside.innerHTML = sidebarHTML;
 
     const userName = sessionStorage.getItem('userName') || '';
-    const userApellidos = sessionStorage.getItem('userApellidos') || '';
-    const displayName = (userName.split(' ')[0] + ' ' + userApellidos.split(' ')[0]).trim() || userName;
 
     // Cabecera Global Uniforme para TODAS las vistas
     const volverBtn = isDetallePage
@@ -141,7 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <button class="profile-btn" id="profile-btn" style="display: flex; align-items: center; gap: 12px; background: transparent; border: none; cursor: pointer; padding: 5px 10px; border-radius: 8px;">
                     <i class="fa-solid fa-circle-user profile-icon" style="font-size: 2rem; color: #64748b;"></i>
                     <div class="user-info-text" style="display: flex; flex-direction: column; align-items: flex-start; text-align: left;">
-                        <span class="user-email" id="global-user-name" style="font-size: 13px; font-weight: 600; color: #1e293b; text-transform: uppercase;">${displayName}</span>
+                        <span class="user-email" id="global-user-name" style="font-size: 13px; font-weight: 600; color: #1e293b; text-transform: uppercase;">${userName}</span>
                         <span class="user-role-soft" id="global-user-role" style="font-size: 12px; color: #64748b;">${rolNombre !== '...' ? rolNombre : 'Cargando...'}</span>
                     </div>
                 </button>
@@ -325,24 +323,19 @@ document.addEventListener('DOMContentLoaded', () => {
             const user = session.user;
 
             const { data: profile } = await client.from('perfiles')
-                .select('nombre_completo, apellidos, roles(nombre)')
+                .select('nombre_completo, roles(nombre)')
                 .eq('id_usuario', user.id)
                 .single();
 
             if (profile) {
                 const fetchedRole = profile.roles ? profile.roles.nombre : 'Usuario';
-                const fetchedNombres = (profile.nombre_completo && profile.nombre_completo.trim() !== '') ? profile.nombre_completo.toUpperCase() : '';
-                const fetchedApellidos = (profile.apellidos && profile.apellidos.trim() !== '') ? profile.apellidos.toUpperCase() : '';
+                const fetchedName = (profile.nombre_completo && profile.nombre_completo.trim() !== '') ? profile.nombre_completo.toUpperCase() : user.email.toUpperCase();
                 
                 sessionStorage.setItem('userRole', fetchedRole);
-                sessionStorage.setItem('userName', fetchedNombres);
-                sessionStorage.setItem('userApellidos', fetchedApellidos);
+                sessionStorage.setItem('userName', fetchedName);
                 
                 if (roleSpan) roleSpan.textContent = fetchedRole;
-                const firstName = fetchedNombres.split(' ')[0] || '';
-                const firstSurname = fetchedApellidos.split(' ')[0] || '';
-                const displayName = (firstName + ' ' + firstSurname).trim() || user.email.toUpperCase();
-                if (nameSpan) nameSpan.textContent = displayName;
+                if (nameSpan) nameSpan.textContent = fetchedName;
             }
         } catch (e) {
         }

@@ -120,14 +120,13 @@ document.addEventListener('DOMContentLoaded', () => {
             // Inicio de sesiÃ³n exitoso. Obtener perfil completo (ya estamos autenticados, RLS lo permite)
             const { data: profile } = await supabaseClient
                 .from('perfiles')
-                .select('nombre_completo, apellidos, nombre_usuario, roles(nombre)')
+                .select('nombre_completo, nombre_usuario, roles(nombre)')
                 .eq('id_usuario', authData.user.id)
                 .single();
 
             if (profile) {
                 sessionStorage.setItem('userRole', profile.roles ? profile.roles.nombre : 'Usuario');
                 sessionStorage.setItem('userName', profile.nombre_completo || profile.nombre_usuario || authData.user.email);
-                sessionStorage.setItem('userApellidos', profile.apellidos || '');
             } else {
                 sessionStorage.setItem('userRole', 'Usuario');
                 sessionStorage.setItem('userName', usernameVal);
