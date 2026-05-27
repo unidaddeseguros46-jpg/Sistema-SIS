@@ -146,7 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             const { error } = await supabaseClient.auth.resetPasswordForEmail(email, {
-                redirectTo: undefined // No usar redirect, usamos OTP directo
+                redirectTo: window.location.origin + '/recuperar-password.html'
             });
 
             if (error) {
@@ -311,7 +311,9 @@ document.addEventListener('DOMContentLoaded', () => {
         clearMsg(msgStep2);
 
         try {
-            const { error } = await supabaseClient.auth.resetPasswordForEmail(recoveryEmail);
+            const { error } = await supabaseClient.auth.resetPasswordForEmail(recoveryEmail, {
+                redirectTo: window.location.origin + '/recuperar-password.html'
+            });
 
             if (error) {
                 if (error.message.includes('rate limit') || error.message.includes('Rate limit')) {

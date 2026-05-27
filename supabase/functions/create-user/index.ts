@@ -66,10 +66,10 @@ Deno.serve(async (req: Request) => {
     const callerRoleName = (callerProfile.roles as any)?.nombre || '';
 
     // 6. Parse request body
-    const { email, password, nombre_completo, id_rol } = await req.json();
+    const { email, password, nombre_completo, apellidos, id_rol } = await req.json();
 
-    if (!email || !password || !nombre_completo || !id_rol) {
-      return new Response(JSON.stringify({ error: 'Missing required fields: email, password, nombre_completo, id_rol' }), {
+    if (!email || !password || !nombre_completo || !apellidos || !id_rol) {
+      return new Response(JSON.stringify({ error: 'Missing required fields: email, password, nombre_completo, apellidos, id_rol' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
@@ -126,6 +126,7 @@ Deno.serve(async (req: Request) => {
       .insert({
         id_usuario: newUser.user.id,
         nombre_completo: nombre_completo,
+        apellidos: apellidos,
         id_rol: id_rol,
         email: email, // New: include email in profile
       });
@@ -146,6 +147,7 @@ Deno.serve(async (req: Request) => {
         id: newUser.user.id,
         email: newUser.user.email,
         nombre_completo: nombre_completo.toUpperCase(),
+        apellidos: apellidos.toUpperCase(),
         id_rol: id_rol,
       },
     }), {
