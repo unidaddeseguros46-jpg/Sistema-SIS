@@ -55,6 +55,16 @@
     background: #f8fafc; color: #1e293b; transition: all 0.2s;
     box-sizing: border-box;
 }
+.modal-form-group select:disabled,
+.modal-form-group input:disabled {
+    background-color: #f1f5f9 !important;
+    color: #64748b !important;
+    border-color: #cbd5e1 !important;
+    cursor: not-allowed;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
+    opacity: 1;
+}
+
 .modal-form-group input:focus,
 .modal-form-group select:focus {
     border-color: #3b82f6;
