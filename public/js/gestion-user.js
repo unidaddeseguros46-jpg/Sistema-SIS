@@ -28,6 +28,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const modalError = document.getElementById('modal-error');
     const form = document.getElementById('form-usuario');
     const inputNombre = document.getElementById('input-nombre');
+    const inputApellidos = document.getElementById('input-apellidos');
     const inputUsername = document.getElementById('input-username');
     const inputEmail = document.getElementById('input-email');
     const inputPassword = document.getElementById('input-password');
@@ -93,6 +94,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             inputPassword.required = false;
             editingUserId = user.id_usuario;
             inputNombre.value = user.nombre_completo || '';
+            inputApellidos.value = user.apellidos || '';
             inputUsername.value = user.nombre_usuario || '';
             inputSusaludUsuario.value = user.susalud_usuario || '';
             inputSusaludClave.value = user.susalud_clave || '';
@@ -123,7 +125,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const { data, error, count } = await supabaseClient
                 .from('perfiles')
-                .select('id_usuario, nombre_completo, nombre_usuario, email, id_rol, fecha_creacion, activo, susalud_usuario, susalud_clave, roles(nombre)', { count: 'exact' })
+                .select('id_usuario, nombre_completo, apellidos, nombre_usuario, email, id_rol, fecha_creacion, activo, susalud_usuario, susalud_clave, roles(nombre)', { count: 'exact' })
                 .in('id_rol', [3]) // Solo usuarios con rol=Usuario
                 .order('fecha_creacion', { ascending: false })
                 .range(startRange, endRange);
@@ -135,7 +137,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const { count: activosCount, error: countError } = await supabaseClient
                 .from('perfiles')
-                .select('id', { count: 'exact', head: true })
+                .select('id_usuario', { count: 'exact', head: true })
                 .in('id_rol', [3])
                 .eq('activo', true);
 
@@ -191,7 +193,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             tr.innerHTML = `
                 <td style="font-weight:700; color:#1e293b;">${start + idx + 1}</td>
-                <td>${user.nombre_completo || 'Sin nombre'}</td>
+                <td>${user.nombre_completo || '—'}</td>
+                <td>${user.apellidos || '—'}</td>
                 <td style="color:#64748b; font-size:13px;">${user.email || '—'}</td>
                 <td><span class="${roleBadgeClass}">${roleName.toUpperCase()}</span></td>
                 <td>${statusBadge}</td>
@@ -270,6 +273,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         clearFieldErrors();
         
         let nombre = inputNombre.value.trim();
+        let apellidos = inputApellidos.value.trim();
         const username = inputUsername.value.trim();
 
         // Validaciones Locales
@@ -284,6 +288,15 @@ document.addEventListener('DOMContentLoaded', async () => {
             hasError = true;
         }
         
+        // Apellidos (3-100)
+        if (!apellidos) {
+            showFieldError('apellidos', 'Los apellidos son obligatorios.');
+            hasError = true;
+        } else if (apellidos.length < 3 || apellidos.length > 100) {
+            showFieldError('apellidos', 'Los apellidos deben tener entre 3 y 100 caracteres.');
+            hasError = true;
+        }
+
         // Usuario (5-50)
         const usernameRegex = /^[a-zA-Z0-9_.-]+$/;
         if (!username) {
@@ -329,6 +342,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Sanitización
         const escapeHTML = (str) => str.replace(/[&<>'"]/g, tag => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[tag]));
         nombre = escapeHTML(nombre);
+        apellidos = escapeHTML(apellidos);
 
         btnSubmit.disabled = true;
         btnSubmitSpinner.style.display = 'inline-block';
@@ -353,7 +367,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (editingUserId) {
                 const { error } = await supabaseClient
                     .from('perfiles')
-                    .update({ nombre_completo: nombre, nombre_usuario: username, susalud_usuario: susaludUsuario || null, susalud_clave: susaludClave || null })
+                    .update({ nombre_completo: nombre, apellidos: apellidos, nombre_usuario: username, susalud_usuario: susaludUsuario || null, susalud_clave: susaludClave || null })
                     .eq('id_usuario', editingUserId);
                 if (error) throw error;
                 showToast(`Usuario actualizado correctamente`);
@@ -374,7 +388,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                         'Content-Type': 'application/json',
                         'Authorization': `Bearer ${s.access_token}`,
                     },
-                    body: JSON.stringify({ email, password, nombre_completo: nombre, id_rol: 3 })
+                    body: JSON.stringify({ email, password, nombre_completo: nombre, apellidos: apellidos, id_rol: 3 })
                 });
 
                 const contentType = response.headers.get("content-type");
