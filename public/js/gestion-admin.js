@@ -1,5 +1,5 @@
 /**
- * GestiÃ³n de Administradores â€” Hospital San JosÃ©
+ * Gestión de Administradores — Hospital San José
  * CRUD de usuarios con rol = Administrador (id_rol=2).
  * Acceso: Solo Desarrollador.
  */
@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const rolNombre = sessionStorage.getItem('userRole') || '';
     if (rolNombre !== 'Desarrollador') {
-        alert('Solo el rol Desarrollador puede acceder a este mÃ³dulo.');
+        alert('Solo el rol Desarrollador puede acceder a este módulo.');
         window.location.href = '../../menu.html';
         return;
     }
@@ -233,7 +233,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else if (action === 'deactivate' || action === 'activate') {
             const newStatus = action === 'activate';
             const label = newStatus ? 'activar' : 'desactivar';
-            if (!confirm(`Â¿EstÃ¡ seguro de ${label} este administrador?`)) return;
+            if (!confirm(`¿Está seguro de ${label} este administrador?`)) return;
 
             try {
                 const { error } = await supabaseClient

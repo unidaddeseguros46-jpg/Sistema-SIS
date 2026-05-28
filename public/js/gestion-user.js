@@ -1,21 +1,21 @@
-﻿/**
- * GestiÃ³n de Usuarios â€” Hospital San JosÃ©
+/**
+ * Gestión de Usuarios — Hospital San José
  * CRUD de usuarios con rol = Usuario (id_rol=3).
  * Acceso: Administrador y Desarrollador.
  */
 document.addEventListener('DOMContentLoaded', async () => {
-    // â”€â”€ Auth Guard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Auth Guard ──────────────────────────────────────────────────────────────────────────
     const { data: { session } } = await supabaseClient.auth.getSession();
     if (!session) { window.location.href = '../../index.html'; return; }
 
     const rolNombre = sessionStorage.getItem('userRole') || '';
     if (rolNombre !== 'Administrador' && rolNombre !== 'Desarrollador') {
-        alert('No tiene permisos para acceder a este mÃ³dulo.');
+        alert('No tiene permisos para acceder a este módulo.');
         window.location.href = '../../menu.html';
         return;
     }
 
-    // â”€â”€ DOM refs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── DOM refs ────────────────────────────────────────────────────────────────────────────
     const tbody = document.getElementById('tbody-users');
     const loadingEl = document.getElementById('loading-users');
     const emptyEl = document.getElementById('empty-users');
@@ -49,14 +49,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     let rowsPerPage = 20;
     let editingUserId = null; // null = creating, uuid = editing
 
-    // â”€â”€ Toast â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Toast ────────────────────────────────────────────────────────────────────────────────
     const showToast = (msg, type = 'success') => {
         if(window.showSystemTooltip) {
             window.showSystemTooltip(msg, type === 'error');
         }
     };
 
-    // â”€â”€ Password toggle â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Password toggle ──────────────────────────────────────────────────────────────────────
     togglePass.addEventListener('click', () => {
         const isHidden = inputPassword.type === 'password';
         inputPassword.type = isHidden ? 'text' : 'password';
@@ -69,7 +69,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         toggleSusaludPass.querySelector('i').className = isHidden ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
     });
 
-    // â”€â”€ Modal logic â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Modal logic ──────────────────────────────────────────────────────────────────────────
     const openModal = (mode = 'create', user = null) => {
         form.reset();
         modalError.classList.remove('show');
@@ -113,7 +113,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('btn-modal-cancel').addEventListener('click', closeModal);
     modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) closeModal(); });
 
-    // â”€â”€ Fetch users â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Fetch users ──────────────────────────────────────────────────────────────────────────
     const fetchUsers = async () => {
         loadingEl.style.display = 'block';
         tableContainer.style.display = 'none';
@@ -163,7 +163,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    // â”€â”€ Render table â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Render table ─────────────────────────────────────────────────────────────────────────
     const renderTable = () => {
         const start = (currentPage - 1) * rowsPerPage;
 
@@ -222,7 +222,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     };
 
-    // â”€â”€ Handle actions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Handle actions ───────────────────────────────────────────────────────────────────────
     const handleAction = async (action, userId) => {
         if (action === 'edit') {
             const user = currentPageUsers.find(u => u.id_usuario === userId);
@@ -230,7 +230,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         } else if (action === 'deactivate' || action === 'activate') {
             const newStatus = action === 'activate';
             const label = newStatus ? 'activar' : 'desactivar';
-            if (!confirm(`Â¿EstÃ¡ seguro de ${label} este usuario?`)) return;
+            if (!confirm(`¿Está seguro de ${label} este usuario?`)) return;
 
             try {
                 const { error } = await supabaseClient
@@ -267,7 +267,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             i.classList.remove('input-error');
         });
     };
-    // â”€â”€ Form submit â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // ── Form submit ──────────────────────────────────────────────────────────────────────────
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         clearFieldErrors();

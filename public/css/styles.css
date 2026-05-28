@@ -108,7 +108,7 @@ body.fade-out {
 .login-page {
     min-height: 100vh;
     width: 100%;
-    /* Usa un fondo representativo. Ajusta el nombre segÃºn tu imagen grande */
+    /* Usa un fondo representativo. Ajusta el nombre según tu imagen grande */
     background: url('../img/fondo.jpg') center/cover no-repeat scroll;
     display: flex;
     justify-content: center;
@@ -132,7 +132,7 @@ body.fade-out {
     position: relative;
     z-index: 2;
     background: #ffffff;
-    /* Formulario de color blanco sÃ³lido */
+    /* Formulario de color blanco sólido */
     border-radius: 12px;
     padding: 70px 40px 40px;
     /* Padding superior mayor para el logo circular */
@@ -144,7 +144,7 @@ body.fade-out {
     /* Espacio para que sobresalga el logo */
 }
 
-/* CÃRCULO DEL LOGO */
+/* CÍRCULO DEL LOGO */
 .logo-circle {
     position: absolute;
     top: -65px;
@@ -152,10 +152,10 @@ body.fade-out {
     left: 50%;
     transform: translateX(-50%);
     width: 130px;
-    /* CÃ­rculo mÃ¡s grande */
+    /* Círculo más grande */
     height: 130px;
     background: #ffffff;
-    /* Fondo blanco sÃ³lido */
+    /* Fondo blanco sólido */
     border-radius: 50%;
     display: flex;
     justify-content: center;
@@ -203,7 +203,7 @@ body.fade-out {
     background: #f8fafc;
     /* Fondo de input muy sutil */
     border: 1px solid #cbd5e1;
-    /* Borde mÃ¡s visible */
+    /* Borde más visible */
     border-radius: 4px;
     /* Curvatura reducida pautada */
     outline: none;
@@ -233,7 +233,7 @@ body.fade-out {
     background: none;
     cursor: pointer;
     color: #64748b;
-    /* Ãcono oscuro */
+    /* Ícono oscuro */
     font-size: 17px;
     padding: 0;
 }
@@ -269,7 +269,7 @@ body.fade-out {
     text-decoration: underline;
 }
 
-/* BOTÃ“N */
+/* BOTÓN */
 .login-btn {
     width: 100%;
     padding: 14px;
@@ -467,7 +467,7 @@ body {
 /* Franja curva celeste en seleccionados */
 
 
-/* Sub-menÃºs escondidos */
+/* Sub-menús escondidos */
 .sub-menu {
     max-height: 0;
     overflow: hidden;
@@ -688,7 +688,7 @@ body {
     font-weight: 400;
 }
 
-/* GRID DE MÃ“DULOS */
+/* GRID DE MÓDULOS */
 .modules-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
@@ -947,7 +947,7 @@ tr.row-alerta:hover {
     box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
 }
 
-/* ExcepciÃ³n readOnly */
+/* Excepción readOnly */
 .material-input[readonly] {
     background: #e2e8f0;
     color: #94a3b8;

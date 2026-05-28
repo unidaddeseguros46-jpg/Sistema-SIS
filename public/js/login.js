@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
         btnText.style.visibility = state ? 'hidden' : 'visible';
     };
 
-    // Restaurar credenciales guardadas (usuario + rol, sin contraseÃ±a)
+    // Restaurar credenciales guardadas (usuario + rol, sin contraseña)
     const savedUsername = localStorage.getItem('rememberUsername');
     const savedRole = localStorage.getItem('rememberRole');
     if (savedUsername) {
@@ -37,11 +37,11 @@ document.addEventListener('DOMContentLoaded', () => {
         roleSelect.value = savedRole;
     }
 
-    // Mostrar mensaje de Ã©xito si viene de recuperaciÃ³n de contraseÃ±a
+    // Mostrar mensaje de éxito si viene de recuperación de contraseña
     const params = new URLSearchParams(window.location.search);
     if (params.get('reset') === 'ok') {
         errorMsg.style.color = '#059669';
-        errorMsg.textContent = 'âœ… ContraseÃ±a actualizada exitosamente. Inicia sesiÃ³n con tus nuevas credenciales.';
+        errorMsg.textContent = '✅ Contraseña actualizada exitosamente. Inicia sesión con tus nuevas credenciales.';
         // Limpiar la URL
         window.history.replaceState({}, '', window.location.pathname);
     }
@@ -59,17 +59,17 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
-        // ValidaciÃ³n de seguridad (lÃ­mites de longitud) para prevenir payloads masivos
+        // Validación de seguridad (límites de longitud) para prevenir payloads masivos
         if (usernameVal.length > 50) {
             errorMsg.textContent = 'El nombre de usuario es demasiado largo.';
             return;
         }
         if (passVal.length > 100) {
-            errorMsg.textContent = 'La contraseÃ±a es demasiado larga.';
+            errorMsg.textContent = 'La contraseña es demasiado larga.';
             return;
         }
 
-        // SanitizaciÃ³n del username (solo caracteres seguros para evitar inyecciones lÃ³gicas)
+        // Sanitización del username (solo caracteres seguros para evitar inyecciones lógicas)
         const usernameRegex = /^[a-zA-Z0-9_.-]+$/;
         if (!usernameRegex.test(usernameVal)) {
             errorMsg.textContent = 'El nombre de usuario contiene caracteres no permitidos.';
@@ -79,7 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
         setLoading(true);
 
         try {
-            // 1. Obtener email y rol asociado al nombre de usuario usando RPC para evadir restricciones de lectura anÃ³nimas
+            // 1. Obtener email y rol asociado al nombre de usuario usando RPC para evadir restricciones de lectura anónimas
             const { data: userInfo, error: rpcError } = await supabaseClient.rpc('get_login_info', {
                 username_in: usernameVal
             });
@@ -99,7 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            // 3. Iniciar sesiÃ³n en Supabase con el email subyacente
+            // 3. Iniciar sesión en Supabase con el email subyacente
             const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
                 email: auth_email,
                 password: passVal
@@ -107,17 +107,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (authError) {
                 if (authError.message.includes('Invalid login')) {
-                    errorMsg.textContent = 'ContraseÃ±a incorrecta.';
+                    errorMsg.textContent = 'Contraseña incorrecta.';
                 } else if (authError.message.includes('Email not confirmed')) {
                     errorMsg.textContent = 'Debes confirmar tu correo.';
                 } else {
-                    errorMsg.textContent = 'Error al iniciar sesiÃ³n.';
+                    errorMsg.textContent = 'Error al iniciar sesión.';
                 }
                 setLoading(false);
                 return;
             }
 
-            // Inicio de sesiÃ³n exitoso. Obtener perfil completo (ya estamos autenticados, RLS lo permite)
+            // Inicio de sesión exitoso. Obtener perfil completo (ya estamos autenticados, RLS lo permite)
             const { data: profile } = await supabaseClient
                 .from('perfiles')
                 .select('nombre_completo, apellidos, nombre_usuario, roles(nombre)')
@@ -133,7 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 sessionStorage.setItem('userName', usernameVal);
             }
 
-            // Guardar credenciales (usuario + rol, sin contraseÃ±a)
+            // Guardar credenciales (usuario + rol, sin contraseña)
             if (remember.checked) {
                 localStorage.setItem('rememberUsername', usernameVal);
                 localStorage.setItem('rememberRole', roleVal);

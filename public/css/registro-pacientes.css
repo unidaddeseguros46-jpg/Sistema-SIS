@@ -1,4 +1,4 @@
-/* MÃ³dulo Registro Pacientes - Estilos Locales */
+/* Módulo Registro Pacientes - Estilos Locales */
 
 .module-commands {
     display: flex;
@@ -196,7 +196,7 @@ select.standard-input:disabled {
     cursor: not-allowed;
     box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
     opacity: 1;
-    /* Para evitar que el navegador lo aclare mÃ¡s */
+    /* Para evitar que el navegador lo aclare más */
 }
 
 /* Acciones en tabla */
