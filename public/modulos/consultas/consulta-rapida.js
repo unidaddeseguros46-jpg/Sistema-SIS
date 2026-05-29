@@ -41,22 +41,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     let modalPacienteActual = null;
     let susaludCreds = null;
 
-    const loadSusaludCreds = async () => {
-        try {
-            const { data: { session } } = await supabaseClient.auth.getSession();
-            if (!session) return;
-            const { data, error } = await supabaseClient
-                .from('perfiles')
-                .select('susalud_usuario, susalud_clave')
-                .eq('id_usuario', session.user.id)
-                .maybeSingle();
-            if (error) throw error;
-            if (data && (data.susalud_usuario || data.susalud_clave)) {
-                susaludCreds = data;
-                const bar = document.querySelector('.susalud-creds-bar');
-                if (bar) bar.style.display = 'flex';
+    const loadSusaludCreds = async (retries = 2) => {
+        for (let attempt = 0; attempt <= retries; attempt++) {
+            try {
+                const { data: { session } } = await supabaseClient.auth.getSession();
+                if (!session) return;
+                const { data, error } = await supabaseClient
+                    .from('perfiles')
+                    .select('susalud_usuario, susalud_clave')
+                    .eq('id_usuario', session.user.id)
+                    .maybeSingle();
+                if (error) throw error;
+                if (data && (data.susalud_usuario || data.susalud_clave)) {
+                    susaludCreds = data;
+                    const bar = document.querySelector('.susalud-creds-bar');
+                    if (bar) bar.style.display = 'flex';
+                    return;
+                }
+            } catch (e) {
+                console.error('[SUSALUD] Error cargando credenciales:', e);
+                if (attempt < retries) {
+                    await new Promise(r => setTimeout(r, 1000));
+                }
             }
-        } catch (e) {}
+        }
     };
 
     const initSusaludCopy = () => {
@@ -993,7 +1001,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    loadSusaludCreds();
+    await loadSusaludCreds();
     initSusaludCopy();
     btnHastaHoy.classList.add('active');
     triggerActionsSearch();
