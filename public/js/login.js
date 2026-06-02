@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('reset') === 'ok') {
         errorMsg.style.color = '#059669';
-        errorMsg.textContent = '✅ Contraseña actualizada exitosamente. Inicia sesión con tus nuevas credenciales.';
+        errorMsg.textContent = 'Contraseña actualizada exitosamente. Inicia sesión con tus nuevas credenciales.';
         // Limpiar la URL
         window.history.replaceState({}, '', window.location.pathname);
     }

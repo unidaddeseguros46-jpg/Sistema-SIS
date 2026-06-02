@@ -48,8 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (step === 'success') {
             map.success.classList.add('active');
             dots[3].classList.add('completed');
-            cardIcon.className = 'fa-solid fa-check';
-            cardIcon.style.color = '#10b981';
+            document.querySelector('.recovery-icon-circle').style.display = 'none';
             return;
         }
         map[step].classList.add('active');
