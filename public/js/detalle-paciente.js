@@ -607,6 +607,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
+        if (tipo === 'Alta' && pacienteId) {
+            try {
+                const ids = JSON.parse(localStorage.getItem('alta_pacientes_ids') || '[]');
+                if (!ids.includes(pacienteId)) ids.push(pacienteId);
+                localStorage.setItem('alta_pacientes_ids', JSON.stringify(ids));
+            } catch (e) {}
+        }
+
         document.getElementById('event-register-popover').style.display = 'none';
         eventRegisterDate = null;
         if (window.showSystemTooltip) window.showSystemTooltip('Evento registrado correctamente');

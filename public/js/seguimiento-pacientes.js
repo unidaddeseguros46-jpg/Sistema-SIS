@@ -17,7 +17,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const filterCondicion = document.getElementById('filter-condicion');
     const btnSearch = document.getElementById('btn-search');
     const btnClear = document.getElementById('btn-clear');
-    const btnBatchAlta = document.getElementById('btn-batch-alta');
     const altaCountEl = document.getElementById('alta-count');
 
     const viewResultados = document.getElementById('view-resultados');
@@ -25,20 +24,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const loadingIndicator = document.getElementById('loading-indicator');
     const tablePacientes = document.getElementById('table-pacientes');
     const toast = document.getElementById('toast');
-
-    // Modal ingreso DOM
-    const modalIngreso = document.getElementById('modal-fecha-ingreso');
-    const modalIngresoPaciente = document.getElementById('modal-ingreso-paciente');
-    const modalIngresoMes = document.getElementById('modal-ingreso-mes');
-    const modalIngresoAno = document.getElementById('modal-ingreso-ano');
-    const modalIngresoCalendar = document.getElementById('modal-ingreso-calendar');
-    const modalIngresoTituloCal = document.getElementById('modal-ingreso-titulo-cal');
-    const modalIngresoPrev = document.getElementById('modal-ingreso-prev');
-    const modalIngresoNext = document.getElementById('modal-ingreso-next');
-    const modalIngresoToday = document.getElementById('modal-ingreso-today');
-    const modalIngresoDate = document.getElementById('modal-ingreso-date');
-    const btnConfirmIngreso = document.getElementById('btn-confirm-ingreso');
-    const btnCancelIngreso = document.getElementById('btn-cancel-ingreso');
 
     if (window.showGuideTooltip) {
         window.showGuideTooltip(
@@ -122,7 +107,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const updateAltaCount = () => {
         const size = selectedPacientes.size;
         altaCountEl.textContent = size > 0 ? `${size} seleccionados` : '';
-        btnBatchAlta.classList.toggle('btn-disabled', size === 0);
     };
 
     const toggleCheck = async (tdEl, pacienteId, dni, apellidos, nombres, servicio) => {
@@ -153,219 +137,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         updateAltaCount();
     };
-
-    // ── Batch Alta ──
-
-    const processAltaPaciente = async (pacienteId, hospitalizacionId, fechaEvento) => {
-        const { error: evtErr } = await client
-            .from('historial_eventos')
-            .insert({
-                paciente_id: pacienteId,
-                hospitalizacion_id: hospitalizacionId,
-                tipo_evento: 'Alta',
-                fecha_evento: fechaEvento,
-                detalle: 'Paciente dado de alta',
-                registrado_por: userId
-            });
-        if (evtErr) throw evtErr;
-
-        if (hospitalizacionId) {
-            await client
-                .from('hospitalizaciones')
-                .update({ hora_alta: '08:00' })
-                .eq('id', hospitalizacionId);
-        }
-    };
-
-    let isAltaLoading = false;
-
-    const setBtnAltaLoading = (loading) => {
-        isAltaLoading = loading;
-        if (loading) {
-            btnBatchAlta.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Procesando...';
-            btnBatchAlta.classList.add('btn-disabled');
-            btnBatchAlta.style.opacity = '0.7';
-            btnBatchAlta.style.filter = 'grayscale(0.5)';
-        } else {
-            btnBatchAlta.innerHTML = 'Dar de Alta';
-            btnBatchAlta.style.opacity = '1';
-            btnBatchAlta.style.filter = 'none';
-            btnBatchAlta.classList.toggle('btn-disabled', selectedPacientes.size === 0);
-        }
-    };
-
-    const batchAlta = async () => {
-        const pending = [...selectedPacientes.entries()];
-        console.log('[Debug] batchAlta iniciado, pendientes:', pending.length);
-        if (pending.length === 0) return;
-
-        setBtnAltaLoading(true);
-        const fechaHoy = getPeruDate().toISOString().split('T')[0];
-        const exitosos = [];
-        let idx = 0;
-
-        const processNext = async () => {
-            if (idx >= pending.length) {
-                await cleanupAfterBatch(exitosos);
-                return;
-            }
-
-            const [pacienteId, info] = pending[idx];
-            idx++;
-
-            try {
-                const { data: hosp, error: hErr } = await client
-                    .from('hospitalizaciones')
-                    .select('id, fecha_ingreso')
-                    .eq('paciente_id', pacienteId)
-                    .eq('activa', true)
-                    .limit(1);
-
-                if (hErr) throw hErr;
-
-                if (hosp && hosp.length > 0 && hosp[0].fecha_ingreso) {
-                    await processAltaPaciente(pacienteId, hosp[0].id, fechaHoy);
-                    exitosos.push(pacienteId);
-                    await processNext();
-                } else {
-                    openIngresoModal(pacienteId, info, fechaHoy, exitosos, processNext);
-                }
-            } catch (e) {
-                console.warn('Error en alta batch para', pacienteId, e);
-                showToast(`Error al procesar ${info.apellidos || pacienteId}`, true);
-                await processNext();
-            }
-        };
-
-        await processNext();
-    };
-
-    const cleanupAfterBatch = async (pacientesIds) => {
-        try {
-            const today = getPeruDate().toISOString().split('T')[0];
-            if (pacientesIds.length > 0) {
-                await client.from('checks_diarios')
-                    .delete()
-                    .eq('usuario_id', userId)
-                    .eq('fecha_check', today)
-                    .in('paciente_id', pacientesIds);
-            }
-        } catch (e) { console.warn(e); }
-
-        selectedPacientes.clear();
-        updateAltaCount();
-        setBtnAltaLoading(false);
-        showToast(`${pacientesIds.length} pacientes dados de alta correctamente.`);
-        currentPage = 1;
-        await searchPacientes();
-    };
-
-    // ── Modal ingreso ──
-
-    let modalPacienteId = null;
-    let modalInfo = null;
-    let modalFechaHoy = '';
-    let modalExitosos = [];
-    let modalOnComplete = null;
-    let modalCalendar = null;
-
-    const openIngresoModal = (pacienteId, info, fechaHoy, exitosos, onComplete) => {
-        modalPacienteId = pacienteId;
-        modalInfo = info;
-        modalFechaHoy = fechaHoy;
-        modalExitosos = exitosos;
-        modalOnComplete = onComplete;
-
-        modalIngresoPaciente.textContent =
-            `${info.apellidos || ''}, ${info.nombres || ''}`;
-
-        // Reset calendar
-        modalIngresoMes.innerHTML = '';
-        modalIngresoAno.innerHTML = '';
-        modalIngresoCalendar.innerHTML = '';
-        modalIngresoDate.value = '';
-
-        modalCalendar = window.crearCalendario({
-            mode: 'single',
-            grid: modalIngresoCalendar,
-            title: modalIngresoTituloCal,
-            month: modalIngresoMes,
-            year: modalIngresoAno,
-            prev: modalIngresoPrev,
-            next: modalIngresoNext,
-            today: modalIngresoToday,
-            onDayClick: (dateObj) => {
-                const y = dateObj.getFullYear();
-                const m = String(dateObj.getMonth() + 1).padStart(2, '0');
-                const d = String(dateObj.getDate()).padStart(2, '0');
-                modalIngresoDate.value = `${y}-${m}-${d}`;
-                btnConfirmIngreso.disabled = false;
-            }
-        });
-
-        btnConfirmIngreso.disabled = true;
-        modalIngreso.style.display = 'flex';
-    };
-
-    btnConfirmIngreso.addEventListener('click', async () => {
-        const fechaIngreso = modalIngresoDate.value;
-        if (!fechaIngreso) return;
-        btnConfirmIngreso.disabled = true;
-
-        try {
-            const { data: hosp, error: insErr } = await client
-                .from('hospitalizaciones')
-                .insert({
-                    paciente_id: modalPacienteId,
-                    servicio: modalInfo.servicio || 'SIN SERVICIO',
-                    fecha_ingreso: fechaIngreso,
-                    activa: true,
-                    creado_por: userId
-                })
-                .select('id')
-                .single();
-
-            if (insErr) throw insErr;
-
-            await processAltaPaciente(modalPacienteId, hosp.id, modalFechaHoy);
-            modalExitosos.push(modalPacienteId);
-            modalIngreso.style.display = 'none';
-            modalCalendar = null;
-
-            const next = modalOnComplete;
-            modalOnComplete = null;
-            if (next) await next();
-        } catch (e) {
-            console.warn(e);
-            showToast('Error al regularizar ingreso', true);
-            btnConfirmIngreso.disabled = false;
-        }
-    });
-
-    btnCancelIngreso.addEventListener('click', async () => {
-        modalIngreso.style.display = 'none';
-        modalCalendar = null;
-
-        modalExitosos.forEach(id => {
-            selectedPacientes.delete(id);
-            const cb = document.querySelector(`.patient-check[data-id="${id}"]`);
-            if (cb) cb.checked = false;
-        });
-
-        if (modalExitosos.length > 0) {
-            const today = getPeruDate().toISOString().split('T')[0];
-            try {
-                await client.from('checks_diarios')
-                    .delete()
-                    .eq('usuario_id', userId)
-                    .eq('fecha_check', today)
-                    .in('paciente_id', modalExitosos);
-            } catch (e) { console.warn(e); }
-        }
-
-        updateAltaCount();
-        setBtnAltaLoading(false);
-    });
 
     // ── Search ──
 
@@ -595,18 +366,36 @@ document.addEventListener('DOMContentLoaded', async () => {
         searchPacientes();
     });
 
-    btnBatchAlta.addEventListener('click', () => {
-        if (isAltaLoading) return;
-        if (selectedPacientes.size === 0) {
-            showToast('Seleccione al menos un paciente para dar de alta.', true);
-            return;
-        }
-        batchAlta();
-    });
+    // ── Limpiar checks de pacientes dados de alta desde detalle ──
+    const limpiarChecksPorAlta = async () => {
+        try {
+            const ids = JSON.parse(localStorage.getItem('alta_pacientes_ids') || '[]');
+            if (ids.length === 0) return;
+            const today = getPeruDate().toISOString().split('T')[0];
+            await client.from('checks_diarios')
+                .delete()
+                .eq('usuario_id', userId)
+                .eq('fecha_check', today)
+                .in('paciente_id', ids);
+            ids.forEach(id => selectedPacientes.delete(id));
+            localStorage.removeItem('alta_pacientes_ids');
+        } catch (e) {}
+    };
 
     // ── Init ──
 
     await loadChecks();
+    await limpiarChecksPorAlta();
     updateAltaCount();
     await searchPacientes();
+
+    // bfcache: cuando el usuario vuelve con el botón Atrás
+    window.addEventListener('pageshow', async (e) => {
+        if (e.persisted) {
+            await loadChecks();
+            await limpiarChecksPorAlta();
+            updateAltaCount();
+            await searchPacientes();
+        }
+    });
 });

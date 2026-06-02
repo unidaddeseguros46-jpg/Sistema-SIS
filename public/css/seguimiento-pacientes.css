@@ -404,22 +404,6 @@
 /* ============================================
    RESPONSIVE FILTER BUTTONS
    ============================================ */
-/* Botón Dar de Alta — base + hover oscuro como .btn-module.primary */
-#btn-batch-alta {
-    background: #dcfce7 !important;
-    color: #15803d !important;
-    border: 1px solid #bbf7d0 !important;
-}
-#btn-batch-alta.btn-disabled {
-    opacity: 0.5 !important;
-    cursor: not-allowed !important;
-}
-#btn-batch-alta:hover:not(.btn-disabled) {
-    background: #a7f3d0 !important;
-    color: #166534 !important;
-    border-color: #86efac !important;
-}
-
 @media (max-width: 768px) {
     .btn-text-resp {
         display: none;

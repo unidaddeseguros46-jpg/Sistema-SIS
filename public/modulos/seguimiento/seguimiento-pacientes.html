@@ -72,14 +72,7 @@
                         <i class="fa-solid fa-chevron-down" style="position: absolute; right: 15px; color: #64748b; font-size: 12px; pointer-events: none;"></i>
                     </div>
                 </div>
-                <div class="filter-group">
-                    <label>&#160;</label>
-                    <button class="btn-module btn-disabled" id="btn-batch-alta"
-                        style="padding: 10px 20px; height: 42px; cursor: pointer;">
-                        Dar de Alta
-                    </button>
-                </div>
-                <span id="alta-count" style="font-size: 14px; color: #94a3b8; font-weight: 500; align-self: flex-end; padding-bottom: 10px;"></span>
+                <span id="alta-count" style="font-size: 14px; color: #3b82f6; font-weight: 600; align-self: flex-end; padding-bottom: 10px;"></span>
                 <div id="pagination-container" class="pagination-controls" style="margin-left: auto; align-self: flex-end;"></div>
             </div>
 
@@ -110,40 +103,7 @@
 
 
 
-            <!-- MODAL FECHA INGRESO -->
-            <div id="modal-fecha-ingreso" class="modal-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:20000; align-items:center; justify-content:center;">
-                <div class="modal-content" style="background:#fff; border-radius:12px; padding:28px; max-width:420px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.2);">
-                    <h3 style="font-size:16px; font-weight:700; color:#0f172a; margin:0 0 6px 0; display:flex; align-items:center; gap:8px;">
-                        <i class="fa-solid fa-calendar-plus" style="color:#1e40af;"></i> Regularizar ingreso
-                    </h3>
-                    <p id="modal-ingreso-paciente" style="font-size:13px; color:#475569; margin:0 0 16px 0;"></p>
-                    <div class="cal-filters" style="display:flex; gap:8px; align-items:flex-end; margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid #f1f5f9;">
-                        <div class="filter-group" style="display:flex; flex-direction:column; gap:3px; flex:1;">
-                            <label style="font-size:12px; font-weight:600; color:#475569;">Mes</label>
-                            <select id="modal-ingreso-mes" class="filter-select"></select>
-                        </div>
-                        <div class="filter-group" style="display:flex; flex-direction:column; gap:3px; flex:1;">
-                            <label style="font-size:12px; font-weight:600; color:#475569;">A&#241;o</label>
-                            <select id="modal-ingreso-ano" class="filter-select"></select>
-                        </div>
-                    </div>
-                    <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
-                        <button id="modal-ingreso-prev" class="cal-nav-btn" style="background:none; border:none; cursor:pointer; font-size:16px; color:#64748b; padding:4px 8px;">&#8249;</button>
-                        <div id="modal-ingreso-titulo-cal" style="flex:1; font-size:14px; font-weight:600; color:#0f172a; text-align:center;"></div>
-                        <button id="modal-ingreso-next" class="cal-nav-btn" style="background:none; border:none; cursor:pointer; font-size:16px; color:#64748b; padding:4px 8px;">&#8250;</button>
-                    </div>
-                    <div class="cal-weekdays"><span>D</span><span>L</span><span>M</span><span>MI</span><span>J</span><span>V</span><span>S</span></div>
-                    <div id="modal-ingreso-calendar" class="cal-days-grid"></div>
-                    <input type="hidden" id="modal-ingreso-date" value="">
-                    <div style="text-align:center; margin-top:6px;">
-                        <button id="modal-ingreso-today" style="background:none; border:none; cursor:pointer; font-size:12px; color:#1e40af; font-weight:600; padding:4px 8px;">Hoy</button>
-                    </div>
-                    <div style="display:flex; gap:10px; margin-top:16px;">
-                        <button id="btn-confirm-ingreso" class="btn-module primary" style="padding:10px 20px; height:42px;"><i class="fa-solid fa-check"></i> Confirmar Ingreso</button>
-                        <button id="btn-cancel-ingreso" class="btn-module btn-clear-hover" style="padding:10px 20px; height:42px; background:#f1f5f9; color:#475569; border:1px solid #e2e8f0;">Cancelar</button>
-                    </div>
-                </div>
-            </div>
+
 
         </main>
     </div>
