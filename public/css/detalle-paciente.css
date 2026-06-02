@@ -963,6 +963,8 @@
     display: flex;
     flex-direction: column;
     flex: 1;
+    min-height: 0;
+    overflow: hidden;
 }
 
 /* ═══════════════════════════════════════════
@@ -1164,4 +1166,145 @@
         align-items: flex-start;
         gap: 6px;
     }
+}
+
+/* ═══════════════════════════════════════════
+   REVERTIR ALTA
+   ═══════════════════════════════════════════ */
+.revertir-alta-container {
+    display: inline-flex;
+}
+
+.btn-revertir-alta {
+    background: #3b82f6;
+    border: none;
+    color: #ffffff;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.btn-revertir-alta:hover {
+    background: #2563eb;
+}
+
+.btn-revertir-alta:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Modal Overlay */
+.revertir-modal-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.9);
+    backdrop-filter: blur(2px);
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: fadeIn 0.2s ease forwards;
+}
+
+.revertir-modal-card {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e2e8f0;
+    padding: 24px;
+    max-width: 320px;
+    width: 100%;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    animation: popUp 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.revertir-modal-icon {
+    width: 48px;
+    height: 48px;
+    background: #fef2f2;
+    color: #ef4444;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    margin: 0 auto;
+}
+
+.revertir-modal-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0;
+}
+
+.revertir-modal-desc {
+    font-size: 13px;
+    color: #64748b;
+    margin: 0;
+    line-height: 1.5;
+}
+
+.revertir-modal-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.btn-revertir-confirm {
+    background: #ef4444;
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background 0.2s;
+}
+
+.btn-revertir-confirm:hover {
+    background: #dc2626;
+}
+
+.btn-revertir-cancel {
+    background: #f1f5f9;
+    color: #475569;
+    border: none;
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-revertir-cancel:hover {
+    background: #e2e8f0;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes popUp {
+    from { opacity: 0; transform: translateY(10px) scale(0.95); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
 }

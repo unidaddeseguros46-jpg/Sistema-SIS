@@ -176,7 +176,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             .select('*')
             .eq('paciente_id', pacienteId)
             .order('numero_registro', { ascending: true });
-        if (error) { hospitalizaciones = []; return; }
+        if (error) { console.error('Error cargando hospitalizaciones:', error); hospitalizaciones = []; return; }
         hospitalizaciones = data || [];
         activeHosp = hospitalizaciones.find(h => h.activa) || null;
 
@@ -218,7 +218,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             .eq('hospitalizacion_id', hospId)
             .order('fecha_evento', { ascending: true })
             .order('creado_en', { ascending: true });
-        if (error) return [];
+        if (error) { console.error('Error cargando eventos:', error); return []; }
         return data || [];
     }
 
@@ -282,7 +282,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             paciente.condicion.toUpperCase() === 'FALLECIDO';
 
         if (hospitalizaciones.length === 0) {
-            // Sin registros: mostrar empty (si fallecido y sin registros, igual mostrar empty)
             document.getElementById('events-empty').style.display = 'flex';
             return;
         }
@@ -290,21 +289,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         const hasActive = !!activeHosp;
 
         if (isFallecido) {
-            // Fallecido: mostrar carpetas (todos los registros están cerrados)
             showFoldersView();
         } else if (hasActive) {
-            // Mostrar línea de tiempo del registro activo
             document.getElementById('events-timeline-view').style.display = 'flex';
             const badge = document.getElementById('events-registro-badge');
             badge.textContent = `Registro #${activeHosp.numero_registro}`;
             badge.classList.remove('closed');
             activeEvents = allEventsMap[activeHosp.id] || [];
             renderTimeline(activeEvents, 'timeline-container', false);
-            // Botón volver: solo visible si hay más de 1 registro
             document.getElementById('btn-timeline-back').style.display =
                 hospitalizaciones.length > 1 ? 'flex' : 'none';
         } else {
-            // Todos cerrados (no fallecido): mostrar carpetas + permitir nuevo ingreso
             showFoldersView();
         }
     }
@@ -361,7 +356,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         badge.className = `events-registro-badge ${hosp.activa ? '' : 'closed'}`;
 
         const events = await loadEvents(hosp.id);
+
         renderTimeline(events, 'folder-detail-timeline', !hosp.activa);
+
+        const revertirContainer = document.getElementById('revertir-alta-container');
+        if (revertirContainer) {
+            const lastType = events.length > 0 ? events[events.length - 1].tipo_evento : 'none';
+            const ultimoRegistro = hospitalizaciones[hospitalizaciones.length - 1];
+            const showBtn = !hosp.activa && events.length > 0 && lastType === 'Alta'
+                && hosp.id === ultimoRegistro.id;
+
+            if (showBtn) {
+                revertirContainer.style.display = 'inline-flex';
+                document.getElementById('btn-revertir-alta').dataset.hospId = hosp.id;
+            } else {
+                revertirContainer.style.display = 'none';
+            }
+        }
     }
 
     document.getElementById('btn-folder-back').addEventListener('click', () => {
@@ -888,6 +899,62 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.addEventListener('resize', syncEventsHeight);
 
     // ═══════════════════════════════════════
+    // REVERTIR ALTA
+    // ═══════════════════════════════════════
+    const modalRevertir = document.getElementById('revertir-modal');
+    const btnRevertirAlta = document.getElementById('btn-revertir-alta');
+    const btnRevertirCancel = document.getElementById('btn-revertir-cancel');
+    const btnRevertirConfirm = document.getElementById('btn-revertir-confirm');
+
+    if (btnRevertirAlta) {
+        btnRevertirAlta.addEventListener('click', () => {
+            modalRevertir.style.display = 'flex';
+        });
+    }
+
+    if (btnRevertirCancel) {
+        btnRevertirCancel.addEventListener('click', () => {
+            modalRevertir.style.display = 'none';
+        });
+    }
+
+    if (btnRevertirConfirm) {
+        btnRevertirConfirm.addEventListener('click', async () => {
+            const hospId = btnRevertirAlta.dataset.hospId;
+            if (!hospId) return;
+
+            btnRevertirConfirm.disabled = true;
+            btnRevertirConfirm.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Revirtiendo...';
+            btnRevertirCancel.style.display = 'none';
+
+            try {
+                const { data, error } = await client.rpc('revertir_alta', {
+                    p_hospitalizacion_id: hospId
+                });
+
+                if (error) throw error;
+                if (!data.ok) throw new Error(data.error || 'Error al revertir el alta');
+
+                if (window.showSystemTooltip) {
+                    window.showSystemTooltip('Alta revertida correctamente. El paciente vuelve a estar hospitalizado.');
+                }
+
+                modalRevertir.style.display = 'none';
+                await reload();
+            } catch (err) {
+                console.error('Error al revertir alta:', err);
+                if (window.showSystemTooltip) {
+                    window.showSystemTooltip('Error: ' + err.message, true);
+                }
+            } finally {
+                btnRevertirConfirm.disabled = false;
+                btnRevertirConfirm.innerHTML = '<i class="fa-solid fa-rotate-left"></i> Sí, Revertir Alta';
+                btnRevertirCancel.style.display = 'block';
+            }
+        });
+    }
+
+    // ═══════════════════════════════════════
     // INICIALIZACIÓN Y RECARGA
     // ═══════════════════════════════════════
     async function reload() {
@@ -900,7 +967,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         renderCalendar();
         await updateEventsView();
-        // Sincronizar después de render completo
         requestAnimationFrame(syncEventsHeight);
     }
 

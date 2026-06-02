@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Detalle del Paciente - Hospital San José</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏥</text></svg>">
     <link rel="stylesheet" href="../../css/styles.css">
     <link rel="stylesheet" href="../../css/registro-pacientes.css">
     <link rel="stylesheet" href="../../css/detalle-paciente.css">
@@ -208,9 +209,37 @@
                             <button class="btn-folder-back" id="btn-folder-back">
                                 <i class="fa-solid fa-arrow-left"></i> Volver
                             </button>
-                            <span class="events-registro-badge" id="folder-detail-badge"></span>
+                            <div class="events-header-right">
+                                <div class="revertir-alta-container" id="revertir-alta-container" style="display:none;">
+                                    <button class="btn-revertir-alta" id="btn-revertir-alta" data-hosp-id="">
+                                        <i class="fa-solid fa-rotate-left"></i>
+                                        <span id="revertir-alta-text">Revertir Alta</span>
+                                        <i id="revertir-alta-spinner" class="fa-solid fa-circle-notch fa-spin" style="display:none;"></i>
+                                    </button>
+                                </div>
+                                <span class="events-registro-badge" id="folder-detail-badge"></span>
+                            </div>
                         </div>
                         <div class="timeline-container" id="folder-detail-timeline"></div>
+                    </div>
+
+                    <!-- Modal confirmación de Revertir Alta -->
+                    <div class="revertir-modal-overlay" id="revertir-modal" style="display:none;">
+                        <div class="revertir-modal-card">
+                            <div class="revertir-modal-icon">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                            </div>
+                            <h3 class="revertir-modal-title">¿Revertir esta alta?</h3>
+                            <p class="revertir-modal-desc">Esta acción eliminará el evento de Alta, reabrirá el registro de hospitalización y cambiará la condición del paciente a <strong>Hospitalizado</strong>.</p>
+                            <div class="revertir-modal-actions">
+                                <button class="btn-revertir-confirm" id="btn-revertir-confirm">
+                                    <i class="fa-solid fa-rotate-left"></i> Sí, Revertir Alta
+                                </button>
+                                <button class="btn-revertir-cancel" id="btn-revertir-cancel">
+                                    Cancelar
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
