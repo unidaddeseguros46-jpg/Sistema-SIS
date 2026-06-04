@@ -1520,11 +1520,6 @@ tr.row-alerta:hover {
         display: inline-flex;
     }
 
-    /* En móvil, ocultar "Bienvenido" para ahorrar espacio */
-    .welcome-text {
-        display: none;
-    }
-
     /* Sidebar como drawer off-canvas con ancho dinámico */
     .sidebar.collapsible-sidebar {
         position: fixed;
@@ -1586,7 +1581,6 @@ tr.row-alerta:hover {
 .custom-select-trigger {
     display: flex;
     align-items: center;
-    justify-content: space-between;
     height: 100%;
     width: 100%;
     cursor: pointer;
@@ -1615,8 +1609,10 @@ tr.row-alerta:hover {
     position: absolute;
     display: block;
     top: calc(100% + 5px);
-    left: -15px; /* Ajuste por el padding del parent */
-    right: -15px;
+    left: -15px;
+    width: fit-content;
+    min-width: calc(100% + 30px);
+    max-width: min(320px, 90vw);
     background: #ffffff;
     border-radius: 10px;
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
@@ -1669,7 +1665,7 @@ tr.row-alerta:hover {
     padding: 10px 15px;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    gap: 8px;
     cursor: pointer;
     transition: background 0.2s, color 0.2s;
     font-size: 13px;
@@ -1720,4 +1716,11 @@ tr.row-alerta:hover {
 }
 .global-search-box > .fa-chevron-down {
     transition: transform 0.2s ease;
+}
+
+/* 2K+ (≥1920px): expandir page-content */
+@media (min-width: 1920px) {
+    .page-content {
+        max-width: 1600px;
+    }
 }

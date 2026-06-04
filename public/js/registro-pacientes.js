@@ -229,6 +229,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (isModal) {
             viewLista.style.display = 'none';
             viewForm.style.display = 'block';
+            moveBtnOnMobile();
             const tempStyle = document.getElementById('temp-modal-hide');
             if (tempStyle) tempStyle.remove();
             document.body.style.display = 'block';
@@ -582,6 +583,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         viewLista.style.display = 'none';
         moduleCommands.style.display = 'none';
         viewForm.style.display = 'block';
+        const headerBack = document.getElementById('btn-header-back');
+        if (headerBack) headerBack.style.display = 'inline-flex';
+        if (window.adjustWelcomeTextVisibility) window.adjustWelcomeTextVisibility();
+        moveBtnOnMobile();
     };
 
     const renderPagination = () => {
@@ -674,12 +679,130 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // ============================================
+    // AUTO-DETECCIÓN DE DNI EXISTENTE
+    // ============================================
+    function removeDniExistsTooltip() {
+        const existing = document.querySelector('.dni-exists-tooltip');
+        if (existing) {
+            existing.classList.add('guide-tooltip-exit');
+            setTimeout(() => {
+                if (existing.parentElement) existing.remove();
+            }, 400);
+        }
+    }
+
+    async function checkDniExists(dni) {
+        removeDniExistsTooltip();
+
+        const pacienteId = document.getElementById('paciente-id').value;
+
+        const { data, error } = await client
+            .from('pacientes')
+            .select('id, apellidos, nombres')
+            .eq('dni', dni)
+            .maybeSingle();
+
+        if (error) {
+            console.error('[DNI Check] Error:', error);
+            return;
+        }
+
+        if (data && data.id != pacienteId) {
+            showDniExistsTooltip(dni, data);
+        }
+    }
+
+    function showDniExistsTooltip(dni, patient) {
+        const tooltip = document.createElement('div');
+        tooltip.className = 'guide-tooltip dni-exists-tooltip';
+        tooltip.innerHTML = `
+            <div style="display:flex; align-items:flex-start; gap:12px;">
+                <i class="fa-solid fa-circle-exclamation" style="color:#ef4444; font-size:18px; flex-shrink:0; margin-top:2px;"></i>
+                <div style="flex:1; min-width:0;">
+                    <div style="font-weight:600; color:#1e293b; font-size:14px; margin-bottom:2px;">
+                        El paciente con DNI <strong style="color:#0f172a;">${dni}</strong> ya existe
+                    </div>
+                    <div style="font-size:12px; color:#64748b; margin-bottom:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                        ${patient.apellidos}, ${patient.nombres}
+                    </div>
+                    <button type="button" style="background:transparent; color:#475569; border:1px solid #cbd5e1; border-radius:6px; padding:7px 18px; font-size:13px; font-weight:500; cursor:pointer; box-shadow:0 2px 6px rgba(0,0,0,0.08); transition:all 0.2s;" onmouseover="this.style.background='#2563eb'; this.style.color='#ffffff'; this.style.borderColor='#2563eb'; this.style.boxShadow='0 4px 12px rgba(37,99,235,0.3)'" onmouseout="this.style.background='transparent'; this.style.color='#475569'; this.style.borderColor='#cbd5e1'; this.style.boxShadow='0 2px 6px rgba(0,0,0,0.08)'" onclick="window.location.href='../seguimiento/detalle-paciente.html?id=${patient.id}'">
+                        Registrar evento
+                    </button>
+                </div>
+                <button type="button" class="dni-exists-close" style="background:none; border:none; color:#94a3b8; cursor:pointer; font-size:20px; padding:0; line-height:1; flex-shrink:0;">
+                    &times;
+                </button>
+            </div>
+        `;
+
+        tooltip.style.position = 'fixed';
+        tooltip.style.bottom = '30px';
+        tooltip.style.right = '30px';
+        tooltip.style.background = '#ffffff';
+        tooltip.style.padding = '16px 20px';
+        tooltip.style.borderRadius = '10px';
+        tooltip.style.boxShadow = '0 10px 25px rgba(0,0,0,0.1)';
+        tooltip.style.borderLeft = '4px solid #ef4444';
+        tooltip.style.zIndex = '30001';
+        tooltip.style.maxWidth = '380px';
+
+        tooltip.querySelector('.dni-exists-close').addEventListener('click', () => {
+            tooltip.classList.add('guide-tooltip-exit');
+            setTimeout(() => tooltip.remove(), 400);
+        });
+
+        document.body.appendChild(tooltip);
+    }
+
+    inputDni.addEventListener('input', () => {
+        const dni = getRawDni();
+        if (dni.length === 8) {
+            checkDniExists(dni);
+        } else {
+            removeDniExistsTooltip();
+        }
+    });
+
+    // ============================================
     // OBTENER FECHA DE NACIMIENTO (Cloudflare Worker)
     // ============================================
     const WORKER_URL = 'https://dni-lookup-api.seguimientohospitalario5.workers.dev/';
     const btnObtenerFnac = document.getElementById('btn-obtener-fnac');
     const btnFnacText = document.getElementById('btn-fnac-text');
     const fnacSpinner = document.getElementById('fnac-spinner');
+    const fnacHeaderParent = btnObtenerFnac.parentElement;
+    const dnisGroup = document.querySelector('#registro-form > .input-stacked:nth-of-type(1)');
+
+    function moveBtnOnMobile() {
+        const container = fnacHeaderParent;
+        if (!container || !btnObtenerFnac || !dnisGroup) return;
+        const dropdown = container.querySelector('.tipo-doc-group');
+        if (!dropdown) return;
+
+        const MAX_DROPDOWN = 280;
+
+        const isInHeader = btnObtenerFnac.parentElement === container;
+
+        if (isInHeader) {
+            // Si el dropdown no alcanza su ancho máximo porque el botón lo comprime
+            if (dropdown.offsetWidth < MAX_DROPDOWN) {
+                dnisGroup.insertAdjacentElement('afterend', btnObtenerFnac);
+            }
+        } else {
+            // Medir si cabe: agregar temporalmente al header (oculto)
+            const origVis = btnObtenerFnac.style.visibility;
+            btnObtenerFnac.style.visibility = 'hidden';
+            container.appendChild(btnObtenerFnac);
+            void container.offsetHeight;
+
+            if (dropdown.offsetWidth < MAX_DROPDOWN) {
+                dnisGroup.insertAdjacentElement('afterend', btnObtenerFnac);
+            }
+            btnObtenerFnac.style.visibility = origVis;
+        }
+    }
+    window.addEventListener('resize', moveBtnOnMobile);
+    moveBtnOnMobile();
 
     btnObtenerFnac.addEventListener('click', async () => {
         const dniValue = getRawDni();
@@ -768,17 +891,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         inputOtros.required = false;
 
         viewForm.style.display = 'block';
+        const headerBack = document.getElementById('btn-header-back');
+        if (headerBack) headerBack.style.display = 'inline-flex';
+        if (window.adjustWelcomeTextVisibility) window.adjustWelcomeTextVisibility();
+        moveBtnOnMobile();
     });
 
     btnCancelar.addEventListener('click', () => {
+        removeDniExistsTooltip();
         if (isModal) {
-            // Si está dentro de un iframe (modal), enviamos un mensaje al padre para cerrar
             window.parent.postMessage({ action: 'closeModal' }, '*');
         } else {
             viewForm.style.display = 'none';
             viewLista.style.display = 'block';
             moduleCommands.style.display = 'flex';
         }
+        const headerBack = document.getElementById('btn-header-back');
+        if (headerBack) headerBack.style.display = 'none';
+        if (window.adjustWelcomeTextVisibility) window.adjustWelcomeTextVisibility();
     });
 
     selectSeguro.addEventListener('change', (e) => {
@@ -1160,6 +1290,35 @@ document.addEventListener('DOMContentLoaded', async () => {
         setTimeout(() => {
             if (btnObtenerFnac) btnObtenerFnac.click();
         }, 500);
+    }
+
+    // ============================================
+    // BOTÓN VOLVER EN EL ENCABEZADO DE LA PÁGINA
+    // ============================================
+    const headerLeft = document.querySelector('.top-header .header-left');
+    if (headerLeft && !document.getElementById('btn-header-back')) {
+        const backBtn = document.createElement('button');
+        backBtn.type = 'button';
+        backBtn.id = 'btn-header-back';
+        backBtn.innerHTML = '<i class="fa-solid fa-arrow-left"></i> Volver';
+        backBtn.style.cssText = 'background:transparent; border:1px solid #e2e8f0; color:#475569; border-radius:6px; padding:6px 14px; font-size:13px; font-weight:500; cursor:pointer; display:none; align-items:center; gap:6px; transition:all 0.2s; box-shadow:0 2px 6px rgba(0,0,0,0.08); margin-right:12px;';
+        backBtn.onmouseover = () => { backBtn.style.background = '#2563eb'; backBtn.style.color = '#ffffff'; backBtn.style.borderColor = '#2563eb'; backBtn.style.boxShadow = '0 4px 12px rgba(37,99,235,0.3)'; };
+        backBtn.onmouseout = () => { backBtn.style.background = 'transparent'; backBtn.style.color = '#475569'; backBtn.style.borderColor = '#e2e8f0'; backBtn.style.boxShadow = '0 2px 6px rgba(0,0,0,0.08)'; };
+        backBtn.addEventListener('click', () => {
+            viewForm.style.display = 'none';
+            viewLista.style.display = 'block';
+            moduleCommands.style.display = 'flex';
+            backBtn.style.display = 'none';
+            removeDniExistsTooltip();
+            if (window.adjustWelcomeTextVisibility) window.adjustWelcomeTextVisibility();
+        });
+
+        const welcomeText = headerLeft.querySelector('.welcome-text');
+        if (welcomeText) {
+            headerLeft.insertBefore(backBtn, welcomeText);
+        } else {
+            headerLeft.appendChild(backBtn);
+        }
     }
 
     // ============================================

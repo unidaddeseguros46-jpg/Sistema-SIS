@@ -51,11 +51,11 @@
 
             <!-- BARRA DE OPERACIONES ESPECÍFICA DEL MÓDULO -->
             <div class="module-commands">
-                <div style="display: flex; gap: 15px; align-items: flex-end;">
+                <div class="commands-left">
                     <div class="filter-group">
                         <label style="font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 5px; display: block;">Buscador</label>
-                        <div class="global-search-box"
-                            style="width: 320px; display: flex; align-items: center; background: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; padding: 0 15px; height: 42px;">
+                        <div class="global-search-box search-box-dni"
+                            style="display: flex; align-items: center; background: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; padding: 0 15px; height: 42px;">
                             <i class="fa-solid fa-magnifying-glass" style="color: #64748b;"></i>
                             <input type="text" id="btn-search-dni" placeholder="Buscar registros por DNI..."
                                 class="global-search-input"
@@ -67,22 +67,26 @@
                      <!-- FILTRO POR SERVICIO -->
                      <div class="filter-group">
                          <label style="font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 5px; display: block;">Servicio</label>
-                         <div class="global-search-box"
-                             style="width: 250px; display: flex; align-items: center; background: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; padding: 0 15px; position: relative; height: 42px;">
+                         <div class="global-search-box search-box-servicio"
+                             style="display: flex; align-items: center; background: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; padding: 0 15px; position: relative; height: 42px;">
                              <i class="fa-solid fa-filter" style="color: #64748b; margin-right: 10px;"></i>
-                              <select id="filter-servicio" class="global-search-input custom-select-source" data-servicio
-                                  style="border: none; padding: 0; outline: none; flex: 1; min-width: 0; appearance: none; -webkit-appearance: none; cursor: pointer; color: #94a3b8; background: transparent;">
+                               <select id="filter-servicio" class="global-search-input custom-select-source" data-servicio
+                                   style="border: none; outline: none; flex: 1; min-width: 0; appearance: none; -webkit-appearance: none; cursor: pointer; color: #94a3b8; background: transparent;">
                                    <option value="" style="color: #94a3b8;">TODOS</option>
                               </select>
-                             <i class="fa-solid fa-chevron-down"
-                                 style="position: absolute; right: 15px; color: #64748b; font-size: 12px; pointer-events: none;"></i>
+                              <i class="fa-solid fa-chevron-down"
+                                    style="margin-left: 4px; color: #64748b; font-size: 12px;"></i>
                          </div>
                      </div>
                      <button class="btn-module btn-clear-hover" id="clear-filter-servicio"
-                         style="background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; padding: 0 15px; font-weight: 500; height: 42px; display: flex; align-items: center; border-radius: 8px;">Limpiar Filtro</button>
+                         style="background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; padding: 0 15px; font-weight: 500; height: 42px; display: flex; align-items: center; border-radius: 8px; gap: 6px;">
+                         <i class="fa-solid fa-broom" style="font-size: 14px; flex-shrink: 0;"></i>
+                         <span class="clear-filter-text">Limpiar Filtro</span>
+                         <span class="clear-filter-short">Limpiar</span>
+                     </button>
+                     <button class="btn-module primary action-btn" id="local-new-patient-btn" style="padding: 12px 20px;"><i
+                             class="fa-solid fa-plus"></i><span>Nuevo<span class="btn-patient-full"> Paciente</span></span></button>
                 </div>
-                <button class="btn-module primary action-btn" id="local-new-patient-btn" style="padding: 12px 20px;"><i
-                        class="fa-solid fa-plus"></i> Nuevo Paciente</button>
             </div>
 
             <!-- LISTA DE PACIENTES -->
@@ -118,9 +122,12 @@
             <!-- FORMULARIO -->
             <div id="view-form" style="display: none; margin-top: 5px;">
                 <div class="standard-form-container blue-toptag-form" style="padding: 20px;">
-                    <div
+                    <div id="form-welcome-title" class="welcome-text" style="display:none; font-family:'Futura','Montserrat','Inter',sans-serif !important; font-size:17px !important; font-weight:800 !important; color:#0f172a !important; margin:0 0 15px 0 !important; padding-bottom:10px; border-bottom:2px solid #e2e8f0; text-transform:uppercase; letter-spacing:normal; white-space:normal !important; word-wrap:break-word; line-height:1.3;">
+                        <span class="welcome-dark">REGISTRO DE </span><span class="welcome-celeste">NUEVOS PACIENTES</span>
+                    </div>
+                    <div class="form-header-row"
                         style="margin-bottom: 15px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: flex-end;">
-                        <div style="flex:1; max-width:280px;">
+                        <div class="tipo-doc-group" style="flex:1; max-width:280px;">
                             <label style="font-size:13px; font-weight:600; color:#475569; margin-bottom:5px; display:block;">Elegir Tipo de Documento</label>
                             <div class="global-search-box" style="width:100%; display:flex; align-items:center; background:#ffffff; border-radius:8px; border:1px solid #e2e8f0; padding:0 15px; position:relative; height:42px;">
                                 <i class="fa-solid fa-id-card" style="color:#64748b; margin-right:10px;"></i>
@@ -147,7 +154,7 @@
                         <input type="hidden" id="fecha-ingreso-data" value="">
                         <input type="hidden" id="hora-ingreso-data" value="">
 
-                        <!-- FILA 1: DNI | CÓDIGO VER. | FECHA NAC (3+2+1 -> usamos 2+2+2) -->
+                        <!-- FILA 1: DNI | FECHA NAC | CÓDIGO VER. -->
                         <div class="input-stacked col-span-2">
                             <label>DNI del Paciente</label>
                             <div style="display:flex; align-items:stretch;">
@@ -155,12 +162,6 @@
                                 <input type="text" id="paciente-dni" class="standard-input" required
                                     style="border-radius:8px; flex:1; min-width:0;">
                             </div>
-                        </div>
-
-                        <div id="dv-group" class="input-stacked col-span-2">
-                            <label>Código de Verificación</label>
-                            <input type="text" id="paciente-codigo-ver" class="standard-input"
-                                oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                         </div>
 
                         <!-- FECHA NACIMIENTO -->
@@ -205,6 +206,12 @@
                                 </div>
                                 <div class="cal-days-grid" id="fnac-days-grid" style="display:grid; grid-template-columns:repeat(7,1fr); gap:3px;"></div>
                             </div>
+                        </div>
+
+                        <div id="dv-group" class="input-stacked col-span-2">
+                            <label>Código de Verificación</label>
+                            <input type="text" id="paciente-codigo-ver" class="standard-input"
+                                oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                         </div>
 
                         <!-- FILA 2: APELLIDOS | NOMBRES (3+3) -->
@@ -289,8 +296,8 @@
 
                         <div class="form-actions"
                             style="grid-column: 1 / -1; display: flex; gap: 15px; margin-top: 18px; border-top: 1px solid #e2e8f0; padding-top: 14px;">
-                            <button type="button" class="btn-module" id="btn-cancelar"
-                                style="background: #f1f5f9; color: #64748b; padding: 12px 25px;">Cancelar</button>
+                            <button type="button" class="btn-module btn-clear-hover" id="btn-cancelar"
+                                style="background: #f1f5f9; color: #64748b; padding: 12px 25px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); transition: all 0.2s;">Cancelar</button>
                             <button type="submit" class="btn-module primary" id="btn-guardar"
                                 style="padding: 12px 25px;">
                                 <i class="fa-solid fa-save"></i>

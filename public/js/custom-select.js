@@ -138,13 +138,12 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Click en la flecha de global-search-box si existe
+        // Click en cualquier parte del global-search-box abre el dropdown
         const parentBox = select.closest('.global-search-box');
         if (parentBox) {
             parentBox.addEventListener('click', (e) => {
-                if (e.target === parentBox || e.target.classList.contains('fa-chevron-down') || e.target.classList.contains('fa-filter')) {
-                    trigger.click();
-                }
+                if (e.target.closest('.custom-select-options')) return;
+                trigger.click();
             });
         }
         

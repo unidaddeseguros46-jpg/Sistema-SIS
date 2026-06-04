@@ -3,19 +3,62 @@
 .module-commands {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-end;
     margin-bottom: 20px;
     gap: 20px;
 }
 
-@media (max-width: 768px) {
+.commands-left {
+    display: flex;
+    gap: 15px;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    width: 100%;
+}
+
+#local-new-patient-btn {
+    white-space: nowrap;
+    gap: 5px;
+}
+
+.clear-filter-short {
+    display: none;
+}
+
+@media (max-width: 720px) {
+    .btn-patient-full {
+        display: none;
+    }
+}
+
+@media (min-width: 481px) {
+    #local-new-patient-btn {
+        margin-left: auto;
+    }
+}
+
+@media (max-width: 1024px) {
     .module-commands {
-        flex-direction: column;
-        align-items: stretch;
+        flex-direction: row;
+        flex-wrap: wrap;
     }
 
+    /* Override styles.css: mantener tamaños originales en módulo registro */
     .global-search-box {
+        width: auto !important;
+        max-width: none !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .search-box-servicio {
         width: 100% !important;
+    }
+}
+
+@media (max-width: 1440px) {
+    .search-box-servicio .fa-filter {
+        display: none !important;
     }
 }
 
@@ -276,6 +319,29 @@ select.standard-input:disabled {
     grid-column: span 6;
 }
 
+.search-box-dni {
+    width: 300px;
+}
+
+.search-box-servicio {
+    width: fit-content !important;
+}
+
+.search-box-servicio .custom-select-wrapper {
+    flex: none !important;
+    width: auto !important;
+}
+
+@media (min-width: 1025px) {
+    .search-box-servicio {
+        width: 175px !important;
+    }
+    .search-box-servicio .custom-select-wrapper {
+        flex: 1 !important;
+        width: 100% !important;
+    }
+}
+
 #registro-form {
     display: grid;
     grid-template-columns: repeat(6, 1fr);
@@ -284,10 +350,43 @@ select.standard-input:disabled {
 }
 
 /* Responsive: evitar overflow y solapes en el grid del formulario */
+@media (min-width: 769px) and (max-width: 1024px) {
+    #registro-form {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0 20px;
+    }
+}
+
 @media (max-width: 768px) {
     #registro-form {
         grid-template-columns: repeat(2, 1fr);
         gap: 0 15px;
+    }
+}
+
+/* 441–600px: evitar colisión Tipo Documento vs botón Obtener Fecha */
+@media (min-width: 441px) and (max-width: 600px) {
+    .form-header-row {
+        gap: 15px;
+    }
+    .tipo-doc-group {
+        flex: none;
+        max-width: none;
+        width: fit-content;
+    }
+    .tipo-doc-group .custom-select-wrapper {
+        flex: none !important;
+        width: auto !important;
+    }
+}
+
+/* Móvil (≤440px): botón Obtener Fecha debajo de DNI dentro del grid */
+@media (max-width: 440px) {
+    #registro-form > #btn-obtener-fnac {
+        grid-column: 1 / -1;
+        width: 100% !important;
+        justify-content: center !important;
+        margin-bottom: 8px;
     }
 }
 
@@ -301,6 +400,44 @@ select.standard-input:disabled {
     .col-span-3,
     .col-span-6 {
         grid-column: 1 / -1;
+    }
+
+    /* Android: DNI al 100%, resto en 2da línea, Limpiar texto corto */
+    .commands-left > .filter-group:first-child {
+        flex: 0 0 100%;
+    }
+    .search-box-dni {
+        width: 100% !important;
+    }
+    .clear-filter-text {
+        display: none;
+    }
+    .clear-filter-short {
+        display: inline;
+    }
+    .commands-left > .filter-group:last-child,
+    #clear-filter-servicio,
+    #local-new-patient-btn {
+        flex: 1 1 auto;
+    }
+    .search-box-servicio {
+        width: 100%;
+    }
+    .search-box-servicio .custom-select-wrapper {
+        flex: 1 !important;
+        width: 100% !important;
+    }
+}
+
+.cr-date-popover {
+    width: min(320px, 85vw) !important;
+}
+
+@media (max-width: 480px) {
+    .cr-date-popover {
+        width: 85vw !important;
+        left: 50% !important;
+        transform: translateX(-50%) !important;
     }
 }
 

@@ -354,6 +354,60 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Mostrar layout una vez inyectado (Anti-FOUC)
     document.body.classList.add('layout-loaded');
+
+    // ============================================
+    // AJUSTE DINÁMICO DE VISIBILIDAD DEL WELCOME-TEXT
+    // ============================================
+    window.adjustWelcomeTextVisibility = () => {
+        const el = document.querySelector('.top-header .welcome-text');
+        if (!el) return;
+
+        const origDisplay = el.style.display;
+        const origVis = el.style.visibility;
+        const origPos = el.style.position;
+
+        el.style.visibility = 'hidden';
+        el.style.position = 'absolute';
+        el.style.display = '';
+
+        const textWidth = el.scrollWidth;
+        const parent = el.parentElement;
+        const parentWidth = parent.clientWidth;
+        const parentCS = window.getComputedStyle(parent);
+        const gap = parseFloat(parentCS.gap) || 0;
+        const padLeft = parseFloat(parentCS.paddingLeft) || 0;
+        const padRight = parseFloat(parentCS.paddingRight) || 0;
+
+        let siblingsWidth = 0;
+        let visibleSiblings = 0;
+        for (const child of parent.children) {
+            if (child === el) continue;
+            const cs = window.getComputedStyle(child);
+            if (cs.display === 'none') continue;
+            visibleSiblings++;
+            const ml = parseFloat(cs.marginLeft) || 0;
+            const mr = parseFloat(cs.marginRight) || 0;
+            siblingsWidth += child.offsetWidth + ml + mr;
+        }
+
+        el.style.visibility = origVis;
+        el.style.position = origPos;
+
+        const available = parentWidth - padLeft - padRight - siblingsWidth - gap * visibleSiblings;
+        const showInHeader = textWidth <= available;
+
+        el.style.display = showInHeader ? '' : 'none';
+        if (origDisplay && !showInHeader) el.style.display = 'none';
+
+        // Mirror: si el texto no cabe en el header, mostrarlo en el formulario
+        const formTitle = document.getElementById('form-welcome-title');
+        if (formTitle) {
+            formTitle.style.display = showInHeader ? 'none' : '';
+        }
+    };
+
+    window.adjustWelcomeTextVisibility();
+    window.addEventListener('resize', window.adjustWelcomeTextVisibility);
 });
 
 // OFFLINE HANDLING
