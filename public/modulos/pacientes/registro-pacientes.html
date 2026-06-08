@@ -168,11 +168,12 @@
                         <div class="input-stacked col-span-2" style="position:relative;">
                             <label>Fecha de Nacimiento</label>
                             <div style="position:relative;">
-                                <input type="text" id="paciente-fecha-nac" class="standard-input" placeholder="dd/mm/aaaa"
-                                    required style="padding-right:40px;">
-                                <div id="fnac-trigger" style="position:absolute; right:0; top:0; bottom:0; width:40px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#94a3b8;">
+                                <div id="fnac-trigger" style="position:absolute; left:0; top:0; bottom:0; width:40px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#94a3b8; z-index:1;">
                                     <i class="fa-regular fa-calendar"></i>
                                 </div>
+                                <i class="fa-solid fa-chevron-down" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); color:#94a3b8; font-size:10px; pointer-events:none;"></i>
+                                <input type="text" id="paciente-fecha-nac" class="standard-input" placeholder="dd/mm/aaaa"
+                                    autocomplete="off" required style="padding-left:40px; padding-right:30px;">
                             </div>
                             <div class="cr-date-popover" id="fnac-popover" style="display:none; position:fixed; z-index:10003; background:#ffffff; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.12),0 2px 8px rgba(0,0,0,0.06); padding:16px 20px; width:320px; animation:popoverIn 0.2s cubic-bezier(0.16,1,0.3,1) forwards;">
                                 <div class="cal-filters" style="display:flex; gap:8px; align-items:flex-end; margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid #f1f5f9;">
@@ -184,14 +185,14 @@
                                         <label style="font-size:10px; font-weight:600; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em;">Año</label>
                                         <select id="fnac-year" class="filter-select"></select>
                                     </div>
-                                    <button id="fnac-today" class="btn-module btn-clear-hover" style="padding:5px 12px; font-size:11px; white-space:nowrap; height:fit-content;">Hoy</button>
+                                    <button type="button" id="fnac-today" class="btn-module btn-clear-hover" style="padding:5px 12px; font-size:11px; white-space:nowrap; height:fit-content;">Hoy</button>
                                 </div>
                                 <div class="calendar-header" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
-                                    <button class="cal-nav-btn" id="fnac-prev" style="width:30px; height:30px; border-radius:6px; border:1px solid #e2e8f0; background:#ffffff; color:#64748b; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; font-size:12px;">
+                                    <button type="button" class="cal-nav-btn" id="fnac-prev" style="width:30px; height:30px; border-radius:6px; border:1px solid #e2e8f0; background:#ffffff; color:#64748b; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; font-size:12px;">
                                         <i class="fa-solid fa-chevron-left"></i>
                                     </button>
                                     <div class="cal-title" id="fnac-title" style="font-size:14px; font-weight:700; color:#0f172a;"></div>
-                                    <button class="cal-nav-btn" id="fnac-next" style="width:30px; height:30px; border-radius:6px; border:1px solid #e2e8f0; background:#ffffff; color:#64748b; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; font-size:12px;">
+                                    <button type="button" class="cal-nav-btn" id="fnac-next" style="width:30px; height:30px; border-radius:6px; border:1px solid #e2e8f0; background:#ffffff; color:#64748b; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; font-size:12px;">
                                         <i class="fa-solid fa-chevron-right"></i>
                                     </button>
                                 </div>
@@ -270,13 +271,55 @@
                             </div>
                         </div>
 
-                        <!-- FECHA INGRESO -->
+                        <!-- FECHA + HORA DE INGRESO -->
                         <div class="input-stacked col-span-2" style="position:relative;">
-                            <label>Fecha de Ingreso</label>
-                            <div class="cr-date-trigger" id="rp-fi-trigger" style="height:42px; display:flex; align-items:center; background:#ffffff; border-radius:8px; border:1px solid #e2e8f0; padding:0 15px; cursor:pointer; gap:8px; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05); overflow:hidden; position:relative;">
-                                <i class="fa-regular fa-calendar" style="color:#64748b;"></i>
-                                <span id="rp-fi-display" style="flex:1; font-size:14px; color:#94a3b8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Opcional</span>
-                                <i class="fa-solid fa-chevron-down" style="color:#94a3b8; font-size:11px;"></i>
+                            <label>Fecha y Hora de Ingreso</label>
+                            <div id="rp-fi-wrapper">
+                                <div class="fi-date-group" style="position:relative;">
+                                    <div id="rp-fi-trigger" style="position:absolute; left:0; top:0; bottom:0; width:40px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#94a3b8; z-index:1;">
+                                        <i class="fa-regular fa-calendar"></i>
+                                    </div>
+                                    <i class="fa-solid fa-chevron-down" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); color:#94a3b8; font-size:10px; pointer-events:none;"></i>
+                                    <input type="text" id="rp-fi-input" class="standard-input" placeholder="dd/mm/aaaa" autocomplete="off" style="padding-left:40px; padding-right:28px; height:42px;">
+                                    <div class="cr-date-popover" id="rp-fi-popover" style="display:none; position:fixed; z-index:10003; background:#ffffff; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.12),0 2px 8px rgba(0,0,0,0.06); padding:16px 20px; width:320px; animation:popoverIn 0.2s cubic-bezier(0.16,1,0.3,1) forwards;">
+                                        <div class="cal-filters" style="display:flex; gap:8px; align-items:flex-end; margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid #f1f5f9;">
+                                            <div class="filter-group" style="display:flex; flex-direction:column; gap:3px; flex:1;">
+                                                <label style="font-size:10px; font-weight:600; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em;">Mes</label>
+                                                <select id="rp-fi-month" class="filter-select"></select>
+                                            </div>
+                                            <div class="filter-group" style="display:flex; flex-direction:column; gap:3px; flex:1;">
+                                                <label style="font-size:10px; font-weight:600; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em;">Año</label>
+                                                <select id="rp-fi-year" class="filter-select"></select>
+                                            </div>
+                                            <button type="button" id="rp-fi-today" class="btn-module btn-clear-hover" style="padding:5px 12px; font-size:11px; white-space:nowrap; height:fit-content;">Hoy</button>
+                                        </div>
+                                        <div class="calendar-header" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+                                            <button type="button" class="cal-nav-btn" id="rp-fi-prev" style="width:30px; height:30px; border-radius:6px; border:1px solid #e2e8f0; background:#ffffff; color:#64748b; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; font-size:12px;">
+                                                <i class="fa-solid fa-chevron-left"></i>
+                                            </button>
+                                            <div class="cal-title" id="rp-fi-title" style="font-size:14px; font-weight:700; color:#0f172a;"></div>
+                                            <button type="button" class="cal-nav-btn" id="rp-fi-next" style="width:30px; height:30px; border-radius:6px; border:1px solid #e2e8f0; background:#ffffff; color:#64748b; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; font-size:12px;">
+                                                <i class="fa-solid fa-chevron-right"></i>
+                                            </button>
+                                        </div>
+                                        <div class="cal-weekdays" style="display:grid; grid-template-columns:repeat(7,1fr); gap:3px; margin-bottom:6px;">
+                                            <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">D</span>
+                                            <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">L</span>
+                                            <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">M</span>
+                                            <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">MI</span>
+                                            <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">J</span>
+                                            <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">V</span>
+                                            <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">S</span>
+                                        </div>
+                                        <div class="cal-days-grid" id="rp-fi-days-grid" style="display:grid; grid-template-columns:repeat(7,1fr); gap:3px;"></div>
+                                    </div>
+                                </div>
+                                <div class="fi-time-group" style="position:relative;">
+                                    <div style="position:absolute; left:0; top:0; bottom:0; width:40px; display:flex; align-items:center; justify-content:center; color:#94a3b8; pointer-events:none; z-index:1;">
+                                        <i class="fa-regular fa-clock"></i>
+                                    </div>
+                                    <input type="text" id="rp-hora-ingreso" class="standard-input" placeholder="hh:mm" autocomplete="off" style="height:42px; padding-left:40px; padding-right:15px;">
+                                </div>
                             </div>
                         </div>
 
@@ -296,91 +339,16 @@
 
                         <div class="form-actions"
                             style="grid-column: 1 / -1; display: flex; gap: 15px; margin-top: 18px; border-top: 1px solid #e2e8f0; padding-top: 14px;">
-                            <button type="button" class="btn-module btn-clear-hover" id="btn-cancelar"
-                                style="background: #f1f5f9; color: #64748b; padding: 12px 25px; box-shadow: 0 2px 6px rgba(0,0,0,0.08); transition: all 0.2s;">Cancelar</button>
+                            <button type="button" class="btn-module" id="btn-cancelar"
+                                style="padding: 12px 25px;">Cancelar</button>
                             <button type="submit" class="btn-module primary" id="btn-guardar"
                                 style="padding: 12px 25px;">
-                                <i class="fa-solid fa-save"></i>
-                                <span id="guardar-text">Guardar Registro</span>
+                                <span id="guardar-text">Guardar</span>
                                 <i id="guardar-spinner" class="fa-solid fa-circle-notch fa-spin"
                                     style="display:none; margin-left:8px;"></i>
                             </button>
                         </div>
                     </form>
-
-                    <!-- MODAL FECHA DE INGRESO (mismo diseño que consulta-rapida) -->
-                    <div id="modal-ingreso-overlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:999; justify-content:center; align-items:center;">
-                        <div style="background:white; border-radius:12px; width:90%; max-width:420px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25); animation:slideUp 0.3s ease;">
-                            <div style="padding:20px 25px; border-bottom:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center;">
-                                <h3 style="margin:0; font-size:16px; color:#0f172a; font-weight:700;">
-                                    <i class="fa-solid fa-right-to-bracket" style="color:#3b82f6; margin-right:8px;"></i>Registrar Fecha de Ingreso
-                                </h3>
-                                <button id="modal-ingreso-close" style="background:none; border:none; cursor:pointer; color:#94a3b8; font-size:18px; padding:4px;">
-                                    <i class="fa-solid fa-xmark"></i>
-                                </button>
-                            </div>
-                            <div style="padding:25px;">
-
-                                <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:12px 15px; margin-bottom:20px;">
-                                    <div style="font-size:12px; color:#94a3b8; font-weight:600; text-transform:uppercase; margin-bottom:4px;">Paciente</div>
-                                    <div id="modal-ingreso-nombre" style="font-weight:600; color:#0f172a;"></div>
-                                    <div id="modal-ingreso-info" style="font-size:12px; color:#64748b; margin-top:2px;"></div>
-                                </div>
-
-                                <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-bottom:20px;">
-                                    <div class="input-stacked" style="position:relative;">
-                                        <label style="font-size:13px; font-weight:600; color:#475569; margin-bottom:6px; display:block;">Fecha de Ingreso *</label>
-                                        <div class="cr-date-trigger" id="modal-fi-trigger" style="height:42px; display:flex; align-items:center; background:#ffffff; border-radius:8px; border:1px solid #e2e8f0; padding:0 15px; cursor:pointer; gap:8px; transition:border-color 0.2s;">
-                                            <i class="fa-regular fa-calendar" style="color:#64748b;"></i>
-                                            <span id="modal-fi-display" style="flex:1; font-size:13px; color:#94a3b8; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Seleccionar fecha</span>
-                                            <i class="fa-solid fa-chevron-down" style="color:#94a3b8; font-size:11px;"></i>
-                                        </div>
-                                        <div class="cr-date-popover" id="modal-fi-popover" style="display:none; position:fixed; z-index:10003; background:#ffffff; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.12),0 2px 8px rgba(0,0,0,0.06); padding:16px 20px; width:320px; animation:popoverIn 0.2s cubic-bezier(0.16,1,0.3,1) forwards;">
-                                            <div class="cal-filters" style="display:flex; gap:8px; align-items:flex-end; margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid #f1f5f9;">
-                                                <div class="filter-group" style="display:flex; flex-direction:column; gap:3px; flex:1;">
-                                                    <label style="font-size:10px; font-weight:600; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em;">Mes</label>
-                                                    <select id="modal-fi-month" class="filter-select"></select>
-                                                </div>
-                                                <div class="filter-group" style="display:flex; flex-direction:column; gap:3px; flex:1;">
-                                                    <label style="font-size:10px; font-weight:600; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em;">Año</label>
-                                                    <select id="modal-fi-year" class="filter-select"></select>
-                                                </div>
-                                                <button id="modal-fi-today" class="btn-module btn-clear-hover" style="padding:5px 12px; font-size:11px; white-space:nowrap; height:fit-content;">Hoy</button>
-                                            </div>
-                                            <div class="calendar-header" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
-                                                <button class="cal-nav-btn" id="modal-fi-prev" style="width:30px; height:30px; border-radius:6px; border:1px solid #e2e8f0; background:#ffffff; color:#64748b; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; font-size:12px;">
-                                                    <i class="fa-solid fa-chevron-left"></i>
-                                                </button>
-                                                <div class="cal-title" id="modal-fi-title" style="font-size:14px; font-weight:700; color:#0f172a;"></div>
-                                                <button class="cal-nav-btn" id="modal-fi-next" style="width:30px; height:30px; border-radius:6px; border:1px solid #e2e8f0; background:#ffffff; color:#64748b; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; font-size:12px;">
-                                                    <i class="fa-solid fa-chevron-right"></i>
-                                                </button>
-                                            </div>
-                                            <div class="cal-weekdays" style="display:grid; grid-template-columns:repeat(7,1fr); gap:3px; margin-bottom:6px;">
-                                                <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">D</span>
-                                                <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">L</span>
-                                                <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">M</span>
-                                                <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">MI</span>
-                                                <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">J</span>
-                                                <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">V</span>
-                                                <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">S</span>
-                                            </div>
-                                            <div class="cal-days-grid" id="modal-fi-days-grid" style="display:grid; grid-template-columns:repeat(7,1fr); gap:3px;"></div>
-                                        </div>
-                                    </div>
-                                    <div class="input-stacked">
-                                        <label style="font-size:13px; font-weight:600; color:#475569; margin-bottom:6px; display:block;">Hora de Ingreso</label>
-                                        <input type="time" id="modal-ingreso-hora" class="standard-input" value="08:00">
-                                    </div>
-                                </div>
-
-                                <button id="modal-ingreso-guardar" class="btn-module primary" style="width:100%; padding:12px; font-weight:600;">
-                                    <span id="modal-ingreso-guardar-text">Registrar Fecha de Ingreso</span>
-                                    <i id="modal-ingreso-spinner" class="fa-solid fa-circle-notch fa-spin" style="display:none; margin-left:8px;"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
 
                     <!-- Botón de reintento (oculto, se muestra solo si falla la hospitalización) -->
                     <button id="btn-reintentar-hosp" style="display:none; align-items:center; gap:6px; background:#fef2f2; color:#dc2626; border:1px solid #fecaca; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer; margin-top:10px;"

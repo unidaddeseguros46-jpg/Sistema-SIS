@@ -184,9 +184,11 @@
       render();
     });
     todayBtn.addEventListener('click', function () {
-      viewMonth = today.getMonth();
-      viewYear = today.getFullYear();
-      render();
+        viewMonth = today.getMonth();
+        viewYear = today.getFullYear();
+        selectedDate = today;
+        render();
+        onDayClick(today);
     });
 
     render();

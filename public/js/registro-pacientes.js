@@ -41,31 +41,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     const fieldHc = document.getElementById('field-hc');
     const fieldCondicion = document.getElementById('field-condicion');
 
-    // Referencias para el modal de Fecha de Ingreso
-    const modalOverlay = document.getElementById('modal-ingreso-overlay');
-    const modalClose = document.getElementById('modal-ingreso-close');
-    const modalGuardar = document.getElementById('modal-ingreso-guardar');
-    const modalGuardarText = document.getElementById('modal-ingreso-guardar-text');
-    const modalSpinner = document.getElementById('modal-ingreso-spinner');
-    const modalHora = document.getElementById('modal-ingreso-hora');
-    const modalNombre = document.getElementById('modal-ingreso-nombre');
-    const modalInfo = document.getElementById('modal-ingreso-info');
+    // Referencias para Fecha y Hora de Ingreso
     const fechaIngresoData = document.getElementById('fecha-ingreso-data');
     const horaIngresoData = document.getElementById('hora-ingreso-data');
     const btnReintentarHosp = document.getElementById('btn-reintentar-hosp');
-    // Calendar popovers
+    // Inline popover
     const rpFiTrigger = document.getElementById('rp-fi-trigger');
-    const rpFiDisplay = document.getElementById('rp-fi-display');
-    const mFiTrigger = document.getElementById('modal-fi-trigger');
-    const mFiPopover = document.getElementById('modal-fi-popover');
-    const mFiDisplay = document.getElementById('modal-fi-display');
-    const mFiGrid = document.getElementById('modal-fi-days-grid');
-    const mFiTitle = document.getElementById('modal-fi-title');
-    const mFiMonth = document.getElementById('modal-fi-month');
-    const mFiYear = document.getElementById('modal-fi-year');
-    const mFiPrev = document.getElementById('modal-fi-prev');
-    const mFiNext = document.getElementById('modal-fi-next');
-    const mFiToday = document.getElementById('modal-fi-today');
+    const rpFiInput = document.getElementById('rp-fi-input');
+    const rpFiPopover = document.getElementById('rp-fi-popover');
+    const rpFiGrid = document.getElementById('rp-fi-days-grid');
+    const rpFiTitle = document.getElementById('rp-fi-title');
+    const rpFiMonth = document.getElementById('rp-fi-month');
+    const rpFiYear = document.getElementById('rp-fi-year');
+    const rpFiPrev = document.getElementById('rp-fi-prev');
+    const rpFiNext = document.getElementById('rp-fi-next');
+    const rpFiToday = document.getElementById('rp-fi-today');
+    const rpHoraInput = document.getElementById('rp-hora-ingreso');
 
     // Referencias para el popover de Fecha de Nacimiento
     const fnacInput = document.getElementById('paciente-fecha-nac');
@@ -296,6 +287,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         return p.length === 3 ? `${p[2]}-${p[1]}-${p[0]}` : val;
     };
 
+    // ── Máscara dd/mm/aaaa para Fecha de Ingreso ──
+    rpFiInput.addEventListener('input', function (e) {
+        if (e.inputType && e.inputType.startsWith('delete')) return;
+        let digits = this.value.replace(/\D/g, '').slice(0, 8);
+        let masked = digits;
+        if (digits.length > 2) masked = digits.slice(0, 2) + '/' + digits.slice(2);
+        if (digits.length > 4) masked = digits.slice(0, 2) + '/' + digits.slice(2, 4) + '/' + digits.slice(4, 8);
+        this.value = masked;
+    });
+
     // ── Calendario popover para Fecha de Nacimiento ──
     let fnacPopoverOpen = false;
     let fnacSelectedDate = null;
@@ -345,7 +346,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         openFnacPopover();
     });
 
-    fnacInput.addEventListener('focus', openFnacPopover);
+    fnacInput.addEventListener('focus', () => {
+        if (!fnacPopoverOpen) openFnacPopover();
+    });
+
+    fnacInput.addEventListener('click', () => {
+        if (!fnacPopoverOpen) openFnacPopover();
+    });
+
+    // ── Focus handler para FI (abre popover al enfocar) ──
+    rpFiInput.addEventListener('focus', (e) => {
+        if (rpFiTrigger.dataset.fiLocked === 'true') return;
+        openRpFiPopover();
+    });
 
     // Variables de Paginación Inteligente y DB
     let currentPage = 1;
@@ -784,12 +797,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const isInHeader = btnObtenerFnac.parentElement === container;
 
         if (isInHeader) {
-            // Si el dropdown no alcanza su ancho máximo porque el botón lo comprime
             if (dropdown.offsetWidth < MAX_DROPDOWN) {
                 dnisGroup.insertAdjacentElement('afterend', btnObtenerFnac);
             }
         } else {
-            // Medir si cabe: agregar temporalmente al header (oculto)
             const origVis = btnObtenerFnac.style.visibility;
             btnObtenerFnac.style.visibility = 'hidden';
             container.appendChild(btnObtenerFnac);
@@ -800,6 +811,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             btnObtenerFnac.style.visibility = origVis;
         }
+
+        // Aplicar/quitar clases de grid según donde quedó el botón
+        const endedInHeader = btnObtenerFnac.parentElement === container;
+        btnObtenerFnac.classList.toggle('col-span-2', !endedInHeader);
+        btnObtenerFnac.style.marginBottom = endedInHeader ? '' : '14px';
     }
     window.addEventListener('resize', moveBtnOnMobile);
     moveBtnOnMobile();
@@ -854,6 +870,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Limpiar fecha de nacimiento
         fnacInput.value = '';
         fnacSelectedDate = null;
+        fnacCal.setSelected(null);
+        fnacCal.setView(new Date().getFullYear(), new Date().getMonth());
 
         // Reset disabled states uniformly
         document.querySelectorAll('.standard-input').forEach(el => el.disabled = false);
@@ -941,16 +959,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         fiSelectedDate = null;
         fechaIngresoData.value = '';
         horaIngresoData.value = '';
-        rpFiDisplay.textContent = 'Opcional';
-        rpFiDisplay.style.color = '#94a3b8';
-        delete rpFiTrigger.dataset.fiLocked;
+        rpFiInput.value = '';
+        rpFiInput.disabled = false;
+        rpFiTrigger.removeAttribute('data-fi-locked');
+        rpFiCal.setSelected(null);
+        rpFiCal.setView(new Date().getFullYear(), new Date().getMonth());
         rpFiTrigger.style.pointerEvents = '';
         rpFiTrigger.style.cursor = '';
-        rpFiTrigger.style.background = '#ffffff';
-        rpFiTrigger.style.borderColor = '#e2e8f0';
-        rpFiTrigger.style.boxShadow = '0 4px 6px -1px rgba(0,0,0,0.05)';
         const icons = rpFiTrigger.querySelectorAll('i');
         icons.forEach(ic => ic.style.color = '');
+        rpHoraInput.value = getPeruTimeNow();
+        rpHoraInput.disabled = false;
     }
 
     function setFiStateFromDB(dateStr, timeStr) {
@@ -959,130 +978,141 @@ document.addEventListener('DOMContentLoaded', async () => {
         fiSelectedDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
         fechaIngresoData.value = dateStr;
         horaIngresoData.value = timeStr || '08:00';
-        rpFiDisplay.textContent = fmtDate(fiSelectedDate);
-        rpFiDisplay.style.color = '#64748b';
+        rpFiInput.value = fmtDate(fiSelectedDate);
+        rpFiInput.disabled = true;
         rpFiTrigger.dataset.fiLocked = 'true';
         rpFiTrigger.style.pointerEvents = 'none';
-        rpFiTrigger.style.cursor = 'not-allowed';
-        rpFiTrigger.style.background = '#f1f5f9';
-        rpFiTrigger.style.borderColor = 'transparent';
-        rpFiTrigger.style.boxShadow = 'inset 0 2px 4px rgba(0,0,0,0.02)';
+        rpFiTrigger.style.cursor = 'default';
         const icons = rpFiTrigger.querySelectorAll('i');
         icons.forEach(ic => ic.style.color = '#94a3b8');
+        rpHoraInput.value = timeStr || '08:00';
+        rpHoraInput.disabled = true;
     }
 
-    // ── Form trigger: abre el modal directamente ──
+    // ── Form trigger: abre/cierra el popover calendario (idéntico a Fnac) ──
+    let rpFiOpen = false;
+
+    const rpFiCal = window.crearCalendario({
+        mode: 'single',
+        grid: rpFiGrid,
+        title: rpFiTitle,
+        month: rpFiMonth,
+        year: rpFiYear,
+        prev: rpFiPrev,
+        next: rpFiNext,
+        today: rpFiToday,
+        selectedDate: null,
+        onDayClick: (d) => {
+            fiSelectedDate = d;
+            rpFiInput.value = fmtDate(d);
+            fechaIngresoData.value = toIso(d.getFullYear(), d.getMonth(), d.getDate());
+            if (!rpHoraInput.value) rpHoraInput.value = getPeruTimeNow();
+            if (rpHoraInput.value) horaIngresoData.value = rpHoraInput.value;
+            closeRpFiPopover();
+        }
+    });
+
+    function openRpFiPopover() {
+        if (rpFiOpen) { closeRpFiPopover(); return; }
+        rpFiOpen = true;
+        if (fiSelectedDate) rpFiCal.setView(fiSelectedDate.getFullYear(), fiSelectedDate.getMonth());
+        rpFiCal.render();
+        const r = rpFiInput.getBoundingClientRect();
+        const popH = 350;
+        const spaceBelow = window.innerHeight - r.bottom - 8;
+        if (spaceBelow >= popH) {
+            rpFiPopover.style.top = (r.bottom + 6) + 'px';
+            rpFiPopover.style.left = Math.min(r.left, window.innerWidth - 330) + 'px';
+        } else {
+            rpFiPopover.style.top = Math.max(8, r.top - popH) + 'px';
+            rpFiPopover.style.left = Math.min(r.left, window.innerWidth - 330) + 'px';
+        }
+        rpFiPopover.style.display = 'block';
+    }
+
+    function closeRpFiPopover() {
+        rpFiPopover.style.display = 'none';
+        rpFiOpen = false;
+    }
+
     rpFiTrigger.addEventListener('click', (e) => {
         if (rpFiTrigger.dataset.fiLocked === 'true') {
             e.stopPropagation();
             return;
         }
         e.stopPropagation();
-        const nombres = document.getElementById('paciente-nombres').value.trim();
-        const apellidos = document.getElementById('paciente-apellidos').value.trim();
-        modalNombre.textContent = apellidos && nombres ? `${apellidos}, ${nombres}` : 'Datos del paciente';
-        modalInfo.textContent = `DNI: ${inputDni.value || '—'} | HC: ${document.getElementById('paciente-hc').value || 'N/A'}`;
-        const now = getPeruDate();
-        fiSelectedDate = now;
-        mFiDisplay.textContent = fmtDate(now);
-        mFiDisplay.style.color = '#0f172a';
-        modalHora.value = getPeruTimeNow();
-        modalOverlay.style.display = 'flex';
+        openRpFiPopover();
     });
 
-    // ── Modal popover (usando calendario compartido) ──
-    let mFiOpen = false;
-
-    const mFiCal = window.crearCalendario({
-        mode: 'single',
-        grid: mFiGrid,
-        title: mFiTitle,
-        month: mFiMonth,
-        year: mFiYear,
-        prev: mFiPrev,
-        next: mFiNext,
-        today: mFiToday,
-        selectedDate: fiSelectedDate,
-        onDayClick: (d) => {
-            fiSelectedDate = d;
-            mFiDisplay.textContent = fmtDate(d);
-            mFiDisplay.style.color = '#0f172a';
-            mFiTrigger.classList.remove('is-open');
-            mFiPopover.style.display = 'none';
-            mFiOpen = false;
-        }
+    rpFiInput.addEventListener('focus', (e) => {
+        if (rpFiTrigger.dataset.fiLocked === 'true') return;
+        if (!rpFiOpen) openRpFiPopover();
     });
 
-    function openMFiPopover() {
-        mFiOpen = true;
-        if (fiSelectedDate) mFiCal.setView(fiSelectedDate.getFullYear(), fiSelectedDate.getMonth());
-        mFiCal.render();
-        const r = mFiTrigger.getBoundingClientRect();
-        const popH = 350;
-        const spaceBelow = window.innerHeight - r.bottom - 8;
-        if (spaceBelow >= popH) {
-            mFiPopover.style.top = (r.bottom + 6) + 'px';
-            mFiPopover.style.left = Math.min(r.left, window.innerWidth - 330) + 'px';
-        } else {
-            mFiPopover.style.top = Math.max(8, r.top - popH) + 'px';
-            mFiPopover.style.left = Math.min(r.left, window.innerWidth - 330) + 'px';
-        }
-        mFiPopover.style.display = 'block';
-        mFiTrigger.classList.add('is-open');
-    }
+    rpFiInput.addEventListener('click', (e) => {
+        if (rpFiTrigger.dataset.fiLocked === 'true') return;
+        if (!rpFiOpen) openRpFiPopover();
+    });
 
-    function closeMFiPopover() {
-        mFiPopover.style.display = 'none';
-        mFiTrigger.classList.remove('is-open');
-        mFiOpen = false;
-    }
-
-    mFiTrigger.addEventListener('click', (e) => { e.stopPropagation(); if (mFiOpen) closeMFiPopover(); else openMFiPopover(); });
-
-    // ── Modal overlay ──
-    const closeModalIngreso = () => {
-        closeMFiPopover();
-        modalOverlay.style.display = 'none';
-    };
-
-    modalClose.addEventListener('click', closeModalIngreso);
-    modalOverlay.addEventListener('click', (e) => { if (e.target === modalOverlay) closeModalIngreso(); });
-
-    const openModalIngreso = () => {
-        const nombres = document.getElementById('paciente-nombres').value.trim();
-        const apellidos = document.getElementById('paciente-apellidos').value.trim();
-        modalNombre.textContent = apellidos && nombres ? `${apellidos}, ${nombres}` : 'Datos del paciente';
-        modalInfo.textContent = `DNI: ${inputDni.value || '—'} | HC: ${document.getElementById('paciente-hc').value || 'N/A'}`;
-        const now = getPeruDate();
-        fiSelectedDate = now;
-        mFiDisplay.textContent = fmtDate(now);
-        mFiDisplay.style.color = '#0f172a';
-        modalHora.value = getPeruTimeNow();
-        modalOverlay.style.display = 'flex';
-    };
-
-    modalGuardar.addEventListener('click', () => {
-        if (!fiSelectedDate) {
-            if (window.showSystemTooltip) window.showSystemTooltip('Seleccione una fecha de ingreso en el calendario', true);
-            return;
-        }
-        const hora = modalHora.value || '08:00';
-        fechaIngresoData.value = toIso(fiSelectedDate.getFullYear(), fiSelectedDate.getMonth(), fiSelectedDate.getDate());
-        horaIngresoData.value = hora;
-        if (window.showSystemTooltip) window.showSystemTooltip('Fecha de ingreso registrada. Guarde el paciente para completar.');
-
-        // Sincronizar display del form trigger
-        rpFiDisplay.textContent = fmtDate(fiSelectedDate);
-        rpFiDisplay.style.color = '#0f172a';
-
-        closeModalIngreso();
+    rpHoraInput.addEventListener('change', () => {
+        horaIngresoData.value = rpHoraInput.value;
+    });
+    rpHoraInput.addEventListener('input', function(e) {
+        if (e.inputType && e.inputType.startsWith('delete')) return;
+        let digits = this.value.replace(/\D/g, '').slice(0, 4);
+        let masked = digits;
+        if (digits.length > 2) masked = digits.slice(0, 2) + ':' + digits.slice(2);
+        this.value = masked;
+        horaIngresoData.value = masked;
     });
 
     // Click fuera de los popovers para cerrarlos
     document.addEventListener('click', (e) => {
-        if (mFiOpen && !e.target.closest('#modal-fi-trigger') && !e.target.closest('#modal-fi-popover')) closeMFiPopover();
-        if (fnacPopoverOpen && !e.target.closest('#fnac-trigger') && !e.target.closest('#paciente-fecha-nac') && !e.target.closest('#fnac-popover')) closeFnacPopover();
+        if (rpFiOpen && !rpFiInput.parentElement.contains(e.target) && !e.target.closest('#rp-fi-popover')) {
+            closeRpFiPopover();
+        }
+        if (fnacPopoverOpen && !fnacInput.parentElement.contains(e.target) && !e.target.closest('#fnac-popover')) {
+            closeFnacPopover();
+        }
     });
+
+    // ── Validación de Fecha y Hora de Ingreso ──
+    function validateFiInputs() {
+        const fiRaw = rpFiInput.value.trim();
+        if (fiRaw && fiRaw.length === 10) {
+            const p = fiRaw.split('/');
+            const d = parseInt(p[0], 10), m = parseInt(p[1], 10) - 1, y = parseInt(p[2], 10);
+            const dateObj = new Date(y, m, d);
+            if (dateObj.getDate() !== d || dateObj.getMonth() !== m || isNaN(dateObj.getTime())) {
+                if (window.showSystemTooltip) window.showSystemTooltip('Fecha de ingreso inválida', true);
+                highlightError(rpFiInput); return false;
+            }
+            const today = getPeruDate(); today.setHours(0,0,0,0);
+            if (dateObj > today) {
+                if (window.showSystemTooltip) window.showSystemTooltip('La fecha de ingreso no puede ser posterior a hoy', true);
+                highlightError(rpFiInput); return false;
+            }
+            if (!fiSelectedDate || fmtDate(fiSelectedDate) !== fiRaw) {
+                fiSelectedDate = dateObj;
+                fechaIngresoData.value = toIso(y, m, d);
+                if (!rpHoraInput.value) rpHoraInput.value = getPeruTimeNow();
+                if (rpHoraInput.value) horaIngresoData.value = rpHoraInput.value;
+            }
+        } else if (fiRaw && fiRaw.length < 10) {
+            fiSelectedDate = null;
+            fechaIngresoData.value = '';
+        }
+        const horaVal = rpHoraInput.value;
+        if (horaVal) {
+            const hp = horaVal.split(':');
+            if (hp.length !== 2 || isNaN(parseInt(hp[0],10)) || isNaN(parseInt(hp[1],10)) ||
+                parseInt(hp[0],10) > 23 || parseInt(hp[1],10) > 59) {
+                if (window.showSystemTooltip) window.showSystemTooltip('Hora de ingreso inválida. Debe estar entre 00:00 y 23:59', true);
+                highlightError(rpHoraInput); return false;
+            }
+        }
+        return true;
+    }
 
     // ============================================
     // INSERCIÓN DE DATOS (SUPABASE)
@@ -1098,6 +1128,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // Validar todos los campos obligatorios
         if (!validateForm()) return;
+
+        // Validar Fecha y Hora de Ingreso (fecha futura / hora inválida)
+        if (!validateFiInputs()) return;
 
         // Estado visual: Bloquear botón y mostrar spinner
         btnGuardar.disabled = true;
@@ -1217,7 +1250,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         } finally {
             // Restaurar botón
             btnGuardar.disabled = false;
-            textGuardar.textContent = 'Guardar Registro';
+            textGuardar.textContent = 'Guardar';
             spinnerGuardar.style.display = 'none';
         }
     });

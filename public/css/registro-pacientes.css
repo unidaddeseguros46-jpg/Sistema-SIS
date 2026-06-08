@@ -442,3 +442,65 @@ select.standard-input:disabled {
 }
 
 /* Los badges ya están definidos arriba para evitar duplicidad */
+
+/* ============================================
+   BOTONES DEL FORMULARIO (Google-style)
+   ============================================ */
+#btn-cancelar {
+    background: transparent;
+    border: 1px solid #e2e8f0;
+    color: #475569;
+    border-radius: 6px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    transition: all 0.2s ease;
+}
+
+#btn-cancelar:hover {
+    background: #fef2f2;
+    color: #dc2626;
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2);
+    transform: translateY(-1px);
+}
+
+#btn-guardar {
+    background: #eff6ff;
+    border: 1.5px solid #bfdbfe;
+    color: #2563eb;
+    border-radius: 6px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    transition: all 0.2s ease;
+}
+
+#btn-guardar:hover {
+    background: #2563eb;
+    color: #ffffff;
+    border-color: #2563eb;
+    box-shadow: 0 2px 10px rgba(37, 99, 235, 0.3);
+    transform: translateY(-1px);
+}
+
+/* ============================================
+   FECHA + HORA DE INGRESO (inline popover)
+   ============================================ */
+#rp-fi-wrapper {
+    display: flex;
+    gap: 10px;
+    align-items: stretch;
+}
+
+#rp-fi-wrapper .fi-date-group {
+    flex: 3;
+    position: relative;
+    min-width: 0;
+}
+
+#rp-fi-wrapper .fi-time-group {
+    flex: 2;
+    min-width: 0;
+}
+
+#rp-fi-wrapper .fi-time-group input {
+    height: 42px;
+    width: 100%;
+    box-sizing: border-box;
+}

@@ -17,6 +17,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // Crear el elemento seleccionado visual
         const trigger = document.createElement('div');
         trigger.className = 'custom-select-trigger';
+        trigger.setAttribute('tabindex', '0');
+        trigger.setAttribute('role', 'combobox');
+        trigger.setAttribute('aria-haspopup', 'listbox');
         
         const selectedText = document.createElement('span');
         selectedText.className = 'custom-select-text';
@@ -135,6 +138,18 @@ document.addEventListener('DOMContentLoaded', () => {
                         wrapper.classList.add('open-up');
                     }
                 });
+            }
+        });
+
+        // Navegación por teclado
+        trigger.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                trigger.click();
+            }
+            if (e.key === 'Escape') {
+                wrapper.classList.remove('open', 'open-up');
+                trigger.focus();
             }
         });
 

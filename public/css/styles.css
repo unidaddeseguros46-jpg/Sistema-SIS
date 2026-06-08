@@ -1588,6 +1588,10 @@ tr.row-alerta:hover {
     text-transform: uppercase;
 }
 
+.custom-select-trigger:focus {
+    outline: none;
+}
+
 .custom-select-wrapper.is-disabled .custom-select-trigger {
     cursor: not-allowed;
     opacity: 0.7;
@@ -1699,6 +1703,12 @@ tr.row-alerta:hover {
 /* La flecha rotará con un hack si está en global-search-box */
 .global-search-box:has(.custom-select-wrapper) {
     overflow: visible !important;
+}
+
+.global-search-box:has(.custom-select-wrapper):focus-within {
+    outline: 2px solid #3b82f6;
+    outline-offset: 1px;
+    border-radius: 8px;
 }
 
 .global-search-box:has(.custom-select-wrapper.is-disabled) {
