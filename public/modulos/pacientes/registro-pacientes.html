@@ -35,14 +35,7 @@
         .cr-date-trigger:hover { border-color: #e2e8f0 !important; }
         .cr-date-trigger.is-open { border-color: #3b82f6 !important; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
     </style>
-    <script>
-        if (new URLSearchParams(window.location.search).get('view') === 'modal') {
-            document.documentElement.classList.add('is-modal');
-            // Ocultar body inmediatamente para evitar parpadeo
-            document.write('<style id="temp-modal-hide">body { display: none !important; }</style>');
-            window.addEventListener('DOMContentLoaded', () => document.body.classList.add('is-modal'));
-        }
-    </script>
+    <script src="../../js/modal-inline-head.js"></script>
 </head>
 
 <body>
@@ -364,61 +357,7 @@
         </main>
     </div>
 
-    <!-- PRE-LLENADO INMEDIATO (antes de que carguen scripts pesados y auth) -->
-    <script>
-        if (new URLSearchParams(window.location.search).get('view') === 'modal') {
-            (function() {
-                // Mostrar formulario inmediatamente
-                var vl = document.getElementById('view-lista');
-                if (vl) vl.style.display = 'none';
-                var vf = document.getElementById('view-form');
-                if (vf) vf.style.display = 'block';
-                var ts = document.getElementById('temp-modal-hide');
-                if (ts) ts.remove();
-                document.body.style.display = 'block';
-                document.body.classList.add('is-modal');
-
-                var data;
-                try {
-                    var raw = sessionStorage.getItem('cd_auto_fill');
-                    if (raw) data = JSON.parse(raw);
-                } catch(e) {}
-                if (!data) return;
-                sessionStorage.removeItem('cd_auto_fill');
-
-                var setVal = function(id, val) {
-                    var el = document.getElementById(id);
-                    if (el) el.value = val || '';
-                };
-                setVal('paciente-dni', data.dni);
-                setVal('paciente-nombres', data.nombres);
-                setVal('paciente-apellidos', data.apellidos);
-                setVal('paciente-codigo-ver', data.codigo_verificacion);
-
-                if (data.tipo_documento) {
-                    var td = document.getElementById('tipo-documento');
-                    if (td) td.value = data.tipo_documento;
-                }
-                if (data.tipo_seguro) {
-                    var seg = document.getElementById('paciente-seguro');
-                    if (seg) {
-                        for (var i = 0; i < seg.options.length; i++) {
-                            if (seg.options[i].value.toUpperCase() === data.tipo_seguro.toUpperCase()) {
-                                seg.value = seg.options[i].value;
-                                break;
-                            }
-                        }
-                    }
-                }
-                if (data.fecha_nacimiento) {
-                    var parts = data.fecha_nacimiento.split('-');
-                    if (parts.length === 3) {
-                        setVal('paciente-fecha-nac', parts[2] + '/' + parts[1] + '/' + parts[0]);
-                    }
-                }
-            })();
-        }
-    </script>
+    <script src="../../js/modal-prellenado.js"></script>
     <!-- SCRIPTS -->
     <script src="../../js/supabase-config.js"></script>
     <script src="../../js/calendario-popover.js"></script>
