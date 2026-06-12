@@ -1,35 +1,39 @@
 # Hospital San José — AGENTS.md
 
-## Repo structure
+## Estructura del repositorio
 
-Multi-project layout with **no root package.json**. Each component is independent:
+Proyecto multi-módulo, **sin código compartido entre componentes**. Cada uno se despliega de forma independiente:
 
-| Path | Tech | Entrypoint | Deploy target |
+| Ruta | Tecnología | Entrypoint | Destino de deploy |
 |---|---|---|---|
-| `public/` | Vanilla JS + Supabase CDN | `index.html` | Static host (any) |
-| `rpa-backend/` | Node.js 18+, Express, Puppeteer | `server.js` | Cloud (Render, Railway, etc.) |
-| `cloudflare-worker/` | JavaScript (CF Workers runtime) | `worker.js` | Cloudflare Workers |
+| `public/` | Vanilla JS + Supabase CDN (global UMD) | 11 páginas HTML | Host estático (cualquiera) |
+| `rpa-backend/` | Node.js 18+, Express, Puppeteer | `server.js` | Cloud (Railway, Render, etc.) |
+| `cloudflare-worker/` | JavaScript (CF Workers) | `worker.js` | Cloudflare Workers |
 | `supabase/functions/create-user/` | Deno / Supabase Edge Functions | `index.ts` | Supabase |
 
-## Commands
+El `package.json` raíz solo contiene la dependencia de la CLI de Supabase (sin scripts de build/start).
 
-- **RPA backend start:** `node server.js` (from `rpa-backend/`)
-- **Supabase local dev:** Requires [Supabase CLI](https://supabase.com/docs/reference/cli). Run `supabase start` from repo root, then invoke function via `curl` (see `supabase/functions/create-user/index.ts:27-30`)
-- **Cloudflare Worker deploy:** `npx wrangler deploy` from `cloudflare-worker/` (requires `wrangler.toml`; currently absent — add one first)
+## Comandos
 
-No test, lint, typecheck, or format commands exist. No CI config.
+- **RPA backend:** `node server.js` (desde `rpa-backend/`)
+- **Cloudflare Worker:** `npx wrangler deploy` (desde `cloudflare-worker/`)
+- **Supabase local:** Ver `DEVELOPMENT.md` para el flujo completo (2 terminales: `npx supabase start` + `npx supabase functions serve create-user --no-verify-jwt`)
 
-## Architecture notes
+No existen comandos de test, lint, typecheck ni formateo. No hay CI configurado.
 
-- **Frontend** is a plain multi-page app (not SPA). Uses `@supabase/supabase-js@2` loaded from CDN. Auth state managed client-side via localStorage (`remember` checkbox).
-- **RPA backend** scrapes `https://dondemeatiendo.essalud.gob.pe` with Puppeteer + Chromium. Optimized for serverless (`@sparticuz/chromium`). Endpoints: `POST /validate` (single), `POST /validate-batch` (batch). Sequential batch processing with 2s delay between patients.
-- **Cloudflare Worker** proxies DNI lookups to `https://buscardniperu.com`. Validates 8-digit DNI, returns `fecha_nac` (dd/mm/yyyy) and `fecha_iso` (yyyy-mm-dd).
-- **Supabase Edge Function** (`create-user`) is a boilerplate stub. JWT-protected (`verify_jwt = true`). Deno editor support is configured in `.vscode/settings.json` — requires `denoland.vscode-deno` extension.
-- No shared code between components. Each can be deployed independently.
+## Notas de arquitectura
 
-## Style & conventions
+- **Frontend** es una app multi-página clásica (11 HTML, sin SPA, sin build step). Usa `@supabase/supabase-js@2` desde CDN como global UMD. Los JS usan variables globales (`supabaseClient`, etc.). Estado de auth en `sessionStorage` (`userRole`, `userName`, `userEmail`). El entorno se detecta automáticamente vía `window.location.hostname` (localhost → Supabase Docker local; otro → Supabase Cloud).
+- **RPA backend** tiene 4 endpoints: `POST /get-dv` / `POST /get-dv-batch` (scrapea `dniperu.com` por código de verificación + nombres), `POST /validate` / `POST /validate-batch` (scrapea `dondemeatiendo.essalud.gob.pe` por cobertura de seguro). Los endpoints individuales reintentan hasta 3 veces con 2-3s de pausa. Batch procesa secuencialmente con 2s entre pacientes. Optimizado para serverless (`@sparticuz/chromium`).
+- **Cloudflare Worker** valida DNI de 8 dígitos, consulta `buscardniperu.com` vía WP AJAX → devuelve `fecha_nac` (dd/mm/yyyy) + `fecha_iso` (yyyy-mm-dd). Timeout de 10s.
+- **Supabase Edge Function** (`create-user`) crea usuarios de auth + fila en `perfiles`. Protegida con JWT (`verify_jwt = true`). RBAC completo: Desarrollador→Administrador→Usuario. Usa `service_role_key` para operaciones admin; revierte (elimina el auth user) si falla el insert del perfil.
+- **BD**: Supabase con columnas en `snake_case`. Un trigger (`uppercase_text_fields()`) pasa a mayúsculas `nombres`, `apellidos`, `servicio`, `tipo_seguro` antes de insert/update en `pacientes`. `creado_en` es `timestamptz`.
 
-- Supabase client uses `snake_case` columns (e.g. `fecha_nacimiento`, `codigo_verificacion`)
-- Supabase anon key is exposed in `public/js/supabase-config.js` (expected for client-side usage)
-- Spanish: code comments, commit messages, UI text, and variable names
-- RPA backend logs with `[Browser]`, `[RPA]`, `[Server]` prefixes
+## Convenciones
+
+- Español: todos los comentarios, commits, textos de UI y nombres de variable
+- `.editorconfig`: final de línea LF, indentación 4 espacios (2 para `package.json`)
+- La anon key de Supabase está expuesta en `public/js/supabase-config.js` (normal para uso client-side)
+- RPA backend usa prefijos `[Browser]`, `[RPA]`, `[Server]` en sus logs
+- `DEVELOPMENT.md` contiene la guía completa de Supabase local (sincronizar esquema, db diff/push, Supabase Studio en `localhost:54323`)
+- `ANALISIS.md` es un transcript de sesión, no documentación del proyecto

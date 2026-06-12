@@ -9,17 +9,140 @@
     <!-- Estilos -->
     <link rel="stylesheet" href="css/styles.css">
 
-    <!-- Supabase -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
     <!-- Iconos -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        .login-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 0;
+            width: 100%;
+            z-index: 2;
+            transition: gap 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .main-login-card {
+            width: 100%;
+            max-width: 420px;
+            flex-shrink: 0;
+        }
+
+        .consulta-container {
+            max-width: 0;
+            opacity: 0;
+            overflow: hidden;
+            transform: translateX(40px);
+            transition: max-width 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            margin-top: 65px; /* Iguala el margen del logo para que visualmente los centros se alineen perfecto */
+        }
+
+        .login-wrapper.showing-consulta {
+            gap: 30px;
+        }
+
+        .login-wrapper.showing-consulta .consulta-container {
+            max-width: 420px;
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .consulta-card-inner {
+            width: 420px;
+            flex-shrink: 0;
+            margin-top: 0; /* Anula el margen heredado de .login-card para manejarlo en el contenedor */
+            padding-top: 30px;
+        }
+
+        #consulta-rn-result {
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+            padding: 0 15px;
+            margin-top: 0;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-top-width: 0;
+            border-bottom-width: 0;
+            border-radius: 8px;
+            transition: max-height 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+                        opacity 0.4s ease,
+                        padding 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+                        margin-top 0.4s ease,
+                        border-top-width 0.4s ease,
+                        border-bottom-width 0.4s ease;
+        }
+
+        #consulta-rn-result.show {
+            max-height: 500px;
+            opacity: 1;
+            padding: 15px;
+            margin-top: 20px;
+            border-top-width: 1px;
+            border-bottom-width: 1px;
+        }
+
+        #error-msg {
+            color: #ef4444;
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+            padding: 0;
+            margin-top: 0;
+            transition: max-height 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+                        opacity 0.4s ease,
+                        padding 0.45s cubic-bezier(0.16, 1, 0.3, 1),
+                        margin-top 0.4s ease;
+        }
+
+        #error-msg.visible {
+            max-height: 200px;
+            opacity: 1;
+            padding: 0;
+            margin-top: 15px;
+        }
+
+        #error-msg:empty {
+            display: block;
+        }
+
+        .login-form .form-group input {
+            background: #ffffff;
+        }
+
+        @media (max-width: 890px) {
+            .login-wrapper {
+                flex-direction: column;
+                align-items: center;
+            }
+            .consulta-container {
+                transform: translateY(-20px);
+                max-width: 420px;
+                max-height: 0;
+                width: 100%;
+                margin-top: 0;
+                transition: max-height 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+            }
+            .login-wrapper.showing-consulta .consulta-container {
+                max-height: 600px;
+                transform: translateY(0);
+                margin-top: 20px; /* Separación vertical en móviles */
+            }
+            .consulta-card-inner {
+                width: 100%;
+            }
+        }
+    </style>
 </head>
 
 <body>
     <div class="login-page">
-        <!-- Tarjeta Central con Glassmorphism -->
-        <div class="login-card">
+        <div class="login-wrapper" id="login-wrapper">
+            <!-- Tarjeta Central con Glassmorphism -->
+            <div class="login-card main-login-card">
 
             <!-- Círculo del Logo Flotante -->
             <div class="logo-circle">
@@ -31,23 +154,27 @@
 
                 <div class="form-group">
                     <label for="role">Rol</label>
-                    <select id="role" name="role" required style="width: 100%; padding: 12px 14px; font-size: 15px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; outline: none; transition: all 0.3s; color: #1e293b;">
-                        <option value="" disabled selected>Seleccione su rol</option>
-                        <option value="Desarrollador">Desarrollador</option>
-                        <option value="Administrador">Administrador</option>
-                        <option value="Usuario General">Usuario General</option>
-                    </select>
+                    <div class="global-search-box" style="width:100%; display:flex; align-items:center; background:#ffffff; border-radius:8px; border:1px solid #e2e8f0; padding:0 15px; position:relative; height:42px;">
+                        <i class="fa-solid fa-user-tag" style="color:#64748b; margin-right:10px; flex-shrink:0;"></i>
+                        <select id="role" name="role" class="global-search-input custom-select-source" style="border:none; padding:0; outline:none; flex:1; min-width:0; appearance:none; -webkit-appearance:none; cursor:pointer; color:inherit; background:transparent; font-size:13px;">
+                            <option value="" disabled selected hidden>Seleccione su rol</option>
+                            <option value="Desarrollador">Desarrollador</option>
+                            <option value="Administrador">Administrador</option>
+                            <option value="Usuario General">Usuario General</option>
+                        </select>
+                        <i class="fa-solid fa-chevron-down" style="position:absolute; right:15px; color:#64748b; font-size:12px; pointer-events:none;"></i>
+                    </div>
                 </div>
 
                 <div class="form-group">
                     <label for="username">Nombre de Usuario</label>
-                    <input type="text" id="username" name="username" required placeholder="tu_usuario">
+                    <input type="text" id="username" name="username" required placeholder="Ingrese su Usuario">
                 </div>
 
                 <div class="form-group">
                     <label for="password">Contraseña</label>
                     <div class="password-wrapper">
-                        <input type="password" id="password" name="password" required placeholder="********">
+                        <input type="password" id="password" name="password" required placeholder="Ingrese su Contraseña">
                         <button type="button" id="toggle-password" class="toggle-btn" title="Mostrar/Ocultar">
                             <i class="fa-solid fa-eye"></i>
                         </button>
@@ -57,22 +184,67 @@
                 <div class="remember-row">
                     <div class="remember">
                         <input type="checkbox" id="remember">
-                        <label for="remember">Recordar credenciales</label>
+                        <label for="remember">Recordar datos</label>
                     </div>
                     <a href="recuperar-password.html" class="forgot-link">¿Olvidaste tu contraseña?</a>
                 </div>
 
                 <button type="submit" id="login-btn" class="login-btn">
-                    <span class="btn-text">Entrar</span>
+                    <span class="btn-text">Ingresar</span>
                     <div class="spinner hidden"></div>
                 </button>
                 <p id="error-msg" class="error-msg"></p>
+                
+                <div style="text-align:center; margin-top: 20px; padding-top: 15px; border-top: 1px solid #e2e8f0;">
+                    <a href="#" id="link-consulta-rn" style="color: #3b82f6; text-decoration: none; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; transition: color 0.2s;">
+                        <i class="fa-solid fa-baby"></i> Consultar estado de Recién Nacido
+                    </a>
+                </div>
             </form>
+        </div>
+
+        <!-- Tarjeta de Consulta RN -->
+        <div class="consulta-container" id="consulta-container">
+            <div class="login-card consulta-card-inner">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+                    <h2 style="margin:0; font-size: 20px; color:#333;">Consulta de Recién Nacidos</h2>
+                    <button id="btn-close-consulta" style="background:none; border:none; cursor:pointer; font-size:18px; color:#94a3b8; transition:color 0.2s;"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                
+                <form id="consulta-rn-form">
+                    <div class="form-group" style="position:relative;">
+                        <label for="rn-query-input">Código Temporal o Doc. Mamá</label>
+                        <div style="position:relative; display:flex; align-items:center;">
+                            <input type="text" id="rn-query-input" required placeholder="Ingrese el código o documento" style="padding-right:36px;">
+                            <i id="btn-clear-rn" class="fa-solid fa-eraser" style="position:absolute; right:10px; cursor:pointer; color:#94a3b8; font-size:14px; display:none; transition:color 0.2s; z-index:2;"></i>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" id="consulta-rn-btn" class="login-btn" style="background:#10b981; box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.4);">
+                        <span class="btn-text">Buscar</span>
+                        <div class="spinner hidden" id="consulta-rn-spinner" style="border-top-color:white;"></div>
+                    </button>
+                    <p id="consulta-error-msg" class="error-msg"></p>
+                </form>
+
+                <div id="consulta-rn-result">
+                    <h3 style="font-size:16px; color:#0f172a; margin:0 0 12px 0; line-height: 1.3;" id="rn-res-nombre"></h3>
+                    <div style="font-size:13px; color:#475569; display:grid; gap:8px;">
+                        <div style="display:flex; align-items:center; gap:8px;"><strong>Estado:</strong> <span id="rn-res-estado" style="padding:4px 10px; border-radius:4px; font-size:11px; font-weight:700; text-transform:uppercase;"></span></div>
+                        <div><strong>Fecha Nac.:</strong> <span id="rn-res-fnac"></span></div>
+                        <div><strong>Establecimiento:</strong> <span id="rn-res-estab"></span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
         </div>
     </div>
 
+    <!-- Supabase CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- Scripts locales -->
     <script src="js/supabase-config.js"></script>
+    <script src="js/custom-select.js"></script>
     <script src="js/login.js"></script>
 </body>
 

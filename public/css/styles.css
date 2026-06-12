@@ -1612,7 +1612,7 @@ tr.row-alerta:hover {
 .custom-select-options {
     position: absolute;
     display: block;
-    top: calc(100% + 5px);
+    top: 100%;
     left: -15px;
     width: fit-content;
     min-width: calc(100% + 30px);
@@ -1657,7 +1657,7 @@ tr.row-alerta:hover {
 
 .custom-select-wrapper.open-up .custom-select-options {
     top: auto;
-    bottom: calc(100% + 5px);
+    bottom: 100%;
     transform: translateY(10px);
 }
 

@@ -64,6 +64,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 </a>
             </div>
 
+            <div class="nav-item">
+                <a href="javascript:void(0)" class="nav-link" onclick="alert('⚙️ Módulo de Recién Nacidos en desarrollo. Próximamente disponible.')">
+                    <i class="fa-solid fa-baby"></i>
+                    <span>Recién Nacidos Temporales</span>
+                </a>
+            </div>
+
             <div class="nav-item has-sub ${currentPage.includes('consulta-') ? 'active' : ''}">
                 <div class="nav-link">
                     <i class="fa-solid fa-robot"></i>
@@ -125,6 +132,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         return '<span class="welcome-dark">BÚSQUEDA / </span><span class="welcome-celeste">VERIFICACIÓN</span>';
                     } else if (currentPage === 'detalle-paciente.html') {
                         return '<span class="welcome-dark">BÚSQUEDA / VERIFICACIÓN / </span><span class="welcome-celeste">ACTUALIZACIÓN</span>';
+                    } else if (currentPage === 'recien-nacidos.html') {
+                        return '<span class="welcome-dark">RECIÉN NACIDOS </span><span class="welcome-celeste">TEMPORALES</span>';
                     } else if (currentPage === 'consulta-rapida.html') {
                         return '<span class="welcome-dark">CONSULTA A WEB </span><span class="welcome-celeste">DONDE ME ATIENDO</span>';
                     } else if (currentPage === 'consulta-datos.html') {

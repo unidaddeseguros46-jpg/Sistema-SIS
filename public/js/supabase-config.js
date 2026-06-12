@@ -1,5 +1,6 @@
 // Detección automática de entorno
-const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+const host = window.location.hostname;
+const isLocal = !host || host === 'localhost' || host === '127.0.0.1';
 
 // Configuración de Producción (Supabase Cloud)
 const prodUrl = 'https://vofqatqocfaqcdcuwama.supabase.co';
@@ -16,6 +17,15 @@ const supabaseKey = isLocal ? localKey : prodKey;
 // Cuando está en local apunta a 127.0.0.1:54321, igual que la BD.
 const edgeFunctionUrl = isLocal ? localUrl : prodUrl;
 
-const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+const fetchWithTimeout = (url, options = {}) => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    return fetch(url, { ...options, signal: controller.signal })
+        .finally(() => clearTimeout(timeout));
+};
+
+const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey, {
+    global: { fetch: fetchWithTimeout }
+});
 
 console.log(`[Supabase] Conectado a: ${isLocal ? 'ENTORNO LOCAL (Pruebas)' : 'PRODUCCIÓN (Real)'}`);
