@@ -15,15 +15,30 @@
         body.is-modal .sidebar, 
         body.is-modal header, 
         body.is-modal .module-commands,
-        body.is-modal #view-lista {
+        body.is-modal #view-lista,
+        body.is-modal .top-header {
             display: none !important;
         }
         body.is-modal .page-content {
             margin-left: 0 !important;
-            padding: 10px !important;
+            padding: 15px !important;
+            max-width: 100% !important;
         }
         body.is-modal .main-wrapper {
             background: white !important;
+            min-height: auto !important;
+            padding-left: 0 !important;
+        }
+        /* Un solo scrollbar: html fijo al tamaño del iframe, body scrollea */
+        html.is-modal {
+            height: 100% !important;
+            overflow: hidden !important;
+        }
+        body.is-modal {
+            height: 100% !important;
+            min-height: 0 !important;
+            overflow-y: auto !important;
+            overflow-x: hidden !important;
         }
 
         @keyframes slideUp {
