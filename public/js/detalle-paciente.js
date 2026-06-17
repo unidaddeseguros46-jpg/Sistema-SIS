@@ -576,6 +576,38 @@ document.addEventListener('DOMContentLoaded', async () => {
             payload.detalle = nuevoServ;
         } else if (tipo === 'Alta') {
             payload.detalle = 'Paciente dado de alta';
+            
+            // VALIDACIÓN: Seguro ESSALUD del padre para Recién Nacidos temporales
+            if (paciente && paciente.tipo_documento === 'DNI_TEMPORAL' && paciente.dni) {
+                try {
+                    const btn = document.getElementById('btn-guardar-evento');
+                    const prevHtml = btn.innerHTML;
+                    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Validando seguro...';
+                    btn.disabled = true;
+
+                    const { data: tempRn } = await client
+                        .from('recien_nacidos_temporales')
+                        .select('tipo_seguro_papa')
+                        .or(`cod_temporal.eq.${paciente.dni},cod_temporal.eq.E-${paciente.dni}`)
+                        .maybeSingle();
+                    
+                    btn.innerHTML = prevHtml;
+                    btn.disabled = false;
+
+                    if (tempRn && tempRn.tipo_seguro_papa === 'ESSALUD') {
+                        const confirmAlta = window.confirm(
+                            "ALERTA DE SEGURO\n\n" +
+                            "El padre de este recién nacido cuenta con ESSALUD.\n" +
+                            "Recuerde DAR DE BAJA el SIS temporal del bebé administrativamente antes de procesar el alta física.\n\n" +
+                            "¿Desea continuar con el registro del alta en el sistema?"
+                        );
+                        if (!confirmAlta) return;
+                    }
+                } catch (e) {
+                    console.error('Error validando seguro RN:', e);
+                    document.getElementById('btn-guardar-evento').disabled = false;
+                }
+            }
         } else if (tipo === 'Fallecido') {
             payload.detalle = 'Paciente fallecido';
         }

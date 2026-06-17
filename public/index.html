@@ -8,7 +8,7 @@
 
     <!-- Estilos -->
     <link rel="stylesheet" href="css/styles.css">
-
+    <link rel="stylesheet" href="css/calendario-popover.css">
     <!-- Iconos -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
@@ -19,70 +19,12 @@
             gap: 0;
             width: 100%;
             z-index: 2;
-            transition: gap 0.5s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         .main-login-card {
             width: 100%;
             max-width: 420px;
             flex-shrink: 0;
-        }
-
-        .consulta-container {
-            max-width: 0;
-            opacity: 0;
-            overflow: hidden;
-            transform: translateX(40px);
-            transition: max-width 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-            flex-shrink: 0;
-            display: flex;
-            align-items: center;
-            margin-top: 65px; /* Iguala el margen del logo para que visualmente los centros se alineen perfecto */
-        }
-
-        .login-wrapper.showing-consulta {
-            gap: 30px;
-        }
-
-        .login-wrapper.showing-consulta .consulta-container {
-            max-width: 420px;
-            opacity: 1;
-            transform: translateX(0);
-        }
-
-        .consulta-card-inner {
-            width: 420px;
-            flex-shrink: 0;
-            margin-top: 0; /* Anula el margen heredado de .login-card para manejarlo en el contenedor */
-            padding-top: 30px;
-        }
-
-        #consulta-rn-result {
-            max-height: 0;
-            opacity: 0;
-            overflow: hidden;
-            padding: 0 15px;
-            margin-top: 0;
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-top-width: 0;
-            border-bottom-width: 0;
-            border-radius: 8px;
-            transition: max-height 0.45s cubic-bezier(0.16, 1, 0.3, 1),
-                        opacity 0.4s ease,
-                        padding 0.45s cubic-bezier(0.16, 1, 0.3, 1),
-                        margin-top 0.4s ease,
-                        border-top-width 0.4s ease,
-                        border-bottom-width 0.4s ease;
-        }
-
-        #consulta-rn-result.show {
-            max-height: 500px;
-            opacity: 1;
-            padding: 15px;
-            margin-top: 20px;
-            border-top-width: 1px;
-            border-bottom-width: 1px;
         }
 
         #error-msg {
@@ -109,31 +51,293 @@
             display: block;
         }
 
-        .login-form .form-group input {
-            background: #ffffff;
+        .consulta-link-wrap {
+            text-align: center;
+            margin-top: 20px;
+            padding-top: 15px;
+            border-top: 1px solid #e2e8f0;
+        }
+        .consulta-link {
+            display: inline;
+            color: #3b82f6;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+            transition: color 0.25s ease;
+            cursor: pointer;
+        }
+        .consulta-link:hover {
+            color: #2563eb;
+            text-shadow: 0 0 4px rgba(37, 99, 235, 0.3), 0 0 8px rgba(37, 99, 235, 0.15);
+        }
+        .consulta-link i {
+            margin-right: 6px;
         }
 
-        @media (max-width: 890px) {
-            .login-wrapper {
-                flex-direction: column;
-                align-items: center;
-            }
-            .consulta-container {
-                transform: translateY(-20px);
-                max-width: 420px;
-                max-height: 0;
-                width: 100%;
-                margin-top: 0;
-                transition: max-height 0.5s cubic-bezier(0.16, 1, 0.3, 1), transform 0.5s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-            }
-            .login-wrapper.showing-consulta .consulta-container {
-                max-height: 600px;
-                transform: translateY(0);
-                margin-top: 20px; /* Separación vertical en móviles */
-            }
-            .consulta-card-inner {
-                width: 100%;
-            }
+        .consulta-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            background: rgba(15, 23, 42, 0.6);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.35s ease, visibility 0.35s ease;
+        }
+        .consulta-overlay.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .consulta-overlay-content {
+            position: fixed;
+            top: 1cm;
+            left: 1cm;
+            right: 1cm;
+            bottom: 1cm;
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            padding: 30px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .consulta-overlay-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1e293b;
+            margin: 0 0 20px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 6px;
+        }
+        .consulta-volver-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            font-size: 12px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: inherit;
+            flex-shrink: 0;
+            transition: all 0.2s ease;
+            margin-left: auto;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            color: #475569;
+        }
+        .consulta-volver-btn:hover {
+            background: #2563eb;
+            color: #fff;
+            border-color: #2563eb;
+        }
+
+        .consulta-filter-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        .consulta-filter-btn {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            color: #475569;
+            border-radius: 6px;
+            padding: 6px 16px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+        }
+        .consulta-filter-btn:hover,
+        .consulta-filter-btn.active {
+            background: #2563eb;
+            color: #fff;
+            border-color: #2563eb;
+        }
+
+        .consulta-input-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: nowrap;
+            overflow: hidden;
+        }
+        .consulta-actions {
+            display: flex;
+            gap: 8px;
+            margin-left: auto;
+            flex-shrink: 0;
+        }
+        .consulta-action-btn {
+            padding: 8px 20px;
+            font-size: 13px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+            height: 42px;
+            white-space: nowrap;
+            border: 1.5px solid #bfdbfe;
+        }
+        .consulta-action-btn.buscar {
+            background: #eff6ff;
+            color: #2563eb;
+            border-color: #bfdbfe;
+        }
+        .consulta-action-btn.buscar:hover {
+            background: #2563eb;
+            color: #fff;
+            border-color: #2563eb;
+        }
+        .consulta-action-btn.limpiar {
+            background: #ffffff;
+            color: #2563eb;
+        }
+        .consulta-action-btn.limpiar:hover {
+            background: #2563eb;
+            color: #fff;
+            border-color: #2563eb;
+        }
+        .consulta-input-group {
+            display: inline-flex;
+            align-items: center;
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 0 15px;
+            height: 42px;
+            transition: border-color 0.2s ease;
+        }
+        .consulta-input-group:focus-within {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        .consulta-input-group i {
+            color: #64748b;
+            font-size: 14px;
+        }
+        .consulta-input-group input {
+            border: none;
+            padding: 12px 10px;
+            outline: none;
+            font-size: 14px;
+            font-family: inherit;
+            color: #1e293b;
+            background: transparent;
+        }
+        .consulta-input-group input::placeholder {
+            color: #94a3b8;
+        }
+
+        .consulta-date-group {
+            position: relative;
+        }
+        #consulta-date-popover {
+            display: none;
+        }
+        #consulta-date-popover.show {
+            display: block;
+            position: fixed;
+            z-index: 10003;
+            background: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+            padding: 16px 20px;
+            width: 320px;
+            animation: popoverIn 0.2s cubic-bezier(0.16,1,0.3,1) forwards;
+        }
+        #consulta-date-popover .cal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        #consulta-date-popover .cal-today-btn {
+            padding: 6px 14px;
+            font-size: 12px;
+            font-weight: 600;
+            border-radius: 6px;
+            border: 1.5px solid #bfdbfe;
+            background: #eff6ff;
+            color: #3b82f6;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-family: inherit;
+            white-space: nowrap;
+            height: fit-content;
+        }
+        #consulta-date-popover .cal-today-btn:hover {
+            background: #3b82f6 !important;
+            color: #fff;
+            border-color: #3b82f6;
+        }
+        @keyframes popoverIn {
+            from { opacity: 0; transform: translateY(-6px) scale(0.96); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        /* ── Resultados ── */
+        .consulta-results {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
+            margin-top: 16px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            background: #ffffff;
+        }
+        .consulta-results table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            background: #ffffff;
+        }
+        .consulta-results thead {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        .consulta-results th {
+            background: #eff6ff;
+            color: #2563eb;
+            font-weight: 600;
+            text-align: left;
+            padding: 10px 12px;
+            border-bottom: 2px solid #bfdbfe;
+            white-space: nowrap;
+        }
+        .consulta-results td {
+            padding: 9px 12px;
+            border-bottom: 1px solid #e2e8f0;
+            color: #334155;
+            background: #ffffff;
+        }
+        .consulta-results tbody tr:hover {
+            background: #eff6ff;
+        }
+        .consulta-results tbody tr:last-child td {
+            border-bottom: none;
+        }
+        .consulta-results-loading,
+        .consulta-results-empty {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            color: #94a3b8;
+            font-size: 14px;
+        }
+        .consulta-results-loading i {
+            margin-right: 8px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
         }
     </style>
 </head>
@@ -194,49 +398,91 @@
                     <div class="spinner hidden"></div>
                 </button>
                 <p id="error-msg" class="error-msg"></p>
-                
-                <div style="text-align:center; margin-top: 20px; padding-top: 15px; border-top: 1px solid #e2e8f0;">
-                    <a href="#" id="link-consulta-rn" style="color: #3b82f6; text-decoration: none; font-size: 14px; font-weight: 600; display: inline-flex; align-items: center; gap: 8px; transition: color 0.2s;">
+
+                <div class="consulta-link-wrap">
+                    <a href="consulta-rn.html" class="consulta-link">
                         <i class="fa-solid fa-baby"></i> Consultar estado de Recién Nacido
                     </a>
                 </div>
             </form>
         </div>
+    </div>
 
-        <!-- Tarjeta de Consulta RN -->
-        <div class="consulta-container" id="consulta-container">
-            <div class="login-card consulta-card-inner">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
-                    <h2 style="margin:0; font-size: 20px; color:#333;">Consulta de Recién Nacidos</h2>
-                    <button id="btn-close-consulta" style="background:none; border:none; cursor:pointer; font-size:18px; color:#94a3b8; transition:color 0.2s;"><i class="fa-solid fa-xmark"></i></button>
+    <div class="consulta-overlay" id="consulta-overlay">
+        <div class="consulta-overlay-content">
+            <h2 class="consulta-overlay-title">
+                Recién Nacidos <span style="color:#3b82f6;">Temporales</span>
+                <button class="consulta-volver-btn" id="consulta-volver-btn">
+                    <i class="fa-solid fa-arrow-left"></i> Volver a Login
+                </button>
+            </h2>
+
+            <div class="consulta-filter-row">
+                <button class="consulta-filter-btn active" data-filter="bebe">Bebé</button>
+                <button class="consulta-filter-btn" data-filter="mama">Mamá</button>
+                <button class="consulta-filter-btn" data-filter="fecha">Fecha de Nacimiento</button>
+            </div>
+
+            <div class="consulta-input-row">
+                <div class="consulta-input-group" data-filter="bebe">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" placeholder="Apellidos del bebé..." size="28">
                 </div>
-                
-                <form id="consulta-rn-form">
-                    <div class="form-group" style="position:relative;">
-                        <label for="rn-query-input">Código Temporal o Doc. Mamá</label>
-                        <div style="position:relative; display:flex; align-items:center;">
-                            <input type="text" id="rn-query-input" required placeholder="Ingrese el código o documento" style="padding-right:36px;">
-                            <i id="btn-clear-rn" class="fa-solid fa-eraser" style="position:absolute; right:10px; cursor:pointer; color:#94a3b8; font-size:14px; display:none; transition:color 0.2s; z-index:2;"></i>
+                <div class="consulta-input-group" data-filter="mama" style="display:none;">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" placeholder="Apellidos de la mamá..." size="28">
+                </div>
+                <div class="consulta-input-group consulta-date-group" data-filter="fecha" style="display:none;">
+                    <i class="fa-regular fa-calendar consulta-date-icon" id="consulta-date-icon"></i>
+                    <input type="text" id="consulta-fecha-input" placeholder="dd/mm/aaaa" size="22" autocomplete="off">
+                </div>
+                <div class="cr-date-popover" id="consulta-date-popover">
+                    <div class="cal-filters">
+                        <div class="filter-group">
+                            <label>Mes</label>
+                            <select class="filter-select" id="consulta-cal-month"></select>
                         </div>
+                        <div class="filter-group">
+                            <label>Año</label>
+                            <select class="filter-select" id="consulta-cal-year"></select>
+                        </div>
+                        <button class="cal-today-btn" id="consulta-cal-month-search">Buscar este mes</button>
                     </div>
-                    
-                    <button type="submit" id="consulta-rn-btn" class="login-btn" style="background:#10b981; box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.4);">
-                        <span class="btn-text">Buscar</span>
-                        <div class="spinner hidden" id="consulta-rn-spinner" style="border-top-color:white;"></div>
-                    </button>
-                    <p id="consulta-error-msg" class="error-msg"></p>
-                </form>
-
-                <div id="consulta-rn-result">
-                    <h3 style="font-size:16px; color:#0f172a; margin:0 0 12px 0; line-height: 1.3;" id="rn-res-nombre"></h3>
-                    <div style="font-size:13px; color:#475569; display:grid; gap:8px;">
-                        <div style="display:flex; align-items:center; gap:8px;"><strong>Estado:</strong> <span id="rn-res-estado" style="padding:4px 10px; border-radius:4px; font-size:11px; font-weight:700; text-transform:uppercase;"></span></div>
-                        <div><strong>Fecha Nac.:</strong> <span id="rn-res-fnac"></span></div>
-                        <div><strong>Establecimiento:</strong> <span id="rn-res-estab"></span></div>
+                    <div class="cal-header">
+                        <button class="cal-nav-btn" id="consulta-cal-prev"><i class="fa-solid fa-chevron-left"></i></button>
+                        <span class="cal-title" id="consulta-cal-title">Mes Año</span>
+                        <button class="cal-nav-btn" id="consulta-cal-next"><i class="fa-solid fa-chevron-right"></i></button>
+                        <button class="cal-today-btn" id="consulta-cal-today">Hoy</button>
                     </div>
+                    <div class="cal-weekdays">
+                        <span>D</span><span>L</span><span>M</span><span>MI</span><span>J</span><span>V</span><span>S</span>
+                    </div>
+                    <div class="cal-days-grid" id="consulta-cal-grid"></div>
+                </div>
+                <div class="consulta-actions">
+                    <button class="consulta-action-btn buscar">Buscar</button>
+                    <button class="consulta-action-btn limpiar">Limpiar</button>
                 </div>
             </div>
-        </div>
+
+            <div class="consulta-results" id="consulta-results">
+                <div class="consulta-results-empty" id="consulta-results-placeholder">
+                    Ingresa apellidos del bebé o de la mamá
+                </div>
+                <table id="consulta-results-table" style="display:none;">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Bebé</th>
+                            <th>Mamá</th>
+                            <th>Fecha Nac.</th>
+                            <th>Estado</th>
+                            <th>Establecimiento</th>
+                        </tr>
+                    </thead>
+                    <tbody id="consulta-results-body"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -245,6 +491,7 @@
     <!-- Scripts locales -->
     <script src="js/supabase-config.js"></script>
     <script src="js/custom-select.js"></script>
+    <script src="js/calendario-popover.js"></script>
     <script src="js/login.js"></script>
 </body>
 

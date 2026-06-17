@@ -267,120 +267,320 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ==========================================
-    // LOGICA DE CONSULTA PÚBLICA RN TEMPORAL
+    // OVERLAY CONSULTA RN
     // ==========================================
-    const linkConsultaRn = document.getElementById('link-consulta-rn');
-    const consultaContainer = document.getElementById('consulta-container');
-    const loginWrapper = document.getElementById('login-wrapper');
-    const btnCloseConsulta = document.getElementById('btn-close-consulta');
-    const consultaRnForm = document.getElementById('consulta-rn-form');
-    const rnQueryInput = document.getElementById('rn-query-input');
-    const consultaRnBtn = document.getElementById('consulta-rn-btn');
-    const consultaRnSpinner = document.getElementById('consulta-rn-spinner');
-    const consultaErrorMsg = document.getElementById('consulta-error-msg');
-    const consultaRnResult = document.getElementById('consulta-rn-result');
+    const consultaLink = document.querySelector('.consulta-link');
+    const consultaOverlay = document.getElementById('consulta-overlay');
 
-    if (linkConsultaRn && consultaContainer) {
-        linkConsultaRn.addEventListener('click', (e) => {
+    if (consultaLink && consultaOverlay) {
+        consultaLink.addEventListener('click', (e) => {
             e.preventDefault();
-            alert('⚙️ Módulo de Recién Nacidos en desarrollo.\nPróximamente disponible.');
+            consultaOverlay.classList.add('visible');
         });
 
-        btnCloseConsulta.addEventListener('click', (e) => {
-            e.preventDefault();
-            loginWrapper.classList.remove('showing-consulta');
-            // Limpiar luego de la animación
-            setTimeout(() => {
-                consultaRnForm.reset();
-                consultaRnResult.classList.remove('show');
-                consultaErrorMsg.textContent = '';
-            }, 500);
+        consultaOverlay.addEventListener('click', (e) => {
+            if (e.target === consultaOverlay) {
+                consultaOverlay.classList.remove('visible');
+            }
         });
 
-        // Botón para limpiar input y resultado
-        const btnClearRn = document.getElementById('btn-clear-rn');
-        if (btnClearRn) {
-            rnQueryInput.addEventListener('input', () => {
-                btnClearRn.style.display = rnQueryInput.value ? 'block' : 'none';
-            });
-
-            btnClearRn.addEventListener('click', (e) => {
-                e.preventDefault();
-                rnQueryInput.value = '';
-                btnClearRn.style.display = 'none';
-                consultaRnResult.classList.remove('show');
-                consultaErrorMsg.textContent = '';
-                rnQueryInput.focus();
+        const volverBtn = document.getElementById('consulta-volver-btn');
+        if (volverBtn) {
+            volverBtn.addEventListener('click', () => {
+                consultaOverlay.classList.remove('visible');
             });
         }
+    }
 
-        consultaRnForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            consultaErrorMsg.textContent = '';
-            consultaRnResult.classList.remove('show');
-            
-            const queryVal = rnQueryInput.value.trim().toUpperCase();
-            if (!queryVal) return;
+    // ==========================================
+    // FILTROS CONSULTA RN + CALENDARIO POPOVER
+    // ==========================================
+    const consultaFilterBtns = document.querySelectorAll('.consulta-filter-btn');
+    const consultaInputGroups = document.querySelectorAll('.consulta-input-group');
+    const fechaInput = document.getElementById('consulta-fecha-input');
 
-            consultaRnBtn.disabled = true;
-            consultaRnSpinner.classList.remove('hidden');
-            consultaRnBtn.querySelector('.btn-text').style.visibility = 'hidden';
+    let openFechaPopover, closeFechaPopover;
 
-            try {
-                // Buscar por código temporal (exacto) o número de documento de mamá (si es numérico)
-                let query = supabaseClient.from('recien_nacidos_temporales').select('*');
-                
-                // Si parece un número, buscamos en num_doc_mama también
-                if (/^\d+$/.test(queryVal)) {
-                    query = query.or(`cod_temporal.eq.${queryVal},num_doc_mama.eq.${queryVal}`);
-                } else {
-                    query = query.eq('cod_temporal', queryVal);
-                }
-
-                const { data, error } = await query;
-
-                if (error) throw error;
-
-                if (!data || data.length === 0) {
-                    consultaErrorMsg.textContent = 'No se encontraron registros con este código o documento';
-                    consultaErrorMsg.style.color = '#ef4444';
-                } else {
-                    // Mostrar el primer resultado
-                    const rn = data[0];
-                    
-                    document.getElementById('rn-res-nombre').textContent = rn.nombre_rn || 'NO REGISTRADO';
-                    
-                    const estadoEl = document.getElementById('rn-res-estado');
-                    const estadoText = (rn.estado_temporal || 'ACTIVO').toUpperCase();
-                    estadoEl.textContent = estadoText;
-                    
-                    // Colores según estado
-                    estadoEl.style.background = '#f1f5f9'; estadoEl.style.color = '#64748b';
-                    if (estadoText === 'ACTIVO') { estadoEl.style.background = '#e0f2fe'; estadoEl.style.color = '#0284c7'; }
-                    else if (estadoText === 'TRANSFERIDO') { estadoEl.style.background = '#fef3c7'; estadoEl.style.color = '#d97706'; }
-                    else if (estadoText === 'FALLECIDO') { estadoEl.style.background = '#fee2e2'; estadoEl.style.color = '#dc2626'; }
-
-                    const formatDate = (dStr) => {
-                        if (!dStr) return '—';
-                        const d = new Date(dStr + 'T00:00:00');
-                        return isNaN(d) ? dStr : d.toLocaleDateString('es-PE');
-                    };
-
-                    document.getElementById('rn-res-fnac').textContent = formatDate(rn.fecha_nacimiento);
-                    document.getElementById('rn-res-estab').textContent = rn.establecimiento || '—';
-
-                    consultaRnResult.classList.add('show');
-                }
-            } catch (err) {
-                console.error(err);
-                consultaErrorMsg.textContent = 'Error al consultar. Intente nuevamente.';
-                consultaErrorMsg.style.color = '#ef4444';
-            } finally {
-                consultaRnBtn.disabled = false;
-                consultaRnSpinner.classList.add('hidden');
-                consultaRnBtn.querySelector('.btn-text').style.visibility = 'visible';
+    if (window.crearCalendario) {
+        const fechaCal = window.crearCalendario({
+            mode: 'single',
+            grid: document.getElementById('consulta-cal-grid'),
+            title: document.getElementById('consulta-cal-title'),
+            month: document.getElementById('consulta-cal-month'),
+            year: document.getElementById('consulta-cal-year'),
+            prev: document.getElementById('consulta-cal-prev'),
+            next: document.getElementById('consulta-cal-next'),
+            today: document.getElementById('consulta-cal-today'),
+            onDayClick: (dateObj) => {
+                const dd = String(dateObj.getDate()).padStart(2, '0');
+                const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+                const yyyy = dateObj.getFullYear();
+                fechaInput.value = `${dd}/${mm}/${yyyy}`;
+                closeFechaPopover();
+                buscarRecienNacidos();
             }
+        });
+
+        openFechaPopover = () => {
+            const popover = document.getElementById('consulta-date-popover');
+            const rect = fechaInput.getBoundingClientRect();
+            popover.style.top = (rect.bottom + 6) + 'px';
+            popover.style.left = Math.max(10, Math.min(rect.left, window.innerWidth - 330)) + 'px';
+            popover.classList.add('show');
+            fechaCal.render();
+        };
+
+        closeFechaPopover = () => {
+            document.getElementById('consulta-date-popover').classList.remove('show');
+        };
+
+        const toggleFechaPopover = (e) => {
+            e.stopPropagation();
+            const popover = document.getElementById('consulta-date-popover');
+            if (popover.classList.contains('show')) {
+                closeFechaPopover();
+            } else {
+                openFechaPopover();
+            }
+        };
+
+        document.getElementById('consulta-cal-month-search').addEventListener('click', () => {
+            const monthSel = document.getElementById('consulta-cal-month');
+            const yearSel = document.getElementById('consulta-cal-year');
+            const mm = String(Number(monthSel.value) + 1).padStart(2, '0');
+            const yyyy = yearSel.value;
+            fechaInput.value = `${mm}/${yyyy}`;
+            closeFechaPopover();
+            buscarRecienNacidos();
+        });
+
+        document.getElementById('consulta-date-icon').addEventListener('click', toggleFechaPopover);
+        fechaInput.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const popover = document.getElementById('consulta-date-popover');
+            if (!popover.classList.contains('show')) {
+                openFechaPopover();
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            const popover = document.getElementById('consulta-date-popover');
+            if (popover.classList.contains('show') &&
+                !popover.contains(e.target) &&
+                !e.target.closest('.consulta-input-row')) {
+                closeFechaPopover();
+            }
+        }, true);
+    }
+
+    consultaFilterBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const filter = btn.dataset.filter;
+            const isActive = btn.classList.contains('active');
+
+            if (isActive && filter === 'bebe') return;
+
+            btn.classList.toggle('active');
+
+            const group = document.querySelector(`.consulta-input-group[data-filter="${filter}"]`);
+            if (group) {
+                if (btn.classList.contains('active')) {
+                    group.style.display = 'inline-flex';
+                    const input = group.querySelector('input');
+                    input.focus();
+                    if (filter === 'fecha' && openFechaPopover) {
+                        setTimeout(openFechaPopover, 200);
+                    }
+                } else {
+                    group.style.display = 'none';
+                    group.querySelector('input').value = '';
+                }
+            }
+        });
+    });
+
+    // ── Autoformato fecha: solo números, inserta / automático ──
+    if (fechaInput) {
+        fechaInput.addEventListener('input', () => {
+            let val = fechaInput.value.replace(/\D/g, '').slice(0, 8);
+            let formatted = '';
+            for (let i = 0; i < val.length; i++) {
+                if (i === 2 || i === 4) formatted += '/';
+                formatted += val[i];
+            }
+            fechaInput.value = formatted;
         });
     }
 
+    // ── Botones Buscar / Limpiar ──
+    const buscarBtn = document.querySelector('.consulta-action-btn.buscar');
+    const limpiarBtn = document.querySelector('.consulta-action-btn.limpiar');
+
+    if (buscarBtn) {
+        buscarBtn.addEventListener('click', buscarRecienNacidos);
+    }
+    if (limpiarBtn) {
+        limpiarBtn.addEventListener('click', () => {
+            consultaFilterBtns.forEach(btn => {
+                const filter = btn.dataset.filter;
+                if (filter === 'bebe') {
+                    if (!btn.classList.contains('active')) btn.classList.add('active');
+                    const group = document.querySelector(`.consulta-input-group[data-filter="bebe"]`);
+                    group.style.display = 'inline-flex';
+                    group.querySelector('input').value = '';
+                } else {
+                    btn.classList.remove('active');
+                    const group = document.querySelector(`.consulta-input-group[data-filter="${filter}"]`);
+                    if (group) {
+                        group.style.display = 'none';
+                        group.querySelector('input').value = '';
+                    }
+                }
+            });
+            resultsPlaceholder.style.display = 'flex';
+            resultsPlaceholder.innerHTML = 'Ingresa apellidos del bebé o de la mamá';
+            resultsTable.style.display = 'none';
+            if (typeof closeFechaPopover === 'function') closeFechaPopover();
+        });
+    }
+
+    const resultsContainer = document.getElementById('consulta-results');
+    const resultsTable = document.getElementById('consulta-results-table');
+    const resultsBody = document.getElementById('consulta-results-body');
+    const resultsPlaceholder = document.getElementById('consulta-results-placeholder');
+
+    function parseFechaInput(val) {
+        if (!val) return null;
+        const parts = val.split('/');
+        if (parts.length === 3) {
+            const [dd, mm, yyyy] = parts.map(Number);
+            if (dd && mm && yyyy) return { type: 'day', yyyy, mm, dd };
+        }
+        if (parts.length === 2) {
+            const [mm, yyyy] = parts.map(Number);
+            if (mm && yyyy) return { type: 'month', yyyy, mm };
+        }
+        if (parts.length === 1 && val.length === 4) {
+            const yyyy = Number(val);
+            if (yyyy) return { type: 'year', yyyy };
+        }
+        return null;
+    }
+
+    function mostrarResultados(data, count) {
+        resultsPlaceholder.style.display = 'none';
+            if (data.length === 0) {
+                resultsTable.style.display = 'none';
+                resultsPlaceholder.style.display = 'flex';
+                resultsPlaceholder.innerHTML = 'No se encontraron resultados';
+                return;
+            }
+        resultsTable.style.display = '';
+        resultsBody.innerHTML = '';
+        data.forEach((row, i) => {
+            const tr = document.createElement('tr');
+            const fecha = row.fecha_nacimiento ? new Date(row.fecha_nacimiento + 'T00:00:00') : null;
+            const fechaStr = fecha
+                ? `${String(fecha.getDate()).padStart(2,'0')}/${String(fecha.getMonth()+1).padStart(2,'0')}/${fecha.getFullYear()}`
+                : '—';
+            tr.innerHTML = `
+                <td>${i + 1}</td>
+                <td>${row.nombre_rn || '—'}</td>
+                <td>${row.nombre_mama || '—'}</td>
+                <td>${fechaStr}</td>
+                <td>${row.estado_temporal || '—'}</td>
+                <td>${row.establecimiento || '—'}</td>
+            `;
+            resultsBody.appendChild(tr);
+        });
+    }
+
+    function mostrarLoading() {
+        resultsPlaceholder.style.display = 'flex';
+        resultsPlaceholder.innerHTML = 'Buscando...';
+        resultsTable.style.display = 'none';
+    }
+
+    function mostrarError(msg) {
+        resultsPlaceholder.style.display = 'flex';
+        resultsPlaceholder.innerHTML = msg;
+        resultsTable.style.display = 'none';
+    }
+
+    async function buscarRecienNacidos() {
+        const bebeGroup = document.querySelector('.consulta-input-group[data-filter="bebe"]');
+        const mamaGroup = document.querySelector('.consulta-input-group[data-filter="mama"]');
+        const fechaGroup = document.querySelector('.consulta-input-group[data-filter="fecha"]');
+
+        const bebeVal = bebeGroup && bebeGroup.style.display !== 'none'
+            ? (bebeGroup.querySelector('input').value.trim()) : '';
+        const mamaVal = mamaGroup && mamaGroup.style.display !== 'none'
+            ? (mamaGroup.querySelector('input').value.trim()) : '';
+        const fechaVal = fechaGroup && fechaGroup.style.display !== 'none'
+            ? (fechaInput.value.trim()) : '';
+
+        if (!bebeVal && !mamaVal && !fechaVal) {
+            const mamaVisible = mamaGroup && mamaGroup.style.display !== 'none';
+            const fechaVisible = fechaGroup && fechaGroup.style.display !== 'none';
+            const msg = (!mamaVisible && !fechaVisible)
+                ? 'Ingresa apellidos del bebé'
+                : 'Ingresa apellidos del bebé o de la mamá';
+            mostrarError(msg);
+            return;
+        }
+
+        mostrarLoading();
+        if (typeof closeFechaPopover === 'function') closeFechaPopover();
+
+        let query = supabaseClient.from('recien_nacidos_temporales').select('*', { count: 'exact' });
+
+        if (bebeVal) {
+            query = query.ilike('nombre_rn', `%${bebeVal}%`);
+        }
+        if (mamaVal) {
+            query = query.ilike('nombre_mama', `%${mamaVal}%`);
+        }
+
+        if (fechaVal) {
+            const parsed = parseFechaInput(fechaVal);
+            if (!parsed) {
+                mostrarError('Formato de fecha inválido. Usa dd/mm/aaaa, mm/aaaa o aaaa');
+                return;
+            }
+            if (parsed.type === 'day') {
+                const iso = `${parsed.yyyy}-${String(parsed.mm).padStart(2,'0')}-${String(parsed.dd).padStart(2,'0')}`;
+                query = query.eq('fecha_nacimiento', iso);
+            } else if (parsed.type === 'month') {
+                const start = `${parsed.yyyy}-${String(parsed.mm).padStart(2,'0')}-01`;
+                const endDate = new Date(parsed.yyyy, parsed.mm, 0);
+                const end = `${parsed.yyyy}-${String(parsed.mm).padStart(2,'0')}-${String(endDate.getDate()).padStart(2,'0')}`;
+                query = query.gte('fecha_nacimiento', start).lte('fecha_nacimiento', end);
+            } else {
+                const start = `${parsed.yyyy}-01-01`;
+                const end = `${parsed.yyyy}-12-31`;
+                query = query.gte('fecha_nacimiento', start).lte('fecha_nacimiento', end);
+            }
+        }
+
+        query = query.order('fecha_nacimiento', { ascending: false }).limit(500);
+
+        try {
+            const { data, error, count } = await query;
+            if (error) {
+                console.error('[Consulta RN] Error:', error);
+                mostrarError('Error al buscar. Intenta de nuevo.');
+                return;
+            }
+            mostrarResultados(data || [], count || 0);
+        } catch (err) {
+            console.error('[Consulta RN] Error inesperado:', err);
+            mostrarError('Error de conexión. Verifica tu red.');
+        }
+    }
+
+    document.querySelectorAll('.consulta-input-group input').forEach(input => {
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') buscarRecienNacidos();
+        });
+    });
 });

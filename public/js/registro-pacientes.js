@@ -92,6 +92,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         dvGroup.style.display = tipo === 'DNI' ? 'block' : 'none';
 
         inputDni.focus();
+
+        const dniValue = getRawDni();
+        if (tipo === 'DNI_TEMPORAL' && dniValue) {
+            tryAutoFillTemporal(dniValue);
+        }
     };
 
     const highlightError = (el) => {
@@ -127,7 +132,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const missing = [];
         const isDni = (tipoDocumento?.value || 'DNI') === 'DNI';
 
-        if (getRawDni().length !== 8) {
+        if (isDni && getRawDni().length !== 8) {
             missing.push({ el: inputDni, msg: 'El DNI debe tener exactamente 8 dígitos' });
         }
 
@@ -227,6 +232,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             // Ocultar Condición en modo modal
             if (fieldCondicion) fieldCondicion.style.display = 'none';
+            // Placeholder solo visible cuando se abre desde Consulta-Datos
+            const hcInput = document.getElementById('paciente-hc');
+            if (hcInput) hcInput.placeholder = 'Opcional';
         }
 
         // Sincronizar display del tipo de documento (prefijo, DV, custom dropdown)
@@ -675,19 +683,93 @@ document.addEventListener('DOMContentLoaded', async () => {
     // ============================================
     // VALIDACIÓN DE DNI (8 DÍGITOS OBLIGATORIOS)
     // ============================================
+    async function tryAutoFillTemporal(dniVal) {
+        if (!dniVal) return;
+        const { data, error } = await client
+            .from('recien_nacidos_temporales')
+            .select('*')
+            .or(`cod_temporal.eq.${dniVal},cod_temporal.eq.E-${dniVal}`)
+            .maybeSingle();
+            
+        if (data) {
+            // Split name
+            const fullName = (data.nombre_rn || '').trim();
+            const parts = fullName.split(/\s+/);
+            let apellidos = fullName;
+            let nombres = '';
+            if (parts.length >= 3) {
+                apellidos = parts.slice(0, 2).join(' ');
+                nombres = parts.slice(2).join(' ');
+            } else if (parts.length === 2) {
+                apellidos = parts[0];
+                nombres = parts[1];
+            }
+
+            const elApellidos = document.getElementById('paciente-apellidos');
+            const elNombres = document.getElementById('paciente-nombres');
+            if (elApellidos) {
+                elApellidos.value = apellidos;
+                elApellidos.dispatchEvent(new Event('input'));
+                elApellidos.dispatchEvent(new Event('change'));
+            }
+            if (elNombres) {
+                elNombres.value = nombres;
+                elNombres.dispatchEvent(new Event('input'));
+                elNombres.dispatchEvent(new Event('change'));
+            }
+            
+            if (data.fecha_nacimiento) {
+                const p = data.fecha_nacimiento.split('-');
+                if (p.length === 3) {
+                    fnacInput.value = `${p[2]}/${p[1]}/${p[0]}`;
+                    fnacInput.dispatchEvent(new Event('input'));
+                    fnacInput.dispatchEvent(new Event('change'));
+                }
+            }
+            
+            setSelectValueCaseInsensitive(selectSeguro, 'SIS');
+            selectSeguro.dispatchEvent(new Event('change'));
+            if (selectSeguro.customDropdownUpdate) selectSeguro.customDropdownUpdate();
+
+            if (window.showSystemTooltip) {
+                window.showSystemTooltip('Datos importados del registro temporal (SIS)', false);
+            }
+        }
+    }
+
     inputDni.addEventListener('blur', () => {
         const dniValue = getRawDni();
-        if (dniValue && dniValue.length !== 8) {
+        const isDni = (tipoDocumento?.value || 'DNI') === 'DNI';
+        
+        if (isDni && dniValue && dniValue.length !== 8) {
             inputDni.setCustomValidity('El DNI debe contener exactamente 8 dígitos numéricos');
         } else {
             inputDni.setCustomValidity('');
         }
     });
 
+    let temporalDebounceTimer;
     inputDni.addEventListener('input', () => {
         const dniValue = getRawDni();
-        if (dniValue.length === 8) {
-            inputDni.setCustomValidity('');
+        const tipo = tipoDocumento?.value || 'DNI';
+
+        if (tipo === 'DNI') {
+            if (dniValue.length === 8) {
+                inputDni.setCustomValidity('');
+                checkDniExists(dniValue);
+            } else {
+                removeDniExistsTooltip();
+            }
+        } else if (tipo === 'DNI_TEMPORAL') {
+            removeDniExistsTooltip();
+            if (dniValue) {
+                clearTimeout(temporalDebounceTimer);
+                temporalDebounceTimer = setTimeout(() => {
+                    tryAutoFillTemporal(dniValue);
+                }, 600);
+            }
+        } else {
+            removeDniExistsTooltip();
         }
     });
 
@@ -767,14 +849,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.body.appendChild(tooltip);
     }
 
-    inputDni.addEventListener('input', () => {
-        const dni = getRawDni();
-        if (dni.length === 8) {
-            checkDniExists(dni);
-        } else {
-            removeDniExistsTooltip();
-        }
-    });
+    // El control de existencia de DNI se maneja consolidadamente en el listener de input anterior
 
     // ============================================
     // OBTENER FECHA DE NACIMIENTO (Cloudflare Worker)

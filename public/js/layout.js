@@ -64,8 +64,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 </a>
             </div>
 
-            <div class="nav-item">
-                <a href="javascript:void(0)" class="nav-link" onclick="alert('⚙️ Módulo de Recién Nacidos en desarrollo. Próximamente disponible.')">
+            <div class="nav-item ${currentPage === 'recien-nacidos.html' ? 'active' : ''}">
+                <a href="${bp}modulos/recien-nacidos/recien-nacidos.html" class="nav-link">
                     <i class="fa-solid fa-baby"></i>
                     <span>Recién Nacidos Temporales</span>
                 </a>
