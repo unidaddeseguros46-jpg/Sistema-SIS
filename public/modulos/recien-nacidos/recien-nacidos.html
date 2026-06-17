@@ -113,51 +113,19 @@
                         <!-- FILA 1: COD TEMPORAL | FECHA REGISTRO -->
                         <div class="input-stacked col-span-3">
                             <label>Código Temporal</label>
-                            <input type="text" id="rn-cod-temporal" class="standard-input" required
-                                placeholder="Ej: RN-2025-001"
-                                style="text-transform: uppercase;">
+                            <div style="display:flex; align-items:stretch;">
+                                <span id="rn-cod-temporal-prefix" style="font-weight:700; color:#475569; background:#f1f5f9; padding:10px 10px; border:1px solid #e2e8f0; border-right:none; border-radius:8px 0 0 8px; font-size:14px; white-space:nowrap; line-height:1; display:flex; align-items:center; justify-content:center;">E- </span>
+                                <input type="text" id="rn-cod-temporal" class="standard-input" required
+                                    placeholder="10733526"
+                                    oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+                                    style="border-radius:0 8px 8px 0; flex:1; min-width:0;">
+                            </div>
                         </div>
 
                         <div class="input-stacked col-span-3" style="position:relative;">
                             <label>Fecha de Registro</label>
                             <div style="position:relative;">
-                                <div id="rn-fregistro-trigger" style="position:absolute; left:0; top:0; bottom:0; width:40px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#94a3b8; z-index:1;">
-                                    <i class="fa-regular fa-calendar"></i>
-                                </div>
-                                <i class="fa-solid fa-chevron-down" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); color:#94a3b8; font-size:10px; pointer-events:none;"></i>
-                                <input type="text" id="rn-fecha-registro" class="standard-input" placeholder="dd/mm/aaaa" autocomplete="off" required style="padding-left:40px; padding-right:30px;">
-                            </div>
-                            <div class="cr-date-popover" id="rn-fregistro-popover" style="display:none; position:fixed; z-index:10003; background:#ffffff; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.12),0 2px 8px rgba(0,0,0,0.06); padding:16px 20px; width:320px; animation:popoverIn 0.2s cubic-bezier(0.16,1,0.3,1) forwards;">
-                                <div class="cal-filters" style="display:flex; gap:8px; align-items:flex-end; margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid #f1f5f9;">
-                                    <div class="filter-group" style="display:flex; flex-direction:column; gap:3px; flex:1;">
-                                        <label style="font-size:10px; font-weight:600; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em;">Mes</label>
-                                        <select id="rn-fregistro-month" class="filter-select"></select>
-                                    </div>
-                                    <div class="filter-group" style="display:flex; flex-direction:column; gap:3px; flex:1;">
-                                        <label style="font-size:10px; font-weight:600; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em;">Año</label>
-                                        <select id="rn-fregistro-year" class="filter-select"></select>
-                                    </div>
-                                    <button type="button" id="rn-fregistro-today" class="btn-module btn-clear-hover" style="padding:5px 12px; font-size:11px; white-space:nowrap; height:fit-content;">Hoy</button>
-                                </div>
-                                <div class="calendar-header" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
-                                    <button type="button" class="cal-nav-btn" id="rn-fregistro-prev" style="width:30px; height:30px; border-radius:6px; border:1px solid #e2e8f0; background:#ffffff; color:#64748b; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; font-size:12px;">
-                                        <i class="fa-solid fa-chevron-left"></i>
-                                    </button>
-                                    <div class="cal-title" id="rn-fregistro-title" style="font-size:14px; font-weight:700; color:#0f172a;"></div>
-                                    <button type="button" class="cal-nav-btn" id="rn-fregistro-next" style="width:30px; height:30px; border-radius:6px; border:1px solid #e2e8f0; background:#ffffff; color:#64748b; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; font-size:12px;">
-                                        <i class="fa-solid fa-chevron-right"></i>
-                                    </button>
-                                </div>
-                                <div class="cal-weekdays" style="display:grid; grid-template-columns:repeat(7,1fr); gap:3px; margin-bottom:6px;">
-                                    <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">D</span>
-                                    <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">L</span>
-                                    <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">M</span>
-                                    <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">MI</span>
-                                    <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">J</span>
-                                    <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">V</span>
-                                    <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">S</span>
-                                </div>
-                                <div class="cal-days-grid" id="rn-fregistro-days-grid" style="display:grid; grid-template-columns:repeat(7,1fr); gap:3px;"></div>
+                                <input type="text" id="rn-fecha-registro" class="standard-input" placeholder="dd/mm/aaaa" autocomplete="off" required disabled style="padding-left:15px; padding-right:15px;">
                             </div>
                         </div>
 
@@ -175,7 +143,7 @@
                                     <i class="fa-regular fa-calendar"></i>
                                 </div>
                                 <i class="fa-solid fa-chevron-down" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); color:#94a3b8; font-size:10px; pointer-events:none;"></i>
-                                <input type="text" id="rn-fecha-nacimiento" class="standard-input" placeholder="dd/mm/aaaa" autocomplete="off" style="padding-left:40px; padding-right:30px;">
+                                <input type="text" id="rn-fecha-nacimiento" class="standard-input" placeholder="dd/mm/aaaa" autocomplete="off" required style="padding-left:40px; padding-right:30px;">
                             </div>
                             <div class="cr-date-popover" id="rn-fnac-popover" style="display:none; position:fixed; z-index:10003; background:#ffffff; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.12),0 2px 8px rgba(0,0,0,0.06); padding:16px 20px; width:320px; animation:popoverIn 0.2s cubic-bezier(0.16,1,0.3,1) forwards;">
                                 <div class="cal-filters" style="display:flex; gap:8px; align-items:flex-end; margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid #f1f5f9;">
@@ -220,9 +188,8 @@
                                  <select id="rn-tipo-doc-mama" class="global-search-input custom-select-source"
                                     style="border:none; padding:0; outline:none; flex:1; min-width:0; appearance:none; -webkit-appearance:none; cursor:pointer; color:inherit; background:transparent; font-size:13px;">
                                     <option value="DNI">DNI</option>
-                                    <option value="CARNET DE EXTRANJERÍA">Carnet de Extranjería</option>
-                                    <option value="PASAPORTE">Pasaporte</option>
-                                    <option value="OTRO">Otro</option>
+                                    <option value="CEDULA_IDEN">CÉDULA DE IDENTIDAD</option>
+                                    <option value="CARNET_EXT">CARNET DE EXTRANJERÍA</option>
                                 </select>
                                 <i class="fa-solid fa-chevron-down"
                                     style="position:absolute; right:15px; color:#64748b; font-size:12px; pointer-events:none;"></i>
@@ -231,14 +198,14 @@
 
                         <div class="input-stacked col-span-2">
                             <label>Nº Documento Mamá</label>
-                            <input type="text" id="rn-num-doc-mama" class="standard-input"
+                            <input type="text" id="rn-num-doc-mama" class="standard-input" required
                                 oninput="this.value = this.value.replace(/[^0-9]/g, '')"
                                 maxlength="15">
                         </div>
 
                         <div class="input-stacked col-span-2">
                             <label>Apellidos y Nombres Mamá</label>
-                            <input type="text" id="rn-nombre-mama" class="standard-input"
+                            <input type="text" id="rn-nombre-mama" class="standard-input" required
                                 oninput="this.value = this.value.replace(/[^A-Za-zñÑáéíóúÁÉÍÓÚ\s]/g, '')">
                         </div>
 
@@ -257,9 +224,8 @@
                                     style="border:none; padding:0; outline:none; flex:1; min-width:0; appearance:none; -webkit-appearance:none; cursor:pointer; color:inherit; background:transparent; font-size:13px;">
                                     <option value="">Sin documento</option>
                                     <option value="DNI">DNI</option>
-                                    <option value="CARNET DE EXTRANJERÍA">Carnet de Extranjería</option>
-                                    <option value="PASAPORTE">Pasaporte</option>
-                                    <option value="OTRO">Otro</option>
+                                    <option value="CEDULA_IDEN">CÉDULA DE IDENTIDAD</option>
+                                    <option value="CARNET_EXT">CARNET DE EXTRANJERÍA</option>
                                 </select>
                                 <i class="fa-solid fa-chevron-down"
                                     style="position:absolute; right:15px; color:#64748b; font-size:12px; pointer-events:none;"></i>
@@ -274,7 +240,7 @@
                         </div>
 
                         <!-- FILA 5: TIPO SEGURO PAPA | ESTADO TEMPORAL -->
-                        <div class="input-stacked col-span-3">
+                        <div class="input-stacked col-span-2">
                             <label>Tipo Seguro del Papá</label>
                             <div class="global-search-box"
                                 style="width:100%; display:flex; align-items:center; background:#ffffff; border-radius:8px; border:1px solid #e2e8f0; padding:0 15px; position:relative; height:42px;">
@@ -282,27 +248,28 @@
                                  <select id="rn-tipo-seguro-papa" class="global-search-input custom-select-source"
                                     style="border:none; padding:0; outline:none; flex:1; min-width:0; appearance:none; -webkit-appearance:none; cursor:pointer; color:inherit; background:transparent; font-size:13px;">
                                     <option value="">Sin seguro</option>
-                                    <option value="ESSALUD">EsSalud</option>
+                                    <option value="EPS">EPS</option>
+                                    <option value="ESSALUD">ESSALUD</option>
+                                    <option value="SALUDPOL">SALUDPOL</option>
+                                    <option value="SANIDADES">SANIDADES</option>
+                                    <option value="SANITAS">SANITAS</option>
+                                    <option value="SCTR">SCTR</option>
                                     <option value="SIS">SIS</option>
-                                    <option value="SALUDPOL">Saludpol</option>
-                                    <option value="PRIVADO">Privado</option>
-                                    <option value="OTRO">Otro</option>
                                 </select>
                                 <i class="fa-solid fa-chevron-down"
                                     style="position:absolute; right:15px; color:#64748b; font-size:12px; pointer-events:none;"></i>
                             </div>
                         </div>
 
-                        <div class="input-stacked col-span-3">
+                        <div class="input-stacked col-span-2">
                             <label>Estado Temporal</label>
                             <div class="global-search-box"
                                 style="width:100%; display:flex; align-items:center; background:#ffffff; border-radius:8px; border:1px solid #e2e8f0; padding:0 15px; position:relative; height:42px;">
                                 <i class="fa-solid fa-circle-info" style="color:#64748b; margin-right:10px;"></i>
                                  <select id="rn-estado-temporal" class="global-search-input custom-select-source"
                                     style="border:none; padding:0; outline:none; flex:1; min-width:0; appearance:none; -webkit-appearance:none; cursor:pointer; color:inherit; background:transparent; font-size:13px;">
-                                    <option value="ACTIVO" selected>Activo</option>
-                                    <option value="INACTIVO">Inactivo</option>
-                                    <option value="TRANSFERIDO">Transferido</option>
+                                    <option value="ACTIVO" selected>ACTIVO</option>
+                                    <option value="CANCELADO">CANCELADO</option>
                                 </select>
                                 <i class="fa-solid fa-chevron-down"
                                     style="position:absolute; right:15px; color:#64748b; font-size:12px; pointer-events:none;"></i>

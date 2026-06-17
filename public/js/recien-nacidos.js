@@ -63,10 +63,60 @@ document.addEventListener('DOMContentLoaded', () => {
         loadingDiv.style.display = 'block';
         document.getElementById('rn-table').style.display = 'none';
 
-        const { data, error } = await supabaseClient
+        const start = (currentPage - 1) * pageSize;
+        const end = start + pageSize - 1;
+
+        const search = (searchInput.value || '').trim();
+        const estado = filterEstado.value;
+
+        let query = supabaseClient
             .from('recien_nacidos_temporales')
-            .select('*')
-            .order('creado_en', { ascending: false });
+            .select('*', { count: 'exact' })
+            .order('creado_en', { ascending: false })
+            .range(start, end);
+
+        if (estado) {
+            query = query.eq('estado_temporal', estado.toUpperCase());
+        }
+
+        if (search) {
+            const cleanQuery = search;
+            const digitsOnly = cleanQuery.replace(/[^0-9]/g, '');
+            const queryWithoutPrefix = cleanQuery.replace(/^E-\s*/i, '');
+
+            const terms = [];
+            
+            // Buscar por cod_temporal de distintas maneras
+            terms.push(`cod_temporal.ilike.%${cleanQuery}%`);
+            if (queryWithoutPrefix !== cleanQuery) {
+                terms.push(`cod_temporal.ilike.%${queryWithoutPrefix}%`);
+            }
+            if (digitsOnly && digitsOnly !== cleanQuery && digitsOnly !== queryWithoutPrefix) {
+                terms.push(`cod_temporal.ilike.%${digitsOnly}%`);
+            }
+            // Si la búsqueda es numérica, buscar también con el prefijo "E-"
+            if (/^\d+$/.test(cleanQuery)) {
+                terms.push(`cod_temporal.ilike.%E-${cleanQuery}%`);
+            }
+
+            // Buscar por campos de texto
+            terms.push(`nombre_rn.ilike.%${cleanQuery}%`);
+            terms.push(`nombre_mama.ilike.%${cleanQuery}%`);
+            terms.push(`establecimiento.ilike.%${cleanQuery}%`);
+
+            // Buscar por documentos numéricos de los padres
+            if (digitsOnly) {
+                const numericVal = parseInt(digitsOnly);
+                if (!isNaN(numericVal)) {
+                    terms.push(`num_doc_mama.eq.${numericVal}`);
+                    terms.push(`num_doc_papa.eq.${numericVal}`);
+                }
+            }
+
+            query = query.or(terms.join(','));
+        }
+
+        const { data, count, error } = await query;
 
         loadingDiv.style.display = 'none';
         document.getElementById('rn-table').style.display = '';
@@ -78,45 +128,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         allRecords = data || [];
-        currentPage = 1;
-        renderTable();
-    };
-
-    // ── Filtrar ──
-    const getFiltered = () => {
-        const search = (searchInput.value || '').trim().toUpperCase();
-        const estado = filterEstado.value;
-
-        return allRecords.filter(r => {
-            if (estado && (r.estado_temporal || '').toUpperCase() !== estado.toUpperCase()) return false;
-            if (search) {
-                const fields = [
-                    r.cod_temporal, r.nombre_rn, r.nombre_mama,
-                    r.num_doc_mama ? String(r.num_doc_mama) : '',
-                    r.num_doc_papa ? String(r.num_doc_papa) : '',
-                    r.establecimiento
-                ].map(f => (f || '').toUpperCase());
-                return fields.some(f => f.includes(search));
-            }
-            return true;
-        });
+        const totalCount = count || 0;
+        renderTable(totalCount);
     };
 
     // ── Renderizar tabla ──
-    const renderTable = () => {
-        const filtered = getFiltered();
-        const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+    const renderTable = (totalCount) => {
+        const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
         if (currentPage > totalPages) currentPage = totalPages;
 
-        const start = (currentPage - 1) * pageSize;
-        const pageData = filtered.slice(start, start + pageSize);
-
-        if (filtered.length === 0) {
+        if (allRecords.length === 0) {
             tbody.innerHTML = `<tr><td colspan="9" style="text-align:center; padding:30px; color:#94a3b8;">
                 <i class="fa-solid fa-inbox" style="font-size:2rem; margin-bottom:10px; display:block;"></i>
                 No se encontraron registros</td></tr>`;
         } else {
-            tbody.innerHTML = pageData.map(r => `
+            tbody.innerHTML = allRecords.map(r => `
                 <tr data-id="${r.id}">
                     <td style="font-weight:600; color:#0f172a;">${r.cod_temporal || '—'}</td>
                     <td>${formatDate(r.fecha_registro)}</td>
@@ -139,7 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (typeof window.renderPaginationControls === 'function') {
             window.renderPaginationControls(paginationDiv, currentPage, totalPages, (p) => {
                 currentPage = p;
-                renderTable();
+                loadRecords();
             });
         } else {
             renderSimplePagination(paginationDiv, currentPage, totalPages);
@@ -164,7 +190,7 @@ document.addEventListener('DOMContentLoaded', () => {
         container.querySelectorAll('[data-page]').forEach(btn => {
             btn.addEventListener('click', () => {
                 const p = parseInt(btn.dataset.page);
-                if (p >= 1 && p <= total) { currentPage = p; renderTable(); }
+                if (p >= 1 && p <= total) { currentPage = p; loadRecords(); }
             });
         });
     };
@@ -172,10 +198,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // ── Eventos de búsqueda y filtro ──
     searchInput.addEventListener('input', () => {
         clearTimeout(searchDebounce);
-        searchDebounce = setTimeout(() => { currentPage = 1; renderTable(); }, 250);
+        searchDebounce = setTimeout(() => { currentPage = 1; loadRecords(); }, 250);
     });
 
-    filterEstado.addEventListener('change', () => { currentPage = 1; renderTable(); });
+    filterEstado.addEventListener('change', () => { currentPage = 1; loadRecords(); });
 
     // ── Toggle Lista / Formulario ──
     const showList = () => {
@@ -202,10 +228,20 @@ document.addEventListener('DOMContentLoaded', () => {
         fechaRegInput.value = `${dd}/${mm}/${yyyy}`;
         fechaRegInput.dataset.calDateValue = `${yyyy}-${mm}-${dd}`;
 
+        // Sincronizar selects customizados después del reset del formulario
+        ['rn-tipo-doc-mama','rn-tipo-doc-papa','rn-tipo-seguro-papa','rn-estado-temporal'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el && el.customDropdownUpdate) el.customDropdownUpdate();
+        });
+
         if (editData) {
             editIdField.value = editData.id;
             guardarText.textContent = 'Actualizar';
-            document.getElementById('rn-cod-temporal').value = editData.cod_temporal || '';
+            let cod = editData.cod_temporal || '';
+            if (cod.startsWith('E-')) {
+                cod = cod.substring(2);
+            }
+            document.getElementById('rn-cod-temporal').value = cod;
             const fechaReg = editData.fecha_registro || '';
             const rnFechaRegInput = document.getElementById('rn-fecha-registro');
             rnFechaRegInput.value = isoToDisplay(fechaReg);
@@ -217,14 +253,28 @@ document.addEventListener('DOMContentLoaded', () => {
             const rnFechaNacInput = document.getElementById('rn-fecha-nacimiento');
             rnFechaNacInput.value = isoToDisplay(fechaNac);
             rnFechaNacInput.dataset.calDateValue = fechaNac;
-            document.getElementById('rn-tipo-doc-mama').value = editData.tipo_doc_mama || 'DNI';
+
+            const mapOldDocType = (val) => {
+                if (!val) return '';
+                const u = val.toUpperCase().trim();
+                if (u.includes('EXTRANJER')) return 'CARNET_EXT';
+                if (u.includes('CEDULA') || u.includes('IDENTI')) return 'CEDULA_IDEN';
+                return u;
+            };
+
+            document.getElementById('rn-tipo-doc-mama').value = mapOldDocType(editData.tipo_doc_mama) || 'DNI';
             document.getElementById('rn-num-doc-mama').value = editData.num_doc_mama ? String(editData.num_doc_mama) : '';
             document.getElementById('rn-nombre-mama').value = editData.nombre_mama || '';
             document.getElementById('rn-establecimiento').value = editData.establecimiento || '';
-            document.getElementById('rn-tipo-doc-papa').value = editData.tipo_doc_papa || '';
+            document.getElementById('rn-tipo-doc-papa').value = mapOldDocType(editData.tipo_doc_papa) || '';
             document.getElementById('rn-num-doc-papa').value = editData.num_doc_papa ? String(editData.num_doc_papa) : '';
             document.getElementById('rn-tipo-seguro-papa').value = editData.tipo_seguro_papa || '';
-            document.getElementById('rn-estado-temporal').value = editData.estado_temporal || 'ACTIVO';
+            
+            let estTemp = (editData.estado_temporal || 'ACTIVO').toUpperCase();
+            if (estTemp !== 'ACTIVO' && estTemp !== 'CANCELADO') {
+                estTemp = 'ACTIVO';
+            }
+            document.getElementById('rn-estado-temporal').value = estTemp;
 
             // Sincronizar selects customizados
             ['rn-tipo-doc-mama','rn-tipo-doc-papa','rn-tipo-seguro-papa','rn-estado-temporal'].forEach(id => {
@@ -248,17 +298,89 @@ document.addEventListener('DOMContentLoaded', () => {
         if (record) showForm(record);
     });
 
+    // ── Resaltado de errores visuales y validación con tooltips ──
+    const highlightError = (el) => {
+        const target = el.closest('.global-search-box') || el;
+        if (target.dataset.errorActive === '1') return;
+        target.dataset.errorActive = '1';
+        const origBorder = target.style.borderColor;
+        const origShadow = target.style.boxShadow;
+        target.style.borderColor = '#ef4444';
+        target.style.boxShadow = '0 0 0 3px rgba(239,68,68,0.15)';
+        const clearError = () => {
+            target.style.borderColor = origBorder || '';
+            target.style.boxShadow = origShadow || '';
+            target.dataset.errorActive = '0';
+            el.removeEventListener('input', clearError);
+            el.removeEventListener('change', clearError);
+            if (target !== el) {
+                target.removeEventListener('change', clearError);
+            }
+        };
+        el.addEventListener('input', clearError);
+        el.addEventListener('change', clearError);
+        if (target !== el) {
+            target.addEventListener('change', clearError);
+        }
+        setTimeout(clearError, 5000);
+    };
+
+    const validateForm = () => {
+        const missing = [];
+
+        const codTemporal = document.getElementById('rn-cod-temporal');
+        if (!codTemporal.value.trim()) {
+            missing.push({ el: codTemporal, msg: 'El Código Temporal es obligatorio' });
+        }
+
+        const fechaReg = document.getElementById('rn-fecha-registro');
+        if (!fechaReg.value.trim()) {
+            missing.push({ el: fechaReg, msg: 'La Fecha de Registro es obligatoria' });
+        }
+
+        const nombreRn = document.getElementById('rn-nombre-rn');
+        if (!nombreRn.value.trim()) {
+            missing.push({ el: nombreRn, msg: 'El nombre del Recién Nacido es obligatorio' });
+        }
+
+        const fechaNac = document.getElementById('rn-fecha-nacimiento');
+        if (!fechaNac.value.trim()) {
+            missing.push({ el: fechaNac, msg: 'La Fecha de Nacimiento es obligatoria' });
+        }
+
+        const numDocMama = document.getElementById('rn-num-doc-mama');
+        if (!numDocMama.value.trim()) {
+            missing.push({ el: numDocMama, msg: 'El documento de la madre es obligatorio' });
+        }
+
+        const nombreMama = document.getElementById('rn-nombre-mama');
+        if (!nombreMama.value.trim()) {
+            missing.push({ el: nombreMama, msg: 'El nombre de la madre es obligatorio' });
+        }
+
+        if (missing.length === 0) return true;
+
+        const first = missing[0];
+        if (window.showSystemTooltip) {
+            window.showSystemTooltip(first.msg, true);
+        }
+        if (first.el && first.el.focus) {
+            first.el.focus();
+            first.el.scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+        }
+        highlightError(first.el);
+        return false;
+    };
+
     // ── Guardar / Actualizar ──
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
 
-        const codTemporal = document.getElementById('rn-cod-temporal').value.trim();
-        const nombreRn = document.getElementById('rn-nombre-rn').value.trim();
+        if (!validateForm()) return;
 
-        if (!codTemporal || !nombreRn) {
-            if (window.showSystemTooltip) window.showSystemTooltip('Código temporal y nombre del RN son obligatorios.', true);
-            return;
-        }
+        const codInput = document.getElementById('rn-cod-temporal').value.trim().toUpperCase();
+        const codTemporal = codInput.startsWith('E-') ? codInput : 'E-' + codInput;
+        const nombreRn = document.getElementById('rn-nombre-rn').value.trim();
 
         guardarSpinner.style.display = '';
         guardarText.style.visibility = 'hidden';
@@ -269,7 +391,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         const payload = {
-            cod_temporal: codTemporal.toUpperCase(),
+            cod_temporal: codTemporal,
             fecha_registro: leerFecha('rn-fecha-registro') || new Date().toISOString().split('T')[0],
             nombre_rn: nombreRn,
             fecha_nacimiento: leerFecha('rn-fecha-nacimiento'),
@@ -438,7 +560,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 // Parsear filas
-                const existingCodes = new Set(allRecords.map(r => (r.cod_temporal || '').toUpperCase()));
+                // Consultamos todos los códigos de la BD de forma ligera para no fallar en la validación por paginación
+                const { data: dbCodes, error: dbCodesErr } = await supabaseClient
+                    .from('recien_nacidos_temporales')
+                    .select('cod_temporal');
+                
+                const existingCodes = new Set(
+                    (dbCodes || []).map(r => (r.cod_temporal || '').toUpperCase())
+                );
 
                 parsedRows = json.map((row, idx) => {
                     const mapped = { _rowNum: idx + 2, _status: 'ok' };
@@ -624,6 +753,21 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     };
 
+    // ── Máscara automática dd/mm/yyyy para Fecha de Nacimiento ──
+    const rnFnacInput = document.getElementById('rn-fecha-nacimiento');
+    rnFnacInput.addEventListener('input', function (e) {
+        if (e.inputType && e.inputType.startsWith('delete')) return;
+        let digits = this.value.replace(/\D/g, '').slice(0, 8);
+        let masked = digits;
+        if (digits.length > 2) masked = digits.slice(0, 2) + '/' + digits.slice(2);
+        if (digits.length > 4) masked = digits.slice(0, 2) + '/' + digits.slice(2, 4) + '/' + digits.slice(4, 8);
+        this.value = masked;
+        // Sincronizar dataset para el calendario cuando se escribe fecha completa
+        if (digits.length === 8) {
+            this.dataset.calDateValue = `${digits.slice(4, 8)}-${digits.slice(2, 4)}-${digits.slice(0, 2)}`;
+        }
+    });
+
     // ── Calendarios Popover ──
     const initCalendario = (config) => {
         const { inputId, triggerId, popoverId, monthId, yearId, prevId, nextId, titleId, todayId, daysGridId } = config;
@@ -634,6 +778,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let isOpen = false;
 
         const openPopover = () => {
+            if (input.disabled) return;
             if (isOpen) { closePopover(); return; }
             const r = input.getBoundingClientRect();
             const popH = 350;
@@ -687,13 +832,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return { cal, openPopover, closePopover };
     };
 
-    initCalendario({
-        inputId: 'rn-fecha-registro', triggerId: 'rn-fregistro-trigger',
-        popoverId: 'rn-fregistro-popover', monthId: 'rn-fregistro-month',
-        yearId: 'rn-fregistro-year', prevId: 'rn-fregistro-prev',
-        nextId: 'rn-fregistro-next', titleId: 'rn-fregistro-title',
-        todayId: 'rn-fregistro-today', daysGridId: 'rn-fregistro-days-grid',
-    });
+    // Fecha de registro es no editable (disabled), no necesita calendario
 
     initCalendario({
         inputId: 'rn-fecha-nacimiento', triggerId: 'rn-fnac-trigger',
