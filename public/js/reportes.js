@@ -519,7 +519,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const dataRows = [['DNI', 'HC', 'Apellidos', 'Nombres', 'Fecha Nac.', 'Tipo Doc.', 'Seguro', 'Servicio', 'Condición', 'Creado']];
             patients.forEach(p => {
                 dataRows.push([
-                    p.dni || '',
+                    (p.tipo_documento === 'DNI_TEMPORAL' ? 'E- ' : (p.tipo_documento === 'CARNET_EXT' ? 'C.E ' : '')) + (p.dni || ''),
                     p.historia_clinica || '',
                     p.apellidos || '',
                     p.nombres || '',
