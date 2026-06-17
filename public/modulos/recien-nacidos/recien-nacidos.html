@@ -212,7 +212,7 @@
                         <!-- FILA 4: ESTABLECIMIENTO | TIPO DOC PAPA | NUM DOC PAPA -->
                         <div class="input-stacked col-span-2">
                             <label>Establecimiento de Salud</label>
-                            <input type="text" id="rn-establecimiento" class="standard-input">
+                            <input type="text" id="rn-establecimiento" class="standard-input" placeholder="Opcional">
                         </div>
 
                         <div class="input-stacked col-span-2">
@@ -222,7 +222,7 @@
                                 <i class="fa-solid fa-id-card" style="color:#64748b; margin-right:10px;"></i>
                                  <select id="rn-tipo-doc-papa" class="global-search-input custom-select-source"
                                     style="border:none; padding:0; outline:none; flex:1; min-width:0; appearance:none; -webkit-appearance:none; cursor:pointer; color:inherit; background:transparent; font-size:13px;">
-                                    <option value="">Sin documento</option>
+                                    <option value="">Opcional</option>
                                     <option value="DNI">DNI</option>
                                     <option value="CEDULA_IDEN">CÉDULA DE IDENTIDAD</option>
                                     <option value="CARNET_EXT">CARNET DE EXTRANJERÍA</option>
@@ -234,7 +234,7 @@
 
                         <div class="input-stacked col-span-2">
                             <label>Nº Documento Papá</label>
-                            <input type="text" id="rn-num-doc-papa" class="standard-input"
+                            <input type="text" id="rn-num-doc-papa" class="standard-input" placeholder="Opcional"
                                 oninput="this.value = this.value.replace(/[^0-9]/g, '')"
                                 maxlength="15">
                         </div>
@@ -247,7 +247,7 @@
                                 <i class="fa-solid fa-shield-halved" style="color:#64748b; margin-right:10px;"></i>
                                  <select id="rn-tipo-seguro-papa" class="global-search-input custom-select-source"
                                     style="border:none; padding:0; outline:none; flex:1; min-width:0; appearance:none; -webkit-appearance:none; cursor:pointer; color:inherit; background:transparent; font-size:13px;">
-                                    <option value="">Sin seguro</option>
+                                    <option value="">Opcional</option>
                                     <option value="EPS">EPS</option>
                                     <option value="ESSALUD">ESSALUD</option>
                                     <option value="SALUDPOL">SALUDPOL</option>
