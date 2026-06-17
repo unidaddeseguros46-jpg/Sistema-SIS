@@ -187,7 +187,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     inputDni.addEventListener('input', function () {
-        const digits = this.value.replace(/[^0-9]/g, '').slice(0, 8);
+        const isDni = (tipoDocumento?.value || 'DNI') === 'DNI';
+        const limit = isDni ? 8 : 15;
+        const digits = this.value.replace(/[^0-9]/g, '').slice(0, limit);
         if (digits !== this.value) this.value = digits;
     });
 
