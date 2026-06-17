@@ -496,7 +496,7 @@ ALTER TABLE "public"."hospitalizaciones" OWNER TO "postgres";
 
 CREATE TABLE IF NOT EXISTS "public"."pacientes" (
     "id" "uuid" DEFAULT "extensions"."uuid_generate_v4"() NOT NULL,
-    "dni" character varying(8) NOT NULL,
+    "dni" character varying(15) NOT NULL,
     "historia_clinica" character varying(20),
     "fecha_nacimiento" "date" NOT NULL,
     "apellidos" character varying(100) NOT NULL,

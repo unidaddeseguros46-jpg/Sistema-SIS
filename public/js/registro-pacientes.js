@@ -1230,7 +1230,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // If newly inserted
         if (!objectId) {
-            payload.dni = getRawDni();
+            // Construir DNI con prefijo según tipo de documento
+            const rawDni = getRawDni();
+            const tipoDoc = tipoDocumento?.value || 'DNI';
+            if (tipoDoc === 'DNI_TEMPORAL') {
+                payload.dni = 'E-' + rawDni;
+            } else {
+                payload.dni = rawDni;
+            }
 
             // Obtener fecha en formato ISO (Y-m-d) para Supabase
             const fnacVal = fnacInput.value.trim();
