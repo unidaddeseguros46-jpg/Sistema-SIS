@@ -979,8 +979,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     const isLocal = !window.location.hostname || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const API_BASE = isLocal ? 'https://lens-answers-accidents-emerald.trycloudflare.com' : '/api/rpa';
-    const LOCAL_API_URL = API_BASE + '/get-dob';
+    const RPA_URL = isLocal ? 'https://lens-answers-accidents-emerald.trycloudflare.com/get-dob' : '/api/rpa';
     const btnObtenerFnac = document.getElementById('btn-obtener-fnac');
     const btnFnacText = document.getElementById('btn-fnac-text');
     const fnacSpinner = document.getElementById('fnac-spinner');
@@ -1020,10 +1019,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         fnacSpinner.style.display = 'inline-block';
 
         try {
-            const response = await fetch(LOCAL_API_URL, {
+            const body = isLocal ? { dni: dniValue } : { endpoint: 'get-dob', dni: dniValue };
+            const response = await fetch(RPA_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ dni: dniValue })
+                body: JSON.stringify(body)
             });
 
             const result = await response.json();

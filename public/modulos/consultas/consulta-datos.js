@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     const isLocal = !window.location.hostname || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const LOCAL_API_URL = isLocal ? 'https://lens-answers-accidents-emerald.trycloudflare.com' : '/api/rpa';
+    const RPA_URL = isLocal ? 'https://lens-answers-accidents-emerald.trycloudflare.com' : '/api/rpa';
 
     const showToast = (msg, isError = false) => {
         if (window.showSystemTooltip) {
@@ -200,10 +200,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             };
 
             updateOverlay('Consultando todas las fuentes en paralelo...');
-            const resultado = await fetchWithRetry(`${LOCAL_API_URL}/consulta-completa`, {
+            const body = isLocal ? { dni } : { endpoint: 'consulta-completa', dni };
+            const resultado = await fetchWithRetry(RPA_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ dni }),
+                body: JSON.stringify(body),
                 signal: signal
             });
 

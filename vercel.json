@@ -13,10 +13,5 @@
         { "key": "Permissions-Policy", "value": "geolocation=(), microphone=(), camera=(), payment=()" }
       ]
     }
-  ],
-  "rewrites": [
-    { "source": "/api/rpa/:path*", "destination": "/api/rpa" }
-  ],
-  "redirects": [],
-  "trailingSlash": false
+  ]
 }
