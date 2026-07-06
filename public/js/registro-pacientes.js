@@ -1035,6 +1035,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 if(window.showSystemTooltip) window.showSystemTooltip(result.error || 'No se encontró fecha para este DNI', true);
             }
         } catch (err) {
+            console.error('[RPA] Error de conexión:', err);
             if(window.showSystemTooltip) window.showSystemTooltip('Error de conexión con el servicio', true);
         } finally {
             btnObtenerFnac.disabled = false;
