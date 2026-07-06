@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     const isLocal = !window.location.hostname || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const RPA_URL = isLocal ? 'https://lens-answers-accidents-emerald.trycloudflare.com' : '/api/rpa';
+    const RPA_URL = isLocal ? 'https://lens-answers-accidents-emerald.trycloudflare.com' : 'https://vofqatqocfaqcdcuwama.supabase.co/functions/v1/rpa-proxy';
 
     const showToast = (msg, isError = false) => {
         if (window.showSystemTooltip) {

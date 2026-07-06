@@ -656,7 +656,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             const isLocal = !window.location.hostname || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-            const RPA_URL = isLocal ? 'https://lens-answers-accidents-emerald.trycloudflare.com/validate-batch' : '/api/rpa';
+            const RPA_URL = isLocal ? 'https://lens-answers-accidents-emerald.trycloudflare.com/validate-batch' : 'https://vofqatqocfaqcdcuwama.supabase.co/functions/v1/rpa-proxy';
             const body = isLocal ? { pacientes: pacientesParaValidar } : { endpoint: 'validate-batch', pacientes: pacientesParaValidar };
             const response = await fetch(RPA_URL, {
                 method: 'POST',
