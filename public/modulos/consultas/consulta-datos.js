@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    const LOCAL_API_URL = 'https://lens-answers-accidents-emerald.trycloudflare.com';
+    const LOCAL_API_URL = '/api/rpa';
 
     const showToast = (msg, isError = false) => {
         if (window.showSystemTooltip) {

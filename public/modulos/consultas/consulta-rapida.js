@@ -655,7 +655,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            const response = await fetch('https://lens-answers-accidents-emerald.trycloudflare.com/validate-batch', {
+            const response = await fetch('/api/rpa/validate-batch', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ pacientes: pacientesParaValidar }),
