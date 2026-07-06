@@ -978,7 +978,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.body.appendChild(tooltip);
     }
 
-    const LOCAL_API_URL = '/api/rpa/get-dob';
+    const isLocal = !window.location.hostname || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    const API_BASE = isLocal ? 'https://lens-answers-accidents-emerald.trycloudflare.com' : '/api/rpa';
+    const LOCAL_API_URL = API_BASE + '/get-dob';
     const btnObtenerFnac = document.getElementById('btn-obtener-fnac');
     const btnFnacText = document.getElementById('btn-fnac-text');
     const fnacSpinner = document.getElementById('fnac-spinner');

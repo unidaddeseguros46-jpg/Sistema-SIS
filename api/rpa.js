@@ -1,6 +1,6 @@
 const TARGET = 'https://lens-answers-accidents-emerald.trycloudflare.com';
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   const path = req.url.replace('/api/rpa', '') || '/';
 
   try {
@@ -28,4 +28,4 @@ export default async function handler(req, res) {
       error: 'Error de conexión con el servicio RPA',
     });
   }
-}
+};

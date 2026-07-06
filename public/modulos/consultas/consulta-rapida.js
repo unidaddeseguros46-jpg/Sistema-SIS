@@ -655,7 +655,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            const response = await fetch('/api/rpa/validate-batch', {
+            const isLocal = !window.location.hostname || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+            const RPA_BASE = isLocal ? 'https://lens-answers-accidents-emerald.trycloudflare.com' : '/api/rpa';
+            const response = await fetch(RPA_BASE + '/validate-batch', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ pacientes: pacientesParaValidar }),
