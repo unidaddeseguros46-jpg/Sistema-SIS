@@ -4,370 +4,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Sistema de Gestión Hospitalaria - Hospital San José. Acceso al sistema de registro, seguimiento y consulta de pacientes.">
     <title>Login - Hospital San José</title>
 
-    <!-- Estilos -->
-    <link rel="stylesheet" href="css/styles.css">
-    <link rel="stylesheet" href="css/calendario-popover.css">
-    <!-- Iconos -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <style>
-        .login-wrapper {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 0;
-            width: 100%;
-            z-index: 2;
-        }
+    <style>*{box-sizing:border-box;margin:0;padding:0}img{max-width:100%;height:auto}body,html{width:100%;overflow-x:hidden}body{font-family:system-ui,-apple-system,sans-serif;min-height:100vh;height:auto;background-color:#f8fafc}:focus-visible{outline:2px solid #3b82f6;outline-offset:2px}:focus:not(:focus-visible){outline:none}.login-page{min-height:100vh;width:100%;background:url('img/fondo.webp') center/cover no-repeat scroll;display:flex;justify-content:center;align-items:center;position:relative;padding:20px}.login-page::before{content:"";position:absolute;inset:0;background:rgba(15,23,42,.7);z-index:1}.login-card{position:relative;z-index:2;background:#fff;border-radius:12px;padding:70px 40px 40px;width:100%;max-width:420px;box-shadow:0 10px 25px rgba(0,0,0,.1);margin-top:65px}.logo-circle{position:absolute;top:-65px;left:50%;transform:translateX(-50%);width:130px;height:130px;background:#fff;border-radius:50%;display:flex;justify-content:center;align-items:center;box-shadow:0 5px 15px rgba(0,0,0,.1);overflow:hidden;padding:10px}.company-logo{width:100%;height:100%;object-fit:contain}.login-form h1,.login-form h2{margin-bottom:25px;color:#333;font-size:26px;text-align:center;font-weight:600}.form-group{margin-bottom:18px}.form-group label{font-size:14px;color:#555;margin-bottom:8px;display:block;font-weight:500}.form-group input{width:100%;padding:12px 14px;font-size:15px;background:#fff;border:1px solid #cbd5e1;border-radius:4px;outline:0;transition:all .3s;box-sizing:border-box;color:#1e293b}.form-group input:focus{background:#fff;border-color:#3b82f6;box-shadow:0 0 0 3px rgba(59,130,246,.3)}.password-wrapper{position:relative;display:flex}.toggle-btn{position:absolute;right:12px;top:50%;transform:translateY(-50%);border:none;background:0 0;cursor:pointer;color:#64748b;font-size:17px;padding:0}.remember-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:8px}.remember{display:flex;align-items:center;gap:8px;font-size:14px;color:#555}.forgot-link{font-size:13px;color:#3b82f6;text-decoration:none;font-weight:500;transition:all .2s}.forgot-link:hover{color:#2563eb;text-decoration:underline}.login-btn{width:100%;padding:14px;font-size:16px;background:#3b82f6;color:#fff;border:none;border-radius:4px;cursor:pointer;position:relative;display:flex;justify-content:center;align-items:center;font-weight:600;transition:all .3s ease;box-shadow:0 4px 6px -1px rgba(59,130,246,.4)}.login-btn:hover:not(:disabled){background:#2563eb;transform:translateY(-2px);box-shadow:0 6px 12px -2px rgba(59,130,246,.5)}.login-btn:active:not(:disabled){transform:translateY(0)}.login-btn:disabled{opacity:.7;cursor:not-allowed;background:#94a3b8;box-shadow:none}.error-msg{color:#8b0000;font-size:14px;margin-top:15px;text-align:center;background:0 0;padding:0;border:none}.error-msg:empty{display:none}.spinner{width:18px;height:18px;border:2px solid transparent;border-top:2px solid #fff;border-radius:50%;position:absolute;animation:spin .6s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}.hidden{display:none}.fa-icon{width:1em;height:1em;vertical-align:-.125em;fill:currentColor;flex-shrink:0}.fa-icon.chevron-position{position:absolute;right:15px}.login-wrapper{display:flex;justify-content:center;align-items:center;gap:0;width:100%;z-index:2}.main-login-card{width:100%;max-width:420px;flex-shrink:0}#error-msg{color:#ef4444;max-height:0;opacity:0;overflow:hidden;padding:0;margin-top:0;transition:max-height .45s cubic-bezier(.16,1,.3,1),opacity .4s ease,padding .45s cubic-bezier(.16,1,.3,1),margin-top .4s ease}#error-msg.visible{max-height:200px;opacity:1;padding:0;margin-top:15px}#error-msg:empty{display:block}.consulta-overlay{position:fixed;inset:0;z-index:1000;background:rgba(15,23,42,.6);opacity:0;visibility:hidden;transition:opacity .35s ease,visibility .35s ease}    </style>
 
-        .main-login-card {
-            width: 100%;
-            max-width: 420px;
-            flex-shrink: 0;
-        }
-
-        #error-msg {
-            color: #ef4444;
-            max-height: 0;
-            opacity: 0;
-            overflow: hidden;
-            padding: 0;
-            margin-top: 0;
-            transition: max-height 0.45s cubic-bezier(0.16, 1, 0.3, 1),
-                        opacity 0.4s ease,
-                        padding 0.45s cubic-bezier(0.16, 1, 0.3, 1),
-                        margin-top 0.4s ease;
-        }
-
-        #error-msg.visible {
-            max-height: 200px;
-            opacity: 1;
-            padding: 0;
-            margin-top: 15px;
-        }
-
-        #error-msg:empty {
-            display: block;
-        }
-
-        .consulta-link-wrap {
-            text-align: center;
-            margin-top: 20px;
-            padding-top: 15px;
-            border-top: 1px solid #e2e8f0;
-        }
-        .consulta-link {
-            display: inline;
-            color: #3b82f6;
-            text-decoration: none;
-            font-size: 14px;
-            font-weight: 600;
-            transition: color 0.25s ease;
-            cursor: pointer;
-        }
-        .consulta-link:hover {
-            color: #2563eb;
-            text-shadow: 0 0 4px rgba(37, 99, 235, 0.3), 0 0 8px rgba(37, 99, 235, 0.15);
-        }
-        .consulta-link i {
-            margin-right: 6px;
-        }
-
-        .consulta-overlay {
-            position: fixed;
-            inset: 0;
-            z-index: 1000;
-            background: rgba(15, 23, 42, 0.6);
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.35s ease, visibility 0.35s ease;
-        }
-        .consulta-overlay.visible {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        .consulta-overlay-content {
-            position: fixed;
-            top: 1cm;
-            left: 1cm;
-            right: 1cm;
-            bottom: 1cm;
-            background: #ffffff;
-            border-radius: 16px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
-            padding: 30px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .consulta-overlay-title {
-            font-size: 18px;
-            font-weight: 700;
-            color: #1e293b;
-            margin: 0 0 20px;
-            display: flex;
-            align-items: center;
-            justify-content: flex-start;
-            gap: 6px;
-        }
-        .consulta-volver-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 6px 14px;
-            font-size: 12px;
-            font-weight: 600;
-            border-radius: 8px;
-            cursor: pointer;
-            font-family: inherit;
-            flex-shrink: 0;
-            transition: all 0.2s ease;
-            margin-left: auto;
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            color: #475569;
-        }
-        .consulta-volver-btn:hover {
-            background: #2563eb;
-            color: #fff;
-            border-color: #2563eb;
-        }
-
-        .consulta-filter-row {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 12px;
-        }
-        .consulta-filter-btn {
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            color: #475569;
-            border-radius: 6px;
-            padding: 6px 16px;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            font-family: inherit;
-        }
-        .consulta-filter-btn:hover,
-        .consulta-filter-btn.active {
-            background: #2563eb;
-            color: #fff;
-            border-color: #2563eb;
-        }
-
-        .consulta-input-row {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            flex-wrap: nowrap;
-            overflow: hidden;
-        }
-        .consulta-actions {
-            display: flex;
-            gap: 8px;
-            margin-left: auto;
-            flex-shrink: 0;
-        }
-        .consulta-action-btn {
-            padding: 8px 20px;
-            font-size: 13px;
-            font-weight: 600;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            font-family: inherit;
-            height: 42px;
-            white-space: nowrap;
-            border: 1.5px solid #bfdbfe;
-        }
-        .consulta-action-btn.buscar {
-            background: #eff6ff;
-            color: #2563eb;
-            border-color: #bfdbfe;
-        }
-        .consulta-action-btn.buscar:hover {
-            background: #2563eb;
-            color: #fff;
-            border-color: #2563eb;
-        }
-        .consulta-action-btn.limpiar {
-            background: #ffffff;
-            color: #2563eb;
-        }
-        .consulta-action-btn.limpiar:hover {
-            background: #2563eb;
-            color: #fff;
-            border-color: #2563eb;
-        }
-        .consulta-input-group {
-            display: inline-flex;
-            align-items: center;
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 0 15px;
-            height: 42px;
-            transition: border-color 0.2s ease;
-        }
-        .consulta-input-group:focus-within {
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-        }
-        .consulta-input-group i {
-            color: #64748b;
-            font-size: 14px;
-        }
-        .consulta-input-group input {
-            border: none;
-            padding: 12px 10px;
-            outline: none;
-            font-size: 14px;
-            font-family: inherit;
-            color: #1e293b;
-            background: transparent;
-        }
-        .consulta-input-group input::placeholder {
-            color: #94a3b8;
-        }
-
-        .consulta-date-group {
-            position: relative;
-        }
-        #consulta-date-popover {
-            display: none;
-        }
-        #consulta-date-popover.show {
-            display: block;
-            position: fixed;
-            z-index: 10003;
-            background: #ffffff;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
-            padding: 16px 20px;
-            width: 320px;
-            animation: popoverIn 0.2s cubic-bezier(0.16,1,0.3,1) forwards;
-        }
-        #consulta-date-popover .cal-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 12px;
-        }
-        #consulta-date-popover .cal-today-btn {
-            padding: 6px 14px;
-            font-size: 12px;
-            font-weight: 600;
-            border-radius: 6px;
-            border: 1.5px solid #bfdbfe;
-            background: #eff6ff;
-            color: #3b82f6;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            font-family: inherit;
-            white-space: nowrap;
-            height: fit-content;
-        }
-        #consulta-date-popover .cal-today-btn:hover {
-            background: #3b82f6 !important;
-            color: #fff;
-            border-color: #3b82f6;
-        }
-        @keyframes popoverIn {
-            from { opacity: 0; transform: translateY(-6px) scale(0.96); }
-            to { opacity: 1; transform: translateY(0) scale(1); }
-        }
-
-        /* ── Resultados ── */
-        .consulta-results {
-            flex: 1;
-            min-height: 0;
-            overflow-y: auto;
-            margin-top: 16px;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            background: #ffffff;
-        }
-        .consulta-results table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 13px;
-            background: #ffffff;
-        }
-        .consulta-results thead {
-            position: sticky;
-            top: 0;
-            z-index: 1;
-        }
-        .consulta-results th {
-            background: #eff6ff;
-            color: #2563eb;
-            font-weight: 600;
-            text-align: left;
-            padding: 10px 12px;
-            border-bottom: 2px solid #bfdbfe;
-            white-space: nowrap;
-        }
-        .consulta-results td {
-            padding: 9px 12px;
-            border-bottom: 1px solid #e2e8f0;
-            color: #334155;
-            background: #ffffff;
-        }
-        .consulta-results tbody tr:hover {
-            background: #eff6ff;
-        }
-        .consulta-results tbody tr:last-child td {
-            border-bottom: none;
-        }
-        .consulta-results-loading,
-        .consulta-results-empty {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 40px 20px;
-            color: #94a3b8;
-            font-size: 14px;
-        }
-        .consulta-results-loading i {
-            margin-right: 8px;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-    </style>
+    <link rel="preload" as="style" href="css/login.css">
+    <link rel="stylesheet" href="css/login.css" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="css/login.css"></noscript>
+    <link rel="stylesheet" href="css/calendario-popover.css" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="css/calendario-popover.css"></noscript>
 </head>
 
 <body>
-    <div class="login-page">
+    <svg style="display:none" aria-hidden="true">
+        <symbol id="fa-user-tag" viewBox="0 0 640 512"><path d="M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3C0 498.7 13.3 512 29.7 512H418.3c10 0 18.8-4.9 24.2-12.5l-99.2-99.2c-14.9-14.9-23.3-35.1-23.3-56.1v-33c-15.9-4.7-32.8-7.2-50.3-7.2H178.3zM384 224c-17.7 0-32 14.3-32 32v82.7c0 17 6.7 33.3 18.7 45.3L478.1 491.3c18.7 18.7 49.1 18.7 67.9 0l73.4-73.4c18.7-18.7 18.7-49.1 0-67.9L512 242.7c-12-12-28.3-18.7-45.3-18.7H384zm24 80a24 24 0 1 1 48 0 24 24 0 1 1 -48 0z"/></symbol>
+        <symbol id="fa-chevron-down" viewBox="0 0 512 512"><path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"/></symbol>
+        <symbol id="fa-eye" viewBox="0 0 576 512"><path d="M288 32c-80.8 0-145.5 36.8-192.6 80.6C48.6 156 17.3 208 2.5 243.7c-3.3 7.9-3.3 16.7 0 24.6C17.3 304 48.6 356 95.4 399.4 142.5 443.2 207.2 480 288 480s145.5-36.8 192.6-80.6c46.8-43.5 78.1-95.4 93-131.1 3.3-7.9 3.3-16.7 0-24.6-14.9-35.7-46.2-87.7-93-131.1C433.5 68.8 368.8 32 288 32zm0 80a144 144 0 1 1 0 288 144 144 0 1 1 0-288z"/></symbol>
+        <symbol id="fa-eye-slash" viewBox="0 0 640 512"><path d="M38.8 5.1C28.4-3.1 13.3-1.2 5.1 9.2S-1.2 34.7 9.2 42.9l592 464c10.4 8.2 25.5 6.3 33.7-4.1s6.3-25.5-4.1-33.7L525.6 386.7c39.6-40.6 66.4-86.1 79.9-118.4c3.3-7.9 3.3-16.7 0-24.6c-14.9-35.7-46.2-87.7-93-131.1C465.5 68.8 400.8 32 320 32c-68.2 0-125 26.3-169.3 60.8L38.8 5.1zM223.1 149.5C248.6 126.2 282.7 112 320 112c79.5 0 144 64.5 144 144c0 24.9-6.3 48.3-17.4 68.7L408 294.5c8.4-19.3 10.6-41.4 4.8-63.3c-11.1-41.5-47.8-69.4-88.6-71.1c-5.8-.2-9.2 6.1-7.4 11.7c2.1 6.4 3.3 13.2 3.3 20.3c0 10.2-2.4 19.8-6.6 28.3l-90.3-70.8zM373 389.9c-16.4 6.5-34.3 10.1-53 10.1c-79.5 0-144-64.5-144-144c0-6.9 .5-13.6 1.4-20.2L83.1 161.5C60.3 191.2 44 220.8 34.5 243.7c-3.3 7.9-3.3 16.7 0 24.6c14.9 35.7 46.2 87.7 93 131.1C174.5 443.2 239.2 480 320 480c47.8 0 89.9-12.9 126.2-32.5L373 389.9z"/></symbol>
+        <symbol id="fa-baby" viewBox="0 0 448 512"><path d="M152 88a72 72 0 1 1 144 0A72 72 0 1 1 152 88zM39.7 144.5c13-17.9 38-21.8 55.9-8.8L131.8 162c26.8 19.5 59.1 30 92.2 30s65.4-10.5 92.2-30l36.2-26.4c17.9-13 42.9-9 55.9 8.8s9 42.9-8.8 55.9l-36.2 26.4c-13.6 9.9-28.1 18.2-43.3 25V288H128V251.7c-15.2-6.7-29.7-15.1-43.3-25L48.5 200.3c-17.9-13-21.8-38-8.8-55.9zm89.8 184.8l60.6 53-26 37.2 24.3 24.3c15.6 15.6 15.6 40.9 0 56.6s-40.9 15.6-56.6 0l-48-48C70 438.6 68.1 417 79.2 401.1l50.2-71.8zm128.5 53l60.6-53 50.2 71.8c11.1 15.9 9.2 37.5-4.5 51.2l-48 48c-15.6 15.6-40.9 15.6-56.6 0s-15.6-40.9 0-56.6L284 419.4l-26-37.2z"/></symbol>
+        <symbol id="fa-arrow-left" viewBox="0 0 448 512"><path d="M9.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l160 160c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L109.2 288 416 288c17.7 0 32-14.3 32-32s-14.3-32-32-32l-306.7 0L214.6 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-160 160z"/></symbol>
+        <symbol id="fa-magnifying-glass" viewBox="0 0 512 512"><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352a144 144 0 1 0 0-288 144 144 0 1 0 0 288z"/></symbol>
+        <symbol id="fa-chevron-left" viewBox="0 0 320 512"><path d="M9.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l192 192c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L77.3 256 246.6 86.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-192 192z"/></symbol>
+        <symbol id="fa-chevron-right" viewBox="0 0 320 512"><path d="M310.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-192 192c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L242.7 256 73.4 86.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l192 192z"/></symbol>
+        <symbol id="fa-calendar" viewBox="0 0 448 512"><path d="M152 24c0-13.3-10.7-24-24-24s-24 10.7-24 24V64H64C28.7 64 0 92.7 0 128v16 48V448c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V192 144 128c0-35.3-28.7-64-64-64H344V24c0-13.3-10.7-24-24-24s-24 10.7-24 24V64H152V24zM48 192H400V448c0 8.8-7.2 16-16 16H64c-8.8 0-16-7.2-16-16V192z"/></symbol>
+    </svg>
+    <main class="login-page">
         <div class="login-wrapper" id="login-wrapper">
-            <!-- Tarjeta Central con Glassmorphism -->
             <div class="login-card main-login-card">
 
-            <!-- Círculo del Logo Flotante -->
             <div class="logo-circle">
-                <img src="img/logotipo_transparent.png" alt="Logo de la Empresa" class="company-logo">
+                <img src="img/logotipo_transparent.png" alt="Logo de la Empresa" class="company-logo" width="110" height="110" fetchpriority="high">
             </div>
 
             <form id="login-form" class="login-form">
-                <h2>Iniciar Sesión</h2>
+                <h1>Iniciar Sesión</h1>
 
                 <div class="form-group">
                     <label for="role">Rol</label>
-                    <div class="global-search-box" style="width:100%; display:flex; align-items:center; background:#ffffff; border-radius:8px; border:1px solid #e2e8f0; padding:0 15px; position:relative; height:42px;">
-                        <i class="fa-solid fa-user-tag" style="color:#64748b; margin-right:10px; flex-shrink:0;"></i>
-                        <select id="role" name="role" class="global-search-input custom-select-source" style="border:none; padding:0; outline:none; flex:1; min-width:0; appearance:none; -webkit-appearance:none; cursor:pointer; color:inherit; background:transparent; font-size:13px;">
-                            <option value="" disabled selected hidden>Seleccione su rol</option>
-                            <option value="Desarrollador">Desarrollador</option>
-                            <option value="Administrador">Administrador</option>
-                            <option value="Usuario General">Usuario General</option>
-                        </select>
-                        <i class="fa-solid fa-chevron-down" style="position:absolute; right:15px; color:#64748b; font-size:12px; pointer-events:none;"></i>
+                    <div class="custom-select-wrapper filter-dropdown-wrapper" id="custom-filter-role" tabindex="0" role="combobox" aria-haspopup="listbox" aria-expanded="false">
+                        <div class="custom-select-trigger" style="gap:10px;">
+                            <svg class="fa-icon trigger-icon" style="color:#64748b;width:18px"><use href="#fa-user-tag"/></svg>
+                            <span class="custom-select-text"></span>
+                            <svg class="fa-icon chevron-icon" style="color:#94a3b8;font-size:14px;margin-left:auto;"><use href="#fa-chevron-down"/></svg>
+                        </div>
+                        <ul class="custom-select-options" role="listbox" id="custom-filter-role-list"></ul>
                     </div>
+                    <select id="role" name="role" style="display:none">
+                        <option value="">Seleccione su rol</option>
+                        <option value="Desarrollador">Desarrollador</option>
+                        <option value="Administrador">Administrador</option>
+                        <option value="Usuario General">Usuario General</option>
+                    </select>
                 </div>
 
                 <div class="form-group">
@@ -380,7 +68,7 @@
                     <div class="password-wrapper">
                         <input type="password" id="password" name="password" required placeholder="Ingrese su Contraseña">
                         <button type="button" id="toggle-password" class="toggle-btn" title="Mostrar/Ocultar">
-                            <i class="fa-solid fa-eye"></i>
+                            <svg class="fa-icon toggle-icon" id="toggle-icon" style="font-size:17px;color:#64748b"><use href="#fa-eye"/></svg>
                         </button>
                     </div>
                 </div>
@@ -400,9 +88,9 @@
                 <p id="error-msg" class="error-msg"></p>
 
                 <div class="consulta-link-wrap">
-                    <a href="consulta-rn.html" class="consulta-link">
-                        <i class="fa-solid fa-baby"></i> Consultar estado de Recién Nacido
-                    </a>
+                    <button type="button" class="consulta-link">
+                        <svg class="fa-icon" style="margin-right:6px;width:14px"><use href="#fa-baby"/></svg> Consultar estado de Recién Nacido
+                    </button>
                 </div>
             </form>
         </div>
@@ -413,7 +101,7 @@
             <h2 class="consulta-overlay-title">
                 Recién Nacidos <span style="color:#3b82f6;">Temporales</span>
                 <button class="consulta-volver-btn" id="consulta-volver-btn">
-                    <i class="fa-solid fa-arrow-left"></i> Volver a Login
+                    <svg class="fa-icon" style="margin-right:6px;width:14px"><use href="#fa-arrow-left"/></svg> Volver a Login
                 </button>
             </h2>
 
@@ -425,15 +113,15 @@
 
             <div class="consulta-input-row">
                 <div class="consulta-input-group" data-filter="bebe">
-                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <svg class="fa-icon" style="margin-right:6px;width:14px"><use href="#fa-magnifying-glass"/></svg>
                     <input type="text" placeholder="Apellidos del bebé..." size="28">
                 </div>
                 <div class="consulta-input-group" data-filter="mama" style="display:none;">
-                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <svg class="fa-icon" style="margin-right:6px;width:14px"><use href="#fa-magnifying-glass"/></svg>
                     <input type="text" placeholder="Apellidos de la mamá..." size="28">
                 </div>
                 <div class="consulta-input-group consulta-date-group" data-filter="fecha" style="display:none;">
-                    <i class="fa-regular fa-calendar consulta-date-icon" id="consulta-date-icon"></i>
+                    <svg class="fa-icon consulta-date-icon" id="consulta-date-icon" style="margin-right:6px;width:14px;color:#64748b"><use href="#fa-calendar"/></svg>
                     <input type="text" id="consulta-fecha-input" placeholder="dd/mm/aaaa" size="22" autocomplete="off">
                 </div>
                 <div class="cr-date-popover" id="consulta-date-popover">
@@ -449,9 +137,9 @@
                         <button class="cal-today-btn" id="consulta-cal-month-search">Buscar este mes</button>
                     </div>
                     <div class="cal-header">
-                        <button class="cal-nav-btn" id="consulta-cal-prev"><i class="fa-solid fa-chevron-left"></i></button>
+                        <button class="cal-nav-btn" id="consulta-cal-prev"><svg class="fa-icon" style="width:12px"><use href="#fa-chevron-left"/></svg></button>
                         <span class="cal-title" id="consulta-cal-title">Mes Año</span>
-                        <button class="cal-nav-btn" id="consulta-cal-next"><i class="fa-solid fa-chevron-right"></i></button>
+                        <button class="cal-nav-btn" id="consulta-cal-next"><svg class="fa-icon" style="width:12px"><use href="#fa-chevron-right"/></svg></button>
                         <button class="cal-today-btn" id="consulta-cal-today">Hoy</button>
                     </div>
                     <div class="cal-weekdays">
@@ -484,15 +172,23 @@
                 </table>
             </div>
         </div>
-    </div>
+    </main>
 
-    <!-- Supabase CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- Scripts locales -->
-    <script src="js/supabase-config.js"></script>
-    <script src="js/custom-select.js"></script>
-    <script src="js/calendario-popover.js"></script>
-    <script src="js/login.js"></script>
+    <script src="js/filter-dropdown.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            window.createFilterDropdown({
+                dropdownEl: document.getElementById('custom-filter-role'),
+                listEl: document.getElementById('custom-filter-role-list'),
+                hiddenSelectEl: document.getElementById('role'),
+                defaultText: 'Seleccione su rol',
+                options: ['Desarrollador', 'Administrador', 'Usuario General'],
+                fixedWidth: true
+            });
+        });
+    </script>
+    <script src="js/calendario-popover.js" defer></script>
+    <script src="js/login.js" defer></script>
 </body>
 
 </html>

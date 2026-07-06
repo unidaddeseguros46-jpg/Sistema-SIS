@@ -1,159 +1,167 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Registro de Pacientes - Hospital San José. Gestión de admisión, ingreso y seguimiento de pacientes hospitalizados.">
     <title>Registro de Pacientes - Hospital San José</title>
-    <link rel="stylesheet" href="../../css/styles.css">
-    <link rel="stylesheet" href="../../css/registro-pacientes.css">
-    <link rel="stylesheet" href="../../css/calendario-popover.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <style>
-        /* Estilos para cuando se abre como modal */
-        body.is-modal .sidebar, 
-        body.is-modal header, 
-        body.is-modal .module-commands,
-        body.is-modal #view-lista,
-        body.is-modal .top-header {
-            display: none !important;
-        }
-        body.is-modal .page-content {
-            margin-left: 0 !important;
-            padding: 15px !important;
-            max-width: 100% !important;
-        }
-        body.is-modal .main-wrapper {
-            background: white !important;
-            min-height: auto !important;
-            padding-left: 0 !important;
-        }
-        /* Un solo scrollbar: html fijo al tamaño del iframe, body scrollea */
-        html.is-modal {
-            height: 100% !important;
-            overflow: hidden !important;
-        }
-        body.is-modal {
-            height: 100% !important;
-            min-height: 0 !important;
-            overflow-y: auto !important;
-            overflow-x: hidden !important;
-        }
 
-        @keyframes slideUp {
-            from { transform: translateY(20px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
-        }
+    <style>:focus-visible{outline:2px solid #3b82f6;outline-offset:2px}:focus:not(:focus-visible){outline:none}*{box-sizing:border-box;margin:0;padding:0}img{max-width:100%;height:auto}body,html{width:100%;overflow-x:hidden}#sidebar-overlay{position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:55;opacity:1;visibility:visible;transition:opacity .3s ease,visibility .3s}#sidebar-overlay[hidden]{opacity:0;visibility:hidden}.sidebar-toggle-btn{display:none;align-items:center;justify-content:center;width:42px;height:42px;border:1px solid #e2e8f0;background:#fff;border-radius:10px;cursor:pointer;color:#475569;margin-right:12px;flex-shrink:0}.sidebar-toggle-btn:hover{background:#f8fafc;color:#3b82f6}body{font-family:system-ui,-apple-system,sans-serif;min-height:100vh;height:auto;opacity:0;animation:fadeInLayout .3s forwards}@keyframes fadeInLayout{to{opacity:1}}body.layout-loaded{opacity:1}@keyframes fadeOutLayout{to{opacity:0}}body.fade-out{animation:fadeOutLayout .3s forwards}@keyframes slideInRight{from{transform:translateX(120%);opacity:0}to{transform:translateX(0);opacity:1}}@keyframes slideOutRight{from{transform:translateX(0);opacity:1}to{transform:translateX(120%);opacity:0}}.guide-tooltip{animation:slideInRight .4s cubic-bezier(.16,1,.3,1) forwards}.guide-tooltip-exit{animation:slideOutRight .4s cubic-bezier(.16,1,.3,1) forwards!important}@keyframes spin{to{transform:rotate(360deg)}}body{background-color:#f8fafc}.main-wrapper{display:flex;flex-direction:column;min-height:100vh;padding-left:350px;transition:all .3s;position:relative}.sidebar{width:350px;height:100vh;position:fixed;top:0;left:0;background:#fff;box-shadow:4px 0 15px rgba(0,0,0,.03);z-index:1000;overflow-y:auto;display:flex;flex-direction:column;padding-top:0;transition:width .3s cubic-bezier(.4, 0, .2, 1),padding .3s cubic-bezier(.4, 0, .2, 1)}.sidebar-header{padding:25px 20px 20px;text-align:left}.sidebar-header-top{display:flex;align-items:center;gap:12px}.sidebar-logo{width:42px;height:auto;object-fit:contain}.sidebar-header h2{color:#1e293b;font-size:15px;font-weight:700;margin:0;line-height:1.2}.sidebar-header p{color:#64748b;font-size:11px;font-weight:500;margin:0}.sidebar-divider{border:0;height:1px;background:rgba(0,0,0,.06);margin:20px 25px}.sidebar-nav{display:flex;flex-direction:column;padding:0 15px;flex-grow:1}.nav-item{margin-bottom:6px;position:relative;border-radius:8px;transition:all .3s}.nav-link{display:flex;align-items:center;padding:13px 18px;color:#64748b;text-decoration:none;font-size:15px;font-weight:500;cursor:pointer;border-radius:8px;transition:all .2s ease}.nav-link i{width:24px;font-size:18px;margin-right:12px;text-align:center;transition:color .2s ease}.nav-item.active>.nav-link,.nav-item:hover>.nav-link{color:#3b82f6;background:rgba(59,130,246,.05)}.nav-item.active>.nav-link{font-weight:600}.sub-menu{max-height:0;overflow:hidden;padding-left:54px;transition:max-height .3s ease,margin .3s ease,opacity .3s ease;opacity:0}.nav-item.has-sub.active .sub-menu,.nav-item.has-sub:hover .sub-menu{max-height:200px;opacity:1;margin-bottom:12px}.sub-menu a{display:block;padding:8px 0;color:#94a3b8;text-decoration:none;font-size:14px;transition:color .2s}.sub-menu a.selected,.sub-menu a:hover{color:#3b82f6;font-weight:600}.top-header{position:absolute;top:25px;right:40px;left:350px;background:0 0;display:flex;justify-content:space-between;align-items:center;z-index:10000}.top-header:has(> .header-right:only-child){justify-content:flex-end}.header-left{display:flex;align-items:center;flex:1;max-width:800px}.welcome-text{font-family:'Plus Jakarta Sans',sans-serif!important;font-size:18px!important;margin:0;line-height:1;white-space:nowrap;text-transform:uppercase;text-shadow:none!important;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}.welcome-text .welcome-dark{color:#0d0d0d;letter-spacing:.02em;font-weight:400!important}.welcome-text .welcome-celeste{color:#3b82f6;font-weight:600!important}.global-search-box{display:flex;width:100%;position:relative;box-shadow:0 4px 6px -1px rgba(0,0,0,.05);border-radius:8px;overflow:hidden;background:#fff;border:1px solid #e2e8f0}.global-search-input{flex:1;border:none;padding:12px 20px;font-size:14px;outline:0;color:#1e293b}.global-search-btn{border:none;background:#f8fafc;color:#64748b;padding:0 20px;cursor:pointer;transition:all .2s;border-left:1px solid #e2e8f0}.global-search-btn:hover{background:#e2e8f0;color:#3b82f6}.header-right{display:flex;align-items:center;gap:20px}.user-role-badge{background:#e0f2fe;color:#0284c7;padding:8px 18px;border-radius:50px;font-size:14px;font-weight:600;box-shadow:0 2px 5px rgba(2,132,199,.1)}.profile-dropdown{position:relative}.profile-btn{background:0 0;border:none;cursor:pointer;color:#64748b;font-size:32px;display:flex;align-items:center;padding:0;transition:color .3s}.profile-btn:hover{color:#3b82f6}.dropdown-menu{position:absolute;top:50px;right:0;background:#fff;box-shadow:0 10px 30px rgba(0,0,0,.1);border-radius:10px;min-width:180px;display:none;flex-direction:column;padding:10px 0;z-index:100}.dropdown-menu.show{display:flex}.dropdown-menu a{padding:12px 20px;color:#475569;text-decoration:none;font-size:14px;display:flex;align-items:center;gap:12px;font-weight:500;transition:background .2s,color .2s}.dropdown-menu a:hover{background:#f8fafc;color:#3b82f6}.dropdown-menu a.logout{color:#ef4444}.dropdown-menu a.logout:hover{background:#fef2f2}.page-content{padding:100px 40px 40px;max-width:1400px;width:100%}.page-header{margin-bottom:30px}.page-header h1{font-size:36px;font-weight:800;color:#1e293b;margin-top:0;margin-bottom:8px}.page-header p{font-size:16px;color:#64748b;font-weight:400}.modules-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(350px,1fr));gap:25px}.module-card{background:#fff;border-radius:16px;padding:30px;box-shadow:0 10px 25px rgba(0,0,0,.03);display:flex;flex-direction:column;transition:transform .3s ease,box-shadow .3s ease}.module-card.span-2{grid-column:span 2}@media (max-width:1000px){.module-card.span-2{grid-column:span 1}}.module-card:hover{transform:translateY(-5px);box-shadow:0 15px 35px rgba(0,0,0,.06)}.module-card.dark-theme{background:#2e3132;box-shadow:0 10px 25px rgba(0,0,0,.1)}.module-card.dark-theme h3,.module-card.dark-theme p{color:#fff}.module-card.dark-theme p{color:#a0aab2}.module-icon-circle{width:65px;height:65px;border-radius:50%;background:#e0f2fe;display:flex;justify-content:center;align-items:center;margin-bottom:20px}.module-icon-circle i{font-size:28px;color:#0284c7}.module-card.dark-theme .module-icon-circle{background:rgba(255,255,255,.1)}.module-card.dark-theme .module-icon-circle i{color:#e0f2fe}.module-card h3{color:#1e293b;font-size:18px;font-weight:700;margin-bottom:12px}.module-card p{color:#64748b;font-size:14px;line-height:1.5;flex-grow:1;margin-bottom:25px}.module-actions{display:flex;flex-direction:column;gap:12px}.btn-module{background:#f1f5f9;color:#3b82f6;border:none;border-radius:8px;padding:12px 15px;font-size:14px;font-weight:600;text-decoration:none;text-align:center;transition:all .3s ease;display:flex;justify-content:center;align-items:center;gap:10px}.btn-module:hover{background:#e2e8f0;color:#2563eb}.btn-clear-hover:hover{box-shadow:0 4px 12px rgba(0,0,0,.12);transform:translateY(-1px);background:#f8fafc!important}.btn-module.primary{background:#3b82f6;color:#fff}.btn-module.primary:hover{background:#2563eb;box-shadow:0 4px 6px -1px rgba(59,130,246,.4)}.module-card.dark-theme .btn-module{background:#3f4345;color:#fff}.module-card.dark-theme .btn-module:hover{background:#4a4f52}.sidebar::-webkit-scrollbar{width:6px}.sidebar::-webkit-scrollbar-thumb{background-color:rgba(0,0,0,.1);border-radius:4px}.data-table-container{width:100%;border:1px solid #e2e8f0;border-radius:8px;overflow-x:auto;overflow-y:visible;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;background:#fff;display:block;min-height:200px;position:relative}.data-table{width:100%;min-width:700px;border-collapse:collapse;text-align:left}.data-table th{background:#f8fafc;color:#475569;font-size:13px;font-weight:600;text-transform:uppercase;padding:15px 20px;border-bottom:2px solid #e2e8f0}.data-table td{padding:15px 20px;border-bottom:1px solid #f1f5f9;color:#1e293b;font-size:14px}.data-table tbody tr:hover{background:#f8fafc}.pagination-controls{display:flex;align-items:center;justify-content:flex-end;padding:16px 0 8px}.pagination-wrapper{display:flex;align-items:center;gap:8px}.pagination-info{font-size:13px;font-weight:500;color:#64748b;user-select:none;margin-right:2px}.pagination-btn{height:38px;border-radius:999px;border:1px solid #e2e8f0;background:#fff;color:#475569;font-size:13px;font-weight:500;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:0 18px;transition:all .2s ease;user-select:none;line-height:0;box-shadow:0 1px 2px rgba(0,0,0,.04);letter-spacing:.01em}.pagination-btn .btn-icon{display:flex;align-items:center;justify-content:center;font-size:11px;line-height:0;margin-top:1px}.pagination-btn .btn-label{display:flex;align-items:center;justify-content:center;line-height:0}.pagination-btn:hover:not(:disabled):not(.active){background:#3b82f6;border-color:#3b82f6;color:#fff;box-shadow:0 4px 12px rgba(59,130,246,.35);transform:translateY(-1px)}.pagination-btn:active:not(:disabled){background:#2563eb;border-color:#2563eb;color:#fff;transform:translateY(0);box-shadow:0 2px 6px rgba(59,130,246,.3)}.pagination-btn.active{background:#3b82f6;color:#fff;border-color:#3b82f6;font-weight:600;box-shadow:0 2px 8px rgba(59,130,246,.3)}.pagination-btn:disabled{opacity:.35;cursor:not-allowed}.pagination-ellipsis{color:#94a3b8;font-size:12px;padding:0 2px;letter-spacing:1px;user-select:none}.main-wrapper{display:flex;min-height:100vh;padding-left:80px;transition:padding-left .3s}.sidebar.collapsible-sidebar{width:80px;position:fixed;top:0;left:0;bottom:0;z-index:9999;background:#fff;box-shadow:2px 0 10px rgba(0,0,0,.05);display:flex;flex-direction:column;overflow:hidden;transition:width .3s cubic-bezier(.4, 0, .2, 1)}@media (min-width:1025px){.sidebar.collapsible-sidebar:hover{width:350px}}.sidebar-header{padding:20px 15px;display:flex;align-items:center;gap:15px;white-space:nowrap}.sidebar-logo{width:50px;height:50px;object-fit:contain;flex-shrink:0}.sidebar-header-text{opacity:0;transition:opacity .2s;transition-delay:0s}@media (min-width:1025px){.sidebar.collapsible-sidebar:hover .sidebar-header-text{opacity:1;transition-delay:0.15s}}.sidebar-nav{flex:1;overflow-y:auto;overflow-x:hidden;white-space:nowrap}.sidebar-nav::-webkit-scrollbar{width:4px}.sidebar-nav::-webkit-scrollbar-thumb{background:#cbd5e1}.nav-link{display:flex;align-items:center;padding:12px 15px;border-radius:8px;transition:all .2s;white-space:nowrap}.nav-link i{width:50px;text-align:center;flex-shrink:0;font-size:1.2rem;margin-right:0}.nav-link span{opacity:0;transition:opacity .2s}@media (min-width:1025px){.sidebar.collapsible-sidebar:hover .nav-link span{opacity:1;transition-delay:0.1s}}.sub-menu{padding-left:65px!important}.sidebar-footer{padding:20px 15px;border-top:1px solid #f1f5f9;white-space:nowrap}.logout-btn{display:flex;align-items:center;width:100%;padding:12px 0;background:0 0;border:none;color:#ef4444;border-radius:8px;cursor:pointer;transition:background .2s;font-weight:500}.logout-btn i{width:50px;text-align:center;flex-shrink:0;font-size:1.2rem}.logout-text{opacity:0;transition:opacity .2s}@media (min-width:1025px){.sidebar.collapsible-sidebar:hover .logout-text{opacity:1}}.top-header{position:fixed!important;top:0!important;left:80px!important;right:0!important;height:70px!important;background:#fff!important;box-shadow:0 2px 10px rgba(0,0,0,.02)!important;padding:0 40px!important;display:flex;justify-content:space-between!important;align-items:center;z-index:900}.welcome-text{font-family:Futura,Montserrat,Inter,sans-serif;font-size:24px;font-weight:800;color:#0f172a;margin:0}.user-info-text{display:flex;flex-direction:column;align-items:flex-end;line-height:1.2}.user-email{font-size:13px;font-weight:600;color:#334155}.user-role-soft{font-size:12px;color:#94a3b8;font-weight:500}.user-role-badge{background:0 0!important;padding:0!important;box-shadow:none!important}.page-content{margin-top:70px!important;padding-top:30px!important}.sidebar.collapsible-sidebar:not(:hover) .nav-item.has-sub.active>.nav-link{background:#f1f5f9;color:#3b82f6}.sidebar.collapsible-sidebar:not(:hover) .nav-item.has-sub.active::before{display:block}@media (min-width:1025px){.sidebar:not(:hover) .nav-link{justify-content:center;padding-left:0;padding-right:0}.sidebar:not(:hover) .nav-link span{display:none}.sidebar:not(:hover) .sub-menu{display:none!important}}.page-content{max-width:100%!important;padding-right:40px!important}@media (min-width:1025px){.sidebar.collapsible-sidebar:hover{width:350px!important;padding-right:20px}}.sidebar .nav-item.has-sub.active>.nav-link{background:#f1f5f9!important;color:#3b82f6!important}.logout-btn:hover{background-color:#fee2e2!important;color:#ef4444!important}.top-header{position:sticky!important;top:0!important;z-index:50!important;margin-bottom:25px!important}.page-content{margin-top:0!important;padding-top:0!important}@media (max-width:1024px){.top-header{left:0!important;right:0!important;padding:0 16px!important}.header-left{max-width:none;min-width:0}.welcome-text{font-size:18px;line-height:1.2}.main-wrapper{padding-left:0!important}.sidebar-header{padding:16px}.sidebar-header-text{opacity:1!important}.sidebar-nav{overflow-y:auto;white-space:normal}.nav-link{justify-content:flex-start!important;padding-left:16px;padding-right:16px}.nav-link i{width:32px}.nav-link span{display:inline!important;opacity:1!important}.nav-item.has-sub.active .sub-menu{max-height:200px;opacity:1;margin-bottom:12px}.nav-item.has-sub .sub-menu{max-height:0;opacity:0;overflow:hidden;margin-bottom:0}.sidebar-footer{padding:12px 16px}.logout-text{opacity:1!important;display:inline!important}.module-commands{flex-direction:column;align-items:stretch;gap:12px}.module-commands>div{flex-wrap:wrap;width:100%}.global-search-box{width:100%!important;max-width:100%!important}.btn-module{max-width:100%;white-space:normal}.page-content{padding:0 16px 16px!important;max-width:100%!important;padding-right:16px!important}.modules-grid{grid-template-columns:1fr}.data-table-container{overflow-x:auto;-webkit-overflow-scrolling:touch}.data-table{min-width:720px}}@media (max-width:1024px){.sidebar-toggle-btn{display:inline-flex}.sidebar.collapsible-sidebar{position:fixed;top:0;left:0;width:auto;min-width:240px;max-width:85vw;height:100vh;overflow-y:auto;overflow-x:hidden;padding-right:16px;transform:translateX(-110%);transition:transform .25s cubic-bezier(.4, 0, .2, 1);z-index:60;white-space:nowrap}body.sidebar-open .sidebar.collapsible-sidebar{transform:translateX(0)}body.sidebar-open{overflow:hidden}}@media (max-width:480px){.page-header h1{font-size:26px}.module-card{padding:20px}}.top-header{margin-bottom:25px!important}.dashboard-legends{padding:6px 0 4px;margin-bottom:16px;border-bottom:1px solid #f1f5f9}.top-header{margin-bottom:25px!important}.dashboard-legends{padding:6px 0 4px;margin-bottom:16px;border-bottom:1px solid #f1f5f9}.module-commands{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:16px;gap:20px}.commands-left.table-toolbar{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;width:100%;justify-content:flex-start}#local-new-patient-btn{white-space:nowrap;gap:5px}.clear-filter-short{display:none;white-space:nowrap;flex-shrink:0;overflow:hidden;max-width:0}@container clear-btn (min-width:99px){.clear-filter-short{max-width:10em}}@media (max-width:720px){.btn-patient-full{display:none}}@media (max-width:1024px){.module-commands{flex-direction:row;flex-wrap:wrap}.global-search-box{width:auto!important;max-width:none!important}}@media (max-width:380px){.legend-item{font-size:11px;padding:0 10px 0 8px;height:60px}.legend-dot{width:10px;height:10px}}.data-table-container{background:#fff;border-radius:10px;box-shadow:0 4px 6px -1px rgba(0,0,0,.05);overflow-x:auto;overflow-y:visible;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;display:block;position:relative}.data-table{width:100%;border-collapse:collapse}.data-table thead th{background:#f8fafc;color:#64748b;font-weight:600;padding:15px 20px;text-align:left;border-bottom:1px solid #e2e8f0;white-space:nowrap}.data-table tbody td{padding:15px 20px;border-bottom:1px solid #f1f5f9;color:#334155;vertical-align:middle}.data-table tbody tr:hover{background:#f8fafc}#registro-form{display:grid;grid-template-columns:repeat(6,1fr);gap:0 25px;align-items:start}@media (min-width:769px) and (max-width:1024px){#registro-form{grid-template-columns:repeat(3,1fr);gap:0 20px}}@media (max-width:768px){#registro-form{grid-template-columns:repeat(2,1fr);gap:0 15px}}@media (min-width:441px) and (max-width:600px){.form-header-row{gap:15px}.tipo-doc-group{flex:none;max-width:none;width:fit-content}.tipo-doc-group .custom-select-wrapper:not(.filter-dropdown-wrapper){flex:none!important;width:auto!important}}@media (max-width:480px){#registro-form{grid-template-columns:1fr;gap:0}.col-span-2,.col-span-3{grid-column:1/-1}.clear-filter-text{display:none}.clear-filter-short{display:inline}.pagination-controls{justify-content:flex-start;width:100%}.commands-left.table-toolbar>*{flex:1}.commands-left.table-toolbar>.filter-group:first-child{margin-right:0!important}#header-search-box{width:100%!important;box-sizing:border-box!important}#clear-filter-servicio{container-type:inline-size;container-name:clear-btn}}#btn-cancelar{background:0 0;border:1px solid #e2e8f0;color:#475569;border-radius:6px;box-shadow:0 1px 2px rgba(0,0,0,.04);transition:all .2s ease}#btn-cancelar:hover{background:#fef2f2;color:#dc2626;box-shadow:0 2px 8px rgba(239,68,68,.2);transform:translateY(-1px)}#btn-guardar{background:#eff6ff;border:1.5px solid #bfdbfe;color:#2563eb;border-radius:6px;box-shadow:0 1px 2px rgba(0,0,0,.04);transition:all .2s ease}#btn-guardar:hover{background:#2563eb;color:#fff;border-color:#2563eb;box-shadow:0 2px 10px rgba(37,99,235,.3);transform:translateY(-1px)}#rp-fi-wrapper{display:flex;gap:10px;align-items:stretch}#rp-fi-wrapper .fi-date-group{flex:3;position:relative;min-width:0}#rp-fi-wrapper .fi-time-group{flex:2;min-width:0}#rp-fi-wrapper .fi-time-group input{height:42px;width:100%;box-sizing:border-box}.servicio-legends{display:flex;flex-wrap:nowrap;gap:10px;align-items:center;overflow-x:auto;overflow-y:hidden;padding-bottom:4px;scrollbar-width:thin}.servicio-legends::-webkit-scrollbar{height:4px}.servicio-legends::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px}.legend-item{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:#1e293b;user-select:none;border:1px solid rgba(0,0,0,.06);border-radius:10px;padding:0 18px 0 12px;height:76px;box-shadow:0 1px 3px rgba(0,0,0,.04);transition:transform .2s;flex-shrink:0}.legend-item:hover{transform:translateY(-2px)}.legend-dot{width:14px;height:14px;border-radius:50%;display:inline-block;flex-shrink:0}.legend-label{font-weight:600;letter-spacing:.01em;font-size:13px}.legend-count{font-size:14px;font-weight:700;min-width:26px;text-align:center;color:inherit}
+#header-search-box{min-width:340px}
+#header-search-box input::placeholder{color:#94a3b8}
+#header-search-box:focus-within{border-color:#3b82f6}
+#btn-obtener-fnac:hover{background:#dbeafe!important;box-shadow:0 4px 12px rgba(59,130,246,.15)!important;transform:translateY(-1px)!important}
+#btn-reintentar-hosp:hover{background:#fee2e2!important}
+.btn-header-back{background:transparent;border:1px solid #e2e8f0;color:#475569;border-radius:6px;padding:6px 14px;font-size:13px;font-weight:500;cursor:pointer;display:none;align-items:center;gap:6px;transition:all .2s;box-shadow:0 2px 6px rgba(0,0,0,.08);margin-right:12px}
+.btn-header-back:hover{background:#2563eb;color:#fff;border-color:#2563eb;box-shadow:0 4px 12px rgba(37,99,235,.3)}
+.dni-exists-btn{background:transparent;color:#475569;border:1px solid #cbd5e1;border-radius:6px;padding:7px 18px;font-size:13px;font-weight:500;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.08);transition:all .2s}
+.dni-exists-btn:hover{background:#2563eb;color:#fff;border-color:#2563eb;box-shadow:0 4px 12px rgba(37,99,235,.3)}
+.filter-label{font-size:13px;font-weight:600;color:#475569;margin-bottom:5px;display:block}
 
-        /* ── Calendar trigger hover/open ── */
-        .cr-date-trigger:hover { border-color: #e2e8f0 !important; }
-        .cr-date-trigger.is-open { border-color: #3b82f6 !important; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
-    </style>
-    <script src="../../js/modal-inline-head.js"></script>
+
+
+.servicio-badge{padding:6px 12px;border-radius:4px;font-size:12px;font-weight:700;display:inline-block;text-align:center}.form-section-title .welcome-dark{color:#0d0d0d;letter-spacing:.02em;font-weight:400}.form-section-title .welcome-celeste{color:#3b82f6;font-weight:600}@media(min-width:1025px){.sidebar-nav{overflow-y:hidden}.sidebar{overflow-y:hidden}}
+</style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700;800&display=swap" onload="this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700;800&display=swap"></noscript>
+    <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com">
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+    <link rel="stylesheet" href="../../css/styles.css" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="../../css/registro-pacientes.css" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="../../css/styles.css"><link rel="stylesheet" href="../../css/registro-pacientes.css"><link rel="stylesheet" href="../../css/calendario-popover.css"></noscript>
+    <link rel="stylesheet" href="../../css/calendario-popover.css" media="print" onload="this.media='all'">
+
+    <style>@font-face{font-family:'Font Awesome 6 Free';font-style:normal;font-weight:900;font-display:swap;src:url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/webfonts/fa-solid-900.woff2') format('woff2')}.fa-icon{width:1em;height:1em;vertical-align:-.125em;fill:currentColor;flex-shrink:0}.ic-spin{animation:ic-spin 1s linear infinite}@keyframes ic-spin{to{transform:rotate(360deg)}}</style>
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" media="print" onload="this.media='all'">
+    <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous"></noscript>
+
+    <script src="../../js/modal-inline-head.js" defer></script>
 </head>
-
 <body>
+    <svg style="display:none" aria-hidden="true"><symbol id="ir-broom" viewBox="0 0 576 512"><path d="M566.6 54.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-192 192-34.7-34.7c-4.2-4.2-10-6.6-16-6.6-12.5 0-22.6 10.1-22.6 22.6v29.1L364.3 320h29.1c12.5 0 22.6-10.1 22.6-22.6 0-6-2.4-11.8-6.6-16l-34.7-34.7 192-192zM341.1 353.4L222.6 234.9c-42.7-3.7-85.2 11.7-115.8 42.3l-8 8C76.5 307.5 64 337.7 64 369.2c0 6.8 7.1 11.2 13.2 8.2l51.1-25.5c5-2.5 9.5 4.1 5.4 7.9L7.3 473.4C2.7 477.6 0 483.6 0 489.9 0 502.1 9.9 512 22.1 512l173.3 0c38.8 0 75.9-15.4 103.4-42.8 30.6-30.6 45.9-73.1 42.3-115.8z"/></symbol><symbol id="ir-building" viewBox="0 0 384 512"><path d="M48 0C21.5 0 0 21.5 0 48V464c0 26.5 21.5 48 48 48h96V432c0-26.5 21.5-48 48-48s48 21.5 48 48v80h96c26.5 0 48-21.5 48-48V48c0-26.5-21.5-48-48-48H48zM64 240c0-8.8 7.2-16 16-16h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16H80c-8.8 0-16-7.2-16-16V240zm112-16h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16H176c-8.8 0-16-7.2-16-16V240c0-8.8 7.2-16 16-16zm80 16c0-8.8 7.2-16 16-16h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16H272c-8.8 0-16-7.2-16-16V240zM80 96h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16H80c-8.8 0-16-7.2-16-16V112c0-8.8 7.2-16 16-16zm80 16c0-8.8 7.2-16 16-16h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16H176c-8.8 0-16-7.2-16-16V112zM272 96h32c8.8 0 16 7.2 16 16v32c0 8.8-7.2 16-16 16H272c-8.8 0-16-7.2-16-16V112c0-8.8 7.2-16 16-16z"/></symbol><symbol id="ir-calendar" viewBox="0 0 448 512"><path d="M152 24c0-13.3-10.7-24-24-24s-24 10.7-24 24V64H64C28.7 64 0 92.7 0 128v16 48V448c0 35.3 28.7 64 64 64H384c35.3 0 64-28.7 64-64V192 144 128c0-35.3-28.7-64-64-64H344V24c0-13.3-10.7-24-24-24s-24 10.7-24 24V64H152V24zM48 192H400V448c0 8.8-7.2 16-16 16H64c-8.8 0-16-7.2-16-16V192z"/></symbol><symbol id="ir-calendar-check" viewBox="0 0 448 512"><path d="M128 0c17.7 0 32 14.3 32 32V64H288V32c0-17.7 14.3-32 32-32s32 14.3 32 32V64h48c26.5 0 48 21.5 48 48v48H0V112C0 85.5 21.5 64 48 64H96V32c0-17.7 14.3-32 32-32zM0 192H448V464c0 26.5-21.5 48-48 48H48c-26.5 0-48-21.5-48-48V192zM329 305c9.4-9.4 9.4-24.6 0-33.9s-24.6-9.4-33.9 0l-95 95-47-47c-9.4-9.4-24.6-9.4-33.9 0s-9.4 24.6 0 33.9l64 64c9.4 9.4 24.6 9.4 33.9 0L329 305z"/></symbol><symbol id="ir-chevron-down" viewBox="0 0 512 512"><path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"/></symbol><symbol id="ir-chevron-left" viewBox="0 0 320 512"><path d="M9.4 233.4c-12.5 12.5-12.5 32.8 0 45.3l192 192c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L77.3 256 246.6 86.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0l-192 192z"/></symbol><symbol id="ir-chevron-right" viewBox="0 0 320 512"><path d="M310.6 233.4c12.5 12.5 12.5 32.8 0 45.3l-192 192c-12.5 12.5-32.8 12.5-45.3 0s-12.5-32.8 0-45.3L242.7 256 73.4 86.6c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l192 192z"/></symbol><symbol id="ir-circle-notch" viewBox="0 0 512 512"><path d="M222.7 32.1c5 16.9-4.6 34.8-21.5 39.8C121.8 95.6 64 169.1 64 256c0 106 86 192 192 192s192-86 192-192c0-86.9-57.8-160.4-137.1-184.1-16.9-5-26.6-22.9-21.5-39.8s22.9-26.6 39.8-21.5C434.9 42.1 512 140 512 256c0 141.4-114.6 256-256 256S0 397.4 0 256C0 140 77.1 42.1 182.9 10.6c16.9-5 34.8 4.6 39.8 21.5z"/></symbol><symbol id="ir-clock" viewBox="0 0 512 512"><path d="M256 0a256 256 0 1 1 0 512A256 256 0 1 1 256 0zM232 120V256c0 8 4 15.5 10.7 20l96 64c11 7.4 25.9 4.4 33.3-6.7s4.4-25.9-6.7-33.3L280 243.2V120c0-13.3-10.7-24-24-24s-24 10.7-24 24z"/></symbol><symbol id="ir-heart-pulse" viewBox="0 0 512 512"><path d="M228.3 469.1L47.6 300.4c-4.2-3.9-8.2-8.1-11.9-12.4h87c22.6 0 43-13.6 51.7-34.5l10.5-25.2 49.3 109.5c3.8 8.5 12.1 14 21.4 14.1s17.8-5 22-13.3L320 253.7l1.7 3.4c9.5 19 28.9 31 50.1 31H476.3c-3.7 4.3-7.7 8.5-11.9 12.4L283.7 469.1c-7.5 7-17.4 10.9-27.7 10.9s-20.2-3.9-27.7-10.9zM503.7 240h-132c-3 0-5.8-1.7-7.2-4.4l-23.2-46.3c-4.1-8.1-12.4-13.3-21.5-13.3s-17.4 5.1-21.5 13.3l-41.4 82.8L205.9 158.2c-3.9-8.7-12.7-14.3-22.2-14.1s-18.1 5.9-21.8 14.8l-31.8 76.3c-1.2 3-4.2 4.9-7.4 4.9H16c-2.6 0-5 .4-7.3 1.1C3 225.2 0 208.2 0 190.9v-5.8c0-69.9 50.5-129.5 119.4-141C165 36.5 211.4 51.4 244 84l12 12 12-12c32.6-32.6 79-47.5 124.6-39.9C461.5 55.6 512 115.2 512 185.1v5.8c0 16.9-2.8 33.5-8.3 49.1z"/></symbol><symbol id="ir-id-card" viewBox="0 0 576 512"><path d="M0 96l576 0c0-35.3-28.7-64-64-64H64C28.7 32 0 60.7 0 96zm0 32V416c0 35.3 28.7 64 64 64H512c35.3 0 64-28.7 64-64V128H0zM64 405.3c0-29.5 23.9-53.3 53.3-53.3H234.7c29.5 0 53.3 23.9 53.3 53.3 0 5.9-4.8 10.7-10.7 10.7H74.7c-5.9 0-10.7-4.8-10.7-10.7zM176 192a64 64 0 1 1 0 128 64 64 0 1 1 0-128zm176 16c0-8.8 7.2-16 16-16H496c8.8 0 16 7.2 16 16s-7.2 16-16 16H368c-8.8 0-16-7.2-16-16zm0 64c0-8.8 7.2-16 16-16H496c8.8 0 16 7.2 16 16s-7.2 16-16 16H368c-8.8 0-16-7.2-16-16zm0 64c0-8.8 7.2-16 16-16H496c8.8 0 16 7.2 16 16s-7.2 16-16 16H368c-8.8 0-16-7.2-16-16z"/></symbol><symbol id="ir-magnifying-glass" viewBox="0 0 512 512"><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352a144 144 0 1 0 0-288 144 144 0 1 0 0 288z"/></symbol><symbol id="ir-rotate" viewBox="0 0 512 512"><path d="M142.9 142.9c62.2-62.2 162.7-62.5 225.3-1L327 183c-6.9 6.9-8.9 17.2-5.2 26.2s12.5 14.8 22.2 14.8H463.5c0 0 0 0 0 0H472c13.3 0 24-10.7 24-24V72c0-9.7-5.8-18.5-14.8-22.2s-19.3-1.7-26.2 5.2L413.4 96.6c-87.6-86.5-228.7-86.2-315.8 1C73.2 122 55.6 150.7 44.8 181.4c-5.9 16.7 2.9 34.9 19.5 40.8s34.9-2.9 40.8-19.5c7.7-21.8 20.2-42.3 37.8-59.8zM16 312v7.6 .7V440c0 9.7 5.8 18.5 14.8 22.2s19.3 1.7 26.2-5.2l41.6-41.6c87.6 86.5 228.7 86.2 315.8-1 24.4-24.4 42.1-53.1 52.9-83.7 5.9-16.7-2.9-34.9-19.5-40.8s-34.9 2.9-40.8 19.5c-7.7 21.8-20.2 42.3-37.8 59.8-62.2 62.2-162.7 62.5-225.3 1L185 329c6.9-6.9 8.9-17.2 5.2-26.2s-12.5-14.8-22.2-14.8H48.4h-.7H40c-13.3 0-24 10.7-24 24z"/></symbol><symbol id="ir-shield-halved" viewBox="0 0 512 512"><path d="M256 0c4.6 0 9.2 1 13.4 2.9L457.7 82.8c22 9.3 38.4 31 38.3 57.2-.5 99.2-41.3 280.7-213.6 363.2-16.7 8-36.1 8-52.8 0C57.3 420.7 16.5 239.2 16 140c-.1-26.2 16.3-47.9 38.3-57.2L242.7 2.9C246.8 1 251.4 0 256 0zm0 66.8V444.8C394 378 431.1 230.1 432 141.4L256 66.8l0 0z"/></symbol><symbol id="ir-user-plus" viewBox="0 0 640 512"><path d="M96 128a128 128 0 1 1 256 0A128 128 0 1 1 96 128zM0 482.3C0 383.8 79.8 304 178.3 304h91.4C368.2 304 448 383.8 448 482.3c0 16.4-13.3 29.7-29.7 29.7H29.7C13.3 512 0 498.7 0 482.3zM504 312V248H440c-13.3 0-24-10.7-24-24s10.7-24 24-24h64V136c0-13.3 10.7-24 24-24s24 10.7 24 24v64h64c13.3 0 24 10.7 24 24s-10.7 24-24 24H552v64c0 13.3-10.7 24-24 24s-24-10.7-24-24z"/></symbol></svg>
     <div class="main-wrapper">
         <main class="page-content" id="page-content">
 
-            <!-- BARRA DE OPERACIONES ESPECÍFICA DEL MÓDULO -->
-            <div class="module-commands">
-                <div class="commands-left">
-                    <div class="filter-group">
-                        <label style="font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 5px; display: block;">Buscador</label>
-                        <div class="global-search-box search-box-dni"
-                            style="display: flex; align-items: center; background: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; padding: 0 15px; height: 42px;">
-                            <i class="fa-solid fa-magnifying-glass" style="color: #64748b;"></i>
-                            <input type="text" id="btn-search-dni" placeholder="Buscar registros por DNI..."
-                                class="global-search-input"
-                                style="border: none; padding: 12px 10px; outline: none; flex: 1; min-width: 0;">
-                            <button id="execute-search" style="display: none;"></button>
-                        </div>
-                    </div>
- 
-                     <!-- FILTRO POR SERVICIO -->
-                     <div class="filter-group">
-                         <label style="font-size: 13px; font-weight: 600; color: #475569; margin-bottom: 5px; display: block;">Servicio</label>
-                         <div class="global-search-box search-box-servicio"
-                             style="display: flex; align-items: center; background: #ffffff; border-radius: 8px; border: 1px solid #e2e8f0; padding: 0 15px; position: relative; height: 42px;">
-                             <i class="fa-solid fa-filter" style="color: #64748b; margin-right: 10px;"></i>
-                               <select id="filter-servicio" class="global-search-input custom-select-source" data-servicio
-                                   style="border: none; outline: none; flex: 1; min-width: 0; appearance: none; -webkit-appearance: none; cursor: pointer; color: #94a3b8; background: transparent;">
-                                   <option value="" style="color: #94a3b8;">TODOS</option>
-                              </select>
-                              <i class="fa-solid fa-chevron-down"
-                                    style="margin-left: 4px; color: #64748b; font-size: 12px;"></i>
-                         </div>
-                     </div>
-                     <button class="btn-module btn-clear-hover" id="clear-filter-servicio"
-                         style="background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; padding: 0 15px; font-weight: 500; height: 42px; display: flex; align-items: center; border-radius: 8px; gap: 6px;">
-                         <i class="fa-solid fa-broom" style="font-size: 14px; flex-shrink: 0;"></i>
-                         <span class="clear-filter-text">Limpiar Filtro</span>
-                         <span class="clear-filter-short">Limpiar</span>
-                     </button>
-                     <button class="btn-module primary action-btn" id="local-new-patient-btn" style="padding: 12px 20px;"><i
-                             class="fa-solid fa-plus"></i><span>Nuevo<span class="btn-patient-full"> Paciente</span></span></button>
-                </div>
+            <div class="dashboard-legends">
+                <div class="servicio-legends" id="servicio-legends"></div>
             </div>
 
-            <!-- LISTA DE PACIENTES -->
-            <div id="view-lista" style="margin-top: 20px;">
-                <div id="pagination-container" class="pagination-controls"></div>
+            <div class="module-commands">
+                <div class="commands-left table-toolbar">
+                     <div class="filter-group">
+                         <label class="filter-label">Buscador</label>
+                         <div class="global-search-box" id="header-search-box"
+                             style="display:flex;align-items:center;background:#fff;border-radius:8px;border:1px solid #e2e8f0;padding:0 15px;height:42px;">
+                             <svg class="fa-icon" style="color:#64748b;font-size:14px;" aria-hidden="true"><use href="#ir-magnifying-glass"/></svg>
+                             <input type="text" id="btn-search-dni" placeholder="Buscar por DNI, apellidos o nombres..."
+                                 autocomplete="off"
+                                 style="border:none;background:transparent;outline:none;flex:1;padding:0 8px;font-size:14px;color:#1e293b;">
+                             <button id="btn-search-clear" class="search-clear-btn" type="button" style="display:none" aria-label="Limpiar búsqueda"><i class="fa-solid fa-xmark"></i></button>
+                             <button id="execute-search" style="display:none;"></button>
+                         </div>
+                     </div>
+                     <div class="filter-group" id="filter-servicio-group">
+                          <label class="filter-label" id="filter-servicio-label">Servicio</label>
+                            <div class="custom-select-wrapper filter-dropdown-wrapper" id="custom-filter-servicio" tabindex="0" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="filter-servicio-label">
+                                <div class="custom-select-trigger">
+                                    <svg class="fa-icon trigger-icon" aria-hidden="true"><use href="#ir-building"/></svg>
+                                    <span class="custom-select-text"></span>
+                                    <svg class="fa-icon chevron-icon" aria-hidden="true"><use href="#ir-chevron-down"></svg>
+                                </div>
+                              <ul class="custom-select-options" role="listbox" id="custom-filter-servicio-list">
+                              </ul>
+                          </div>
+                         <select id="filter-servicio" data-servicio style="display:none">
+                             <option value="">TODOS</option>
+                         </select>
+                     </div>
+
+                     <div class="filter-group" id="filter-condicion-group">
+                          <label class="filter-label" id="filter-condicion-label">Condición</label>
+                            <div class="custom-select-wrapper filter-dropdown-wrapper" id="custom-filter-condicion" tabindex="0" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="filter-condicion-label">
+                             <div class="custom-select-trigger">
+                                 <svg class="fa-icon trigger-icon" aria-hidden="true"><use href="#ir-heart-pulse"/></svg>
+                                 <span class="custom-select-text"></span>
+                                 <svg class="fa-icon chevron-icon" aria-hidden="true"><use href="#ir-chevron-down"></svg>
+                             </div>
+                             <ul class="custom-select-options" role="listbox" id="custom-filter-condicion-list">
+                             </ul>
+                         </div>
+                         <select id="filter-condicion" style="display:none">
+                             <option value="">TODAS</option>
+                             <option value="Hospitalizado">HOSPITALIZADO</option>
+                             <option value="Alta">ALTA</option>
+                             <option value="Fallecido">FALLECIDO</option>
+                         </select>
+                     </div>
+                     <button class="btn-module btn-clear-hover" id="clear-filter-servicio" aria-label="Limpiar filtros"
+                         style="background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; padding: 0 15px; font-weight: 500; height: 42px; display: flex; align-items: center; border-radius: 8px; gap: 6px;">
+                         <svg class="fa-icon" style="font-size: 14px; flex-shrink: 0;" aria-hidden="true"><use href="#ir-broom"/></svg>
+                         <span class="clear-filter-text">Limpiar Filtros</span>
+                         <span class="clear-filter-short">Limpiar</span>
+                     </button>
+                     <button class="btn-module primary action-btn" id="local-new-patient-btn" aria-label="Nuevo paciente" style="padding: 12px 20px;">
+                         <svg class="fa-icon" aria-hidden="true"><use href="#ir-user-plus"/></svg><span>Nuevo<span class="btn-patient-full"> Paciente</span></span>
+                     </button>
+                 </div>
+            </div>
+
+            <div id="view-lista">
                 <div class="data-table-container">
-                    <!-- LOADING SPINNER -->
                     <div id="loading-indicator"
                         style="display: none; text-align: center; padding: 40px; color: #3b82f6;">
-                        <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 2rem;"></i>
+                        <svg class="fa-icon ic-spin" style="font-size: 2rem;" aria-hidden="true"><use href="#ir-circle-notch"/></svg>
                         <p style="margin-top: 10px; font-weight: 500;">Cargando pacientes...</p>
                     </div>
 
                     <table class="data-table" id="table-element">
                         <thead>
                             <tr>
-                                <th>DNI</th>
-                                <th>Paciente</th>
-                                <th>H.C.</th>
-                                <th>Tipo de Seguro</th>
-                                <th>Servicio</th>
-                                <th>Condición</th>
-                                <th style="text-align: center;">Acciones</th>
+                                <th scope="col">DNI</th>
+                                <th scope="col">Paciente</th>
+                                <th scope="col">H.C.</th>
+                                <th scope="col">Tipo de Seguro</th>
+                                <th scope="col">Servicio</th>
+                                <th scope="col">Condición</th>
+                                <th scope="col" style="text-align: center;">Acciones</th>
                             </tr>
                         </thead>
-                        <tbody id="tabla-pacientes">
-                            <!-- Los registros se generan en JS -->
-                        </tbody>
+                        <tbody id="tabla-pacientes"></tbody>
                     </table>
                 </div>
+                <div id="pagination-container" class="pagination-controls"></div>
             </div>
 
-            <!-- FORMULARIO -->
             <div id="view-form" style="display: none; margin-top: 5px;">
                 <div class="standard-form-container blue-toptag-form" style="padding: 20px;">
-                    <div id="form-welcome-title" class="welcome-text" style="display:none; font-family:'Futura','Montserrat','Inter',sans-serif !important; font-size:17px !important; font-weight:800 !important; color:#0f172a !important; margin:0 0 15px 0 !important; padding-bottom:10px; border-bottom:2px solid #e2e8f0; text-transform:uppercase; letter-spacing:normal; white-space:normal !important; word-wrap:break-word; line-height:1.3;">
-                        <span class="welcome-dark">REGISTRO DE </span><span class="welcome-celeste">NUEVOS PACIENTES</span>
+                    <div id="form-welcome-title" class="form-section-title" style="display:none; font-family:'Futura','Montserrat','Inter',sans-serif !important; font-size:17px !important; font-weight:800 !important; color:#0f172a !important; margin:0 0 15px 0 !important; padding-bottom:10px; border-bottom:2px solid #e2e8f0; text-transform:uppercase; letter-spacing:normal; white-space:normal !important; word-wrap:break-word; line-height:1.3; -webkit-font-smoothing:antialiased !important; -moz-osx-font-smoothing:grayscale !important;">
+                        <span class="welcome-dark">REGISTRO DE</span> <span class="welcome-celeste">NUEVOS PACIENTES</span>
                     </div>
                     <div class="form-header-row"
                         style="margin-bottom: 15px; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: flex-end;">
                         <div class="tipo-doc-group" style="flex:1; max-width:280px;">
-                            <label style="font-size:13px; font-weight:600; color:#475569; margin-bottom:5px; display:block;">Elegir Tipo de Documento</label>
-                            <div class="global-search-box" style="width:100%; display:flex; align-items:center; background:#ffffff; border-radius:8px; border:1px solid #e2e8f0; padding:0 15px; position:relative; height:42px;">
-                                <i class="fa-solid fa-id-card" style="color:#64748b; margin-right:10px;"></i>
-                                <select id="tipo-documento" class="global-search-input custom-select-source" style="border:none; padding:0; outline:none; flex:1; min-width:0; appearance:none; -webkit-appearance:none; cursor:pointer; color:inherit; background:transparent; font-size:13px;">
-                                    <option value="DNI">DNI</option>
-                                    <option value="DNI_TEMPORAL">DNI Temporal</option>
-                                    <option value="CARNET_EXT">Carnet de Extranjería</option>
-                                </select>
-                                <i class="fa-solid fa-chevron-down" style="position:absolute; right:15px; color:#64748b; font-size:12px; pointer-events:none;"></i>
+                            <label for="tipo-documento" class="filter-label">Elegir Tipo de Documento</label>
+                            <div class="custom-select-wrapper filter-dropdown-wrapper" id="custom-tipo-documento" tabindex="0" role="combobox" aria-haspopup="listbox" aria-expanded="false" style="width:100%;">
+                                <div class="custom-select-trigger">
+                                    <svg class="fa-icon trigger-icon" aria-hidden="true"><use href="#ir-id-card"/></svg>
+                                    <span class="custom-select-text"></span>
+                                    <svg class="fa-icon chevron-icon" aria-hidden="true"><use href="#ir-chevron-down"/></svg>
+                                </div>
+                                <ul class="custom-select-options" role="listbox" id="custom-tipo-documento-list"></ul>
                             </div>
+                            <select id="tipo-documento" style="display:none">
+                                <option value="DNI">DNI</option>
+                                <option value="DNI_TEMPORAL">DNI Temporal</option>
+                                <option value="CARNET_EXT">Carnet de Extranjería</option>
+                            </select>
                         </div>
                         <button type="button" id="btn-obtener-fnac"
-                            style="display: flex; align-items: center; gap: 8px; background: #eff6ff; color: #2563eb; border: 1.5px solid #bfdbfe; border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; white-space: nowrap;"
-                            onmouseover="this.style.background='#dbeafe'; this.style.boxShadow='0 4px 12px rgba(59,130,246,0.15)'; this.style.transform='translateY(-1px)'"
-                            onmouseout="this.style.background='#eff6ff'; this.style.boxShadow='none'; this.style.transform='none'">
-                            <i class="fa-solid fa-calendar-check"></i>
+                            style="display:flex;align-items:center;gap:8px;background:#eff6ff;color:#2563eb;border:1.5px solid #bfdbfe;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s ease;white-space:nowrap;">
+                            <svg class="fa-icon" aria-hidden="true"><use href="#ir-calendar-check"/></svg>
                             <span id="btn-fnac-text">Obtener Fecha de Nacimiento</span>
-                            <i id="fnac-spinner" class="fa-solid fa-circle-notch fa-spin" style="display:none;"></i>
+                            <svg id="fnac-spinner" class="fa-icon ic-spin" style="display:none;" aria-hidden="true"><use href="#ir-circle-notch"/></svg>
                         </button>
                     </div>
 
@@ -162,9 +170,8 @@
                         <input type="hidden" id="fecha-ingreso-data" value="">
                         <input type="hidden" id="hora-ingreso-data" value="">
 
-                        <!-- FILA 1: DNI | FECHA NAC | CÓDIGO VER. -->
                         <div class="input-stacked col-span-2">
-                            <label>DNI del Paciente</label>
+                            <label for="paciente-dni">DNI del Paciente</label>
                             <div style="display:flex; align-items:stretch;">
                                 <span id="dni-prefix" style="display:none; font-weight:700; color:#475569; background:#f1f5f9; padding:10px 10px; border:1px solid #e2e8f0; border-right:none; border-radius:8px 0 0 8px; font-size:14px; white-space:nowrap; line-height:1;"></span>
                                 <input type="text" id="paciente-dni" class="standard-input" required
@@ -172,177 +179,115 @@
                             </div>
                         </div>
 
-                        <!-- FECHA NACIMIENTO -->
                         <div class="input-stacked col-span-2" style="position:relative;">
-                            <label>Fecha de Nacimiento</label>
+                            <label for="paciente-fecha-nac">Fecha de Nacimiento</label>
                             <div style="position:relative;">
                                 <div id="fnac-trigger" style="position:absolute; left:0; top:0; bottom:0; width:40px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#94a3b8; z-index:1;">
-                                    <i class="fa-regular fa-calendar"></i>
+                                    <svg class="fa-icon" aria-hidden="true"><use href="#ir-calendar"/></svg>
                                 </div>
-                                <i class="fa-solid fa-chevron-down" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); color:#94a3b8; font-size:10px; pointer-events:none;"></i>
+                                <svg class="fa-icon chevron-icon" style="position:absolute; right:12px; top:50%; transform:translateY(-50%); color:#94a3b8; font-size:10px; pointer-events:none;" aria-hidden="true"><use href="#ir-chevron-down"/></svg>
                                 <input type="text" id="paciente-fecha-nac" class="standard-input" placeholder="dd/mm/aaaa"
                                     autocomplete="off" required style="padding-left:40px; padding-right:30px;">
                             </div>
-                            <div class="cr-date-popover" id="fnac-popover" style="display:none; position:fixed; z-index:10003; background:#ffffff; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.12),0 2px 8px rgba(0,0,0,0.06); padding:16px 20px; width:320px; animation:popoverIn 0.2s cubic-bezier(0.16,1,0.3,1) forwards;">
-                                <div class="cal-filters" style="display:flex; gap:8px; align-items:flex-end; margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid #f1f5f9;">
-                                    <div class="filter-group" style="display:flex; flex-direction:column; gap:3px; flex:1;">
-                                        <label style="font-size:10px; font-weight:600; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em;">Mes</label>
-                                        <select id="fnac-month" class="filter-select"></select>
-                                    </div>
-                                    <div class="filter-group" style="display:flex; flex-direction:column; gap:3px; flex:1;">
-                                        <label style="font-size:10px; font-weight:600; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em;">Año</label>
-                                        <select id="fnac-year" class="filter-select"></select>
-                                    </div>
-                                    <button type="button" id="fnac-today" class="btn-module btn-clear-hover" style="padding:5px 12px; font-size:11px; white-space:nowrap; height:fit-content;">Hoy</button>
-                                </div>
-                                <div class="calendar-header" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
-                                    <button type="button" class="cal-nav-btn" id="fnac-prev" style="width:30px; height:30px; border-radius:6px; border:1px solid #e2e8f0; background:#ffffff; color:#64748b; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; font-size:12px;">
-                                        <i class="fa-solid fa-chevron-left"></i>
-                                    </button>
-                                    <div class="cal-title" id="fnac-title" style="font-size:14px; font-weight:700; color:#0f172a;"></div>
-                                    <button type="button" class="cal-nav-btn" id="fnac-next" style="width:30px; height:30px; border-radius:6px; border:1px solid #e2e8f0; background:#ffffff; color:#64748b; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; font-size:12px;">
-                                        <i class="fa-solid fa-chevron-right"></i>
-                                    </button>
-                                </div>
-                                <div class="cal-weekdays" style="display:grid; grid-template-columns:repeat(7,1fr); gap:3px; margin-bottom:6px;">
-                                    <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">D</span>
-                                    <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">L</span>
-                                    <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">M</span>
-                                    <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">MI</span>
-                                    <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">J</span>
-                                    <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">V</span>
-                                    <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">S</span>
-                                </div>
-                                <div class="cal-days-grid" id="fnac-days-grid" style="display:grid; grid-template-columns:repeat(7,1fr); gap:3px;"></div>
-                            </div>
+                            <div class="cr-date-popover" id="fnac-popover"></div>
                         </div>
 
                         <div id="dv-group" class="input-stacked col-span-2">
-                            <label>Código de Verificación</label>
-                            <input type="text" id="paciente-codigo-ver" class="standard-input"
-                                oninput="this.value = this.value.replace(/[^0-9]/g, '')">
-                        </div>
-
-                        <!-- FILA 2: APELLIDOS | NOMBRES (3+3) -->
-                        <div class="input-stacked col-span-3">
-                            <label>Apellidos Completos</label>
-                            <input type="text" id="paciente-apellidos" class="standard-input"
-                                oninput="this.value = this.value.replace(/[^A-Za-zñÑáéíóúÁÉÍÓÚ\s]/g, '')" required>
+                            <label for="paciente-codigo-ver">Código de Verificación</label>
+                            <input type="text" id="paciente-codigo-ver" class="standard-input">
                         </div>
 
                         <div class="input-stacked col-span-3">
-                            <label>Nombres Completos</label>
-                            <input type="text" id="paciente-nombres" class="standard-input"
-                                oninput="this.value = this.value.replace(/[^A-Za-zñÑáéíóúÁÉÍÓÚ\s]/g, '')" required>
+                            <label for="paciente-apellidos">Apellidos Completos</label>
+                            <input type="text" id="paciente-apellidos" class="standard-input" required>
                         </div>
 
-                        <!-- FILA 3: HC | TIPO SEGURO (2+2) + GRUPO OTROS (2) -->
+                        <div class="input-stacked col-span-3">
+                            <label for="paciente-nombres">Nombres Completos</label>
+                            <input type="text" id="paciente-nombres" class="standard-input" required>
+                        </div>
+
                         <div class="input-stacked col-span-2" id="field-hc">
-                            <label>Nº Historia Clínica</label>
-    <input type="text" id="paciente-hc" class="standard-input hc-input"
-        maxlength="20"
-        oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+                            <label for="paciente-hc">Nº Historia Clínica</label>
+                            <input type="text" id="paciente-hc" class="standard-input hc-input" maxlength="20">
                         </div>
 
                         <div class="input-stacked col-span-2">
-                            <label>Tipo de Seguro</label>
-                            <div class="global-search-box" style="width:100%; display:flex; align-items:center; background:#ffffff; border-radius:8px; border:1px solid #e2e8f0; padding:0 15px; position:relative; height:42px;">
-                                <i class="fa-solid fa-shield-halved" style="color:#64748b; margin-right:10px;"></i>
-                                <select id="paciente-seguro" class="global-search-input custom-select-source" required style="border:none; padding:0; outline:none; flex:1; min-width:0; appearance:none; -webkit-appearance:none; cursor:pointer; color:inherit; background:transparent; font-size:13px;">
-                                    <option value="" disabled selected hidden>Seleccione</option>
-                                    <option value="EsSalud">EsSalud</option>
-                                    <option value="SIS">SIS</option>
-                                    <option value="Saludpol">Saludpol</option>
-                                    <option value="SOAT">SOAT</option>
-                                    <option value="Privado">Privado</option>
-                                    <option value="Otros">Otros tipos</option>
-                                </select>
-                                <i class="fa-solid fa-chevron-down" style="position:absolute; right:15px; color:#64748b; font-size:12px; pointer-events:none;"></i>
+                            <label for="paciente-seguro">Tipo de Seguro</label>
+                            <div class="custom-select-wrapper filter-dropdown-wrapper" id="custom-paciente-seguro" tabindex="0" role="combobox" aria-haspopup="listbox" aria-expanded="false">
+                                <div class="custom-select-trigger">
+                                    <svg class="fa-icon trigger-icon" aria-hidden="true"><use href="#ir-shield-halved"/></svg>
+                                    <span class="custom-select-text"></span>
+                                    <svg class="fa-icon chevron-icon" aria-hidden="true"><use href="#ir-chevron-down"/></svg>
+                                </div>
+                                <ul class="custom-select-options" role="listbox" id="custom-paciente-seguro-list"></ul>
                             </div>
+                            <select id="paciente-seguro" style="display:none" required>
+                                <option value="" disabled selected hidden>Seleccione</option>
+                                <option value="EsSalud">EsSalud</option>
+                                <option value="SIS">SIS</option>
+                                <option value="Saludpol">Saludpol</option>
+                                <option value="SOAT">SOAT</option>
+                                <option value="Privado">Privado</option>
+                                <option value="OTROS TIPOS">OTROS TIPOS</option>
+                            </select>
                         </div>
 
                         <div class="input-stacked col-span-2" id="grupo-otros" style="display: none;">
-                            <label>Especificar Seguro</label>
+                            <label for="paciente-seguro-otros">Especificar Seguro</label>
                             <input type="text" id="paciente-seguro-otros" class="standard-input">
                         </div>
 
-                        <!-- FILA 4: SERVICIO | FECHA INGRESO | CONDICIÓN (2+2+2) -->
-                        <!-- SERVICIO -->
                         <div class="input-stacked col-span-2">
-                            <label>Servicio</label>
-                            <div class="global-search-box" style="width:100%; display:flex; align-items:center; background:#ffffff; border-radius:8px; border:1px solid #e2e8f0; padding:0 15px; position:relative; height:42px;">
-                                <i class="fa-solid fa-building" style="color:#64748b; margin-right:10px;"></i>
-                                <select id="paciente-servicio" class="global-search-input custom-select-source" data-servicio required style="border:none; padding:0; outline:none; flex:1; min-width:0; appearance:none; -webkit-appearance:none; cursor:pointer; color:inherit; background:transparent; font-size:13px;">
-                                    <option value="" disabled selected hidden>Seleccione Servicio</option>
-                                </select>
-                                <i class="fa-solid fa-chevron-down" style="position:absolute; right:15px; color:#64748b; font-size:12px; pointer-events:none;"></i>
+                            <label for="paciente-servicio">Servicio</label>
+                            <div class="custom-select-wrapper filter-dropdown-wrapper" id="custom-paciente-servicio" tabindex="0" role="combobox" aria-haspopup="listbox" aria-expanded="false">
+                                <div class="custom-select-trigger">
+                                    <svg class="fa-icon trigger-icon" aria-hidden="true"><use href="#ir-building"/></svg>
+                                    <span class="custom-select-text"></span>
+                                    <svg class="fa-icon chevron-icon" aria-hidden="true"><use href="#ir-chevron-down"/></svg>
+                                </div>
+                                <ul class="custom-select-options" role="listbox" id="custom-paciente-servicio-list"></ul>
                             </div>
+                            <select id="paciente-servicio" data-servicio style="display:none" required>
+                                <option value="" disabled selected hidden>Seleccione Servicio</option>
+                            </select>
                         </div>
 
-                        <!-- FECHA + HORA DE INGRESO -->
                         <div class="input-stacked col-span-2" style="position:relative;">
-                            <label>Fecha y Hora de Ingreso</label>
+                            <label for="rp-fi-input">Fecha y Hora de Ingreso <span style="font-weight:400">(Opcional)</span></label>
                             <div id="rp-fi-wrapper">
                                 <div class="fi-date-group" style="position:relative;">
                                     <div id="rp-fi-trigger" style="position:absolute; left:0; top:0; bottom:0; width:40px; display:flex; align-items:center; justify-content:center; cursor:pointer; color:#94a3b8; z-index:1;">
-                                        <i class="fa-regular fa-calendar"></i>
+                                        <svg class="fa-icon" aria-hidden="true"><use href="#ir-calendar"/></svg>
                                     </div>
-                                    <i class="fa-solid fa-chevron-down" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); color:#94a3b8; font-size:10px; pointer-events:none;"></i>
+                                    <svg class="fa-icon chevron-icon" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); color:#94a3b8; font-size:10px; pointer-events:none;" aria-hidden="true"><use href="#ir-chevron-down"/></svg>
                                     <input type="text" id="rp-fi-input" class="standard-input" placeholder="dd/mm/aaaa" autocomplete="off" style="padding-left:40px; padding-right:28px; height:42px;">
-                                    <div class="cr-date-popover" id="rp-fi-popover" style="display:none; position:fixed; z-index:10003; background:#ffffff; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.12),0 2px 8px rgba(0,0,0,0.06); padding:16px 20px; width:320px; animation:popoverIn 0.2s cubic-bezier(0.16,1,0.3,1) forwards;">
-                                        <div class="cal-filters" style="display:flex; gap:8px; align-items:flex-end; margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid #f1f5f9;">
-                                            <div class="filter-group" style="display:flex; flex-direction:column; gap:3px; flex:1;">
-                                                <label style="font-size:10px; font-weight:600; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em;">Mes</label>
-                                                <select id="rp-fi-month" class="filter-select"></select>
-                                            </div>
-                                            <div class="filter-group" style="display:flex; flex-direction:column; gap:3px; flex:1;">
-                                                <label style="font-size:10px; font-weight:600; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em;">Año</label>
-                                                <select id="rp-fi-year" class="filter-select"></select>
-                                            </div>
-                                            <button type="button" id="rp-fi-today" class="btn-module btn-clear-hover" style="padding:5px 12px; font-size:11px; white-space:nowrap; height:fit-content;">Hoy</button>
-                                        </div>
-                                        <div class="calendar-header" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
-                                            <button type="button" class="cal-nav-btn" id="rp-fi-prev" style="width:30px; height:30px; border-radius:6px; border:1px solid #e2e8f0; background:#ffffff; color:#64748b; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; font-size:12px;">
-                                                <i class="fa-solid fa-chevron-left"></i>
-                                            </button>
-                                            <div class="cal-title" id="rp-fi-title" style="font-size:14px; font-weight:700; color:#0f172a;"></div>
-                                            <button type="button" class="cal-nav-btn" id="rp-fi-next" style="width:30px; height:30px; border-radius:6px; border:1px solid #e2e8f0; background:#ffffff; color:#64748b; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; font-size:12px;">
-                                                <i class="fa-solid fa-chevron-right"></i>
-                                            </button>
-                                        </div>
-                                        <div class="cal-weekdays" style="display:grid; grid-template-columns:repeat(7,1fr); gap:3px; margin-bottom:6px;">
-                                            <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">D</span>
-                                            <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">L</span>
-                                            <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">M</span>
-                                            <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">MI</span>
-                                            <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">J</span>
-                                            <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">V</span>
-                                            <span style="text-align:center; font-size:10px; font-weight:700; color:#94a3b8; text-transform:uppercase; padding:3px 0;">S</span>
-                                        </div>
-                                        <div class="cal-days-grid" id="rp-fi-days-grid" style="display:grid; grid-template-columns:repeat(7,1fr); gap:3px;"></div>
-                                    </div>
+                                    <div class="cr-date-popover" id="rp-fi-popover"></div>
                                 </div>
                                 <div class="fi-time-group" style="position:relative;">
                                     <div style="position:absolute; left:0; top:0; bottom:0; width:40px; display:flex; align-items:center; justify-content:center; color:#94a3b8; pointer-events:none; z-index:1;">
-                                        <i class="fa-regular fa-clock"></i>
+                                        <svg class="fa-icon" aria-hidden="true"><use href="#ir-clock"/></svg>
                                     </div>
                                     <input type="text" id="rp-hora-ingreso" class="standard-input" placeholder="hh:mm" autocomplete="off" style="height:42px; padding-left:40px; padding-right:15px;">
                                 </div>
                             </div>
                         </div>
 
-                        <!-- CONDICION ACTUAL -->
                         <div class="input-stacked col-span-2" id="field-condicion">
-                            <label>Condición Actual</label>
-                            <div class="global-search-box" style="width:100%; display:flex; align-items:center; background:#ffffff; border-radius:8px; border:1px solid #e2e8f0; padding:0 15px; position:relative; height:42px;">
-                                <i class="fa-solid fa-heart-pulse" style="color:#64748b; margin-right:10px;"></i>
-                                <select id="paciente-condicion" class="global-search-input custom-select-source" required style="border:none; padding:0; outline:none; flex:1; min-width:0; appearance:none; -webkit-appearance:none; cursor:pointer; color:inherit; background:transparent; font-size:13px;">
-                                    <option value="Hospitalizado" selected>Hospitalizado</option>
-                                    <option value="Salió de Alta">Alta</option>
-                                    <option value="Fallecido">Fallecido</option>
-                                </select>
-                                <i class="fa-solid fa-chevron-down" style="position:absolute; right:15px; color:#64748b; font-size:12px; pointer-events:none;"></i>
+                            <label for="paciente-condicion">Condición Actual</label>
+                            <div class="custom-select-wrapper filter-dropdown-wrapper" id="custom-paciente-condicion" tabindex="0" role="combobox" aria-haspopup="listbox" aria-expanded="false">
+                                <div class="custom-select-trigger">
+                                    <svg class="fa-icon trigger-icon" aria-hidden="true"><use href="#ir-heart-pulse"/></svg>
+                                    <span class="custom-select-text"></span>
+                                    <svg class="fa-icon chevron-icon" aria-hidden="true"><use href="#ir-chevron-down"/></svg>
+                                </div>
+                                <ul class="custom-select-options" role="listbox" id="custom-paciente-condicion-list"></ul>
                             </div>
+                            <select id="paciente-condicion" style="display:none" required disabled>
+                                <option value="Hospitalizado" selected>Hospitalizado</option>
+                                <option value="Alta">Alta</option>
+                                <option value="Fallecido">Fallecido</option>
+                            </select>
                         </div>
 
                         <div class="form-actions"
@@ -352,35 +297,153 @@
                             <button type="submit" class="btn-module primary" id="btn-guardar"
                                 style="padding: 12px 25px;">
                                 <span id="guardar-text">Guardar</span>
-                                <i id="guardar-spinner" class="fa-solid fa-circle-notch fa-spin"
-                                    style="display:none; margin-left:8px;"></i>
+                                <svg id="guardar-spinner" class="fa-icon ic-spin" style="display:none; margin-left:8px;" aria-hidden="true"><use href="#ir-circle-notch"/></svg>
                             </button>
                         </div>
                     </form>
 
-                    <!-- Botón de reintento (oculto, se muestra solo si falla la hospitalización) -->
-                    <button id="btn-reintentar-hosp" style="display:none; align-items:center; gap:6px; background:#fef2f2; color:#dc2626; border:1px solid #fecaca; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer; margin-top:10px;"
-                        onmouseover="this.style.background='#fee2e2'"
-                        onmouseout="this.style.background='#fef2f2'">
-                        <i class="fa-solid fa-rotate"></i> Reintentar Fecha de Ingreso
+                    <button id="btn-reintentar-hosp" style="display:none; align-items:center; gap:6px; background:#fef2f2; color:#dc2626; border:1px solid #fecaca; border-radius:8px; padding:8px 16px; font-size:13px; font-weight:600; cursor:pointer; margin-top:10px;">
+                        <svg class="fa-icon" aria-hidden="true"><use href="#ir-rotate"/></svg> Reintentar Fecha de Ingreso
                     </button>
                 </div>
             </div>
 
-
-
         </main>
     </div>
 
-    <script src="../../js/modal-prellenado.js"></script>
-    <!-- SCRIPTS -->
-    <script src="../../js/supabase-config.js"></script>
-    <script src="../../js/calendario-popover.js"></script>
-    <script src="../../js/servicios.js"></script>
-    <script src="../../js/custom-select.js"></script>
-    <script src="../../js/layout.js"></script>
-    <script src="../../js/dynamic-table.js"></script>
-    <script src="../../js/registro-pacientes.js"></script>
-</body>
+    <template id="tpl-calendar-popover">
+        <div class="cal-filters">
+            <div class="filter-group">
+                <label for="{prefix}-month" style="font-size:10px; font-weight:600; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em;">Mes</label>
+                <select id="{prefix}-month" class="filter-select"></select>
+            </div>
+            <div class="filter-group">
+                <label for="{prefix}-year" style="font-size:10px; font-weight:600; color:#94a3b8; text-transform:uppercase; letter-spacing:0.05em;">Año</label>
+                <select id="{prefix}-year" class="filter-select"></select>
+            </div>
+            <button type="button" id="{prefix}-today" class="btn-module btn-clear-hover" style="padding:5px 12px; font-size:11px; white-space:nowrap; height:fit-content;">Hoy</button>
+        </div>
+        <div class="calendar-header" style="display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;">
+            <button type="button" class="cal-nav-btn" id="{prefix}-prev" aria-label="Mes anterior" style="width:30px; height:30px; border-radius:6px; border:1px solid #e2e8f0; background:#ffffff; color:#64748b; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; font-size:12px;">
+                <svg class="fa-icon" aria-hidden="true"><use href="#ir-chevron-left"/></svg>
+            </button>
+            <div class="cal-title" id="{prefix}-title"></div>
+            <button type="button" class="cal-nav-btn" id="{prefix}-next" aria-label="Mes siguiente" style="width:30px; height:30px; border-radius:6px; border:1px solid #e2e8f0; background:#ffffff; color:#64748b; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s; font-size:12px;">
+                <svg class="fa-icon" aria-hidden="true"><use href="#ir-chevron-right"/></svg>
+            </button>
+        </div>
+        <div class="cal-weekdays" aria-hidden="true">
+            <span style="font-size:10px; font-weight:700; text-transform:uppercase; padding:3px 0;">D</span>
+            <span style="font-size:10px; font-weight:700; text-transform:uppercase; padding:3px 0;">L</span>
+            <span style="font-size:10px; font-weight:700; text-transform:uppercase; padding:3px 0;">M</span>
+            <span style="font-size:10px; font-weight:700; text-transform:uppercase; padding:3px 0;">MI</span>
+            <span style="font-size:10px; font-weight:700; text-transform:uppercase; padding:3px 0;">J</span>
+            <span style="font-size:10px; font-weight:700; text-transform:uppercase; padding:3px 0;">V</span>
+            <span style="font-size:10px; font-weight:700; text-transform:uppercase; padding:3px 0;">S</span>
+        </div>
+        <div class="cal-days-grid" id="{prefix}-days-grid"></div>
+    </template>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" defer></script>
+    <script src="../../js/modal-prellenado.js" defer></script>
+    <script src="../../js/supabase-config.js" defer></script>
+    <script src="../../js/calendario-popover.js" defer></script>
+    <script src="../../js/servicios.js" defer></script>
+    <script src="../../js/servicio-colores.js" defer></script>
+    <script src="../../js/filter-dropdown.js" defer></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var docFilter = window.createFilterDropdown({
+                dropdownEl: document.getElementById('custom-tipo-documento'),
+                listEl: document.getElementById('custom-tipo-documento-list'),
+                hiddenSelectEl: document.getElementById('tipo-documento'),
+                defaultText: '',
+                options: ['DNI', 'DNI_TEMPORAL', 'CARNET_EXT']
+            });
+
+            var segFilter = window.createFilterDropdown({
+                dropdownEl: document.getElementById('custom-paciente-seguro'),
+                listEl: document.getElementById('custom-paciente-seguro-list'),
+                hiddenSelectEl: document.getElementById('paciente-seguro'),
+                defaultText: 'Seleccione',
+                options: ['EsSalud', 'SIS', 'Saludpol', 'SOAT', 'Privado', 'OTROS TIPOS']
+            });
+
+            var srvFormFilter = window.createFilterDropdown({
+                dropdownEl: document.getElementById('custom-paciente-servicio'),
+                listEl: document.getElementById('custom-paciente-servicio-list'),
+                hiddenSelectEl: document.getElementById('paciente-servicio'),
+                defaultText: 'SELECCIONE',
+                options: typeof SERVICIOS !== 'undefined' ? SERVICIOS : []
+            });
+
+            var condFormFilter = window.createFilterDropdown({
+                dropdownEl: document.getElementById('custom-paciente-condicion'),
+                listEl: document.getElementById('custom-paciente-condicion-list'),
+                hiddenSelectEl: document.getElementById('paciente-condicion'),
+                defaultText: 'SELECCIONE',
+                options: ['Hospitalizado', 'Alta', 'Fallecido']
+            });
+
+            var srvFilter = window.createFilterDropdown({
+                dropdownEl: document.getElementById('custom-filter-servicio'),
+                listEl: document.getElementById('custom-filter-servicio-list'),
+                hiddenSelectEl: document.getElementById('filter-servicio'),
+                defaultText: 'TODOS',
+                options: typeof SERVICIOS !== 'undefined' ? SERVICIOS : []
+            });
+
+            var condFilter = window.createFilterDropdown({
+                dropdownEl: document.getElementById('custom-filter-condicion'),
+                listEl: document.getElementById('custom-filter-condicion-list'),
+                hiddenSelectEl: document.getElementById('filter-condicion'),
+                defaultText: 'TODAS',
+                options: ['Hospitalizado', 'Alta', 'Fallecido']
+            });
+
+            document.getElementById('clear-filter-servicio').addEventListener('click', function () {
+                var searchInput = document.getElementById('btn-search-dni');
+                var clearBtn = document.getElementById('btn-search-clear');
+                if (searchInput) searchInput.value = '';
+                if (clearBtn) clearBtn.style.display = 'none';
+                setTimeout(function() {
+                    srvFilter.syncSelected();
+                    condFilter.syncSelected();
+                }, 0);
+            });
+        });
+    </script>
+    <script src="../../js/layout.js" defer></script>
+    <script src="../../js/dynamic-table.js" defer></script>
+    <script src="../../js/registro-pacientes.js" defer></script>
+    <script>
+        (function () {
+            var input = document.getElementById('btn-search-dni');
+            var clearBtn = document.getElementById('btn-search-clear');
+            if (!input || !clearBtn) return;
+
+            function update() {
+                clearBtn.style.display = input.value.trim() ? '' : 'none';
+            }
+
+            input.addEventListener('input', update);
+
+            clearBtn.addEventListener('click', function () {
+                var srvSelect = document.getElementById('filter-servicio');
+                var condSelect = document.getElementById('filter-condicion');
+                var hasFilters = (srvSelect && srvSelect.value !== '') ||
+                                 (condSelect && condSelect.value !== '');
+                if (hasFilters) {
+                    input.value = '';
+                    clearBtn.style.display = 'none';
+                    input.focus();
+                } else {
+                    document.getElementById('clear-filter-servicio').click();
+                }
+            });
+
+            update();
+        })();
+    </script>
+</body>
 </html>

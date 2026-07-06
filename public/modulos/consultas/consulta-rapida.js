@@ -3,6 +3,43 @@ document.addEventListener('DOMContentLoaded', async () => {
     const btnClear = document.getElementById('btn-clear');
     const inputDniHc = document.getElementById('filter-dni-hc');
     const inputApellidos = document.getElementById('filter-apellidos');
+    const crClearDni = document.getElementById('cr-clear-dni');
+    const crClearAp = document.getElementById('cr-clear-ap');
+
+    function updateCrClear(input, btn) {
+        if (btn) btn.style.display = input.value.trim() ? '' : 'none';
+    }
+    inputDniHc.addEventListener('input', function () { updateCrClear(inputDniHc, crClearDni); });
+    inputApellidos.addEventListener('input', function () { updateCrClear(inputApellidos, crClearAp); });
+
+    var clearDniListener = function () {
+        var hasFilters = (filterCondicion && filterCondicion.value !== '') ||
+                         (filterServicio && filterServicio.value !== '');
+        if (hasFilters) {
+            inputDniHc.value = '';
+            if (crClearDni) crClearDni.style.display = 'none';
+            inputDniHc.focus();
+        } else {
+            btnClear.click();
+            if (crClearDni) crClearDni.style.display = 'none';
+            if (crClearAp) crClearAp.style.display = 'none';
+        }
+    };
+    var clearApListener = function () {
+        var hasFilters = (filterCondicion && filterCondicion.value !== '') ||
+                         (filterServicio && filterServicio.value !== '');
+        if (hasFilters) {
+            inputApellidos.value = '';
+            if (crClearAp) crClearAp.style.display = 'none';
+            inputApellidos.focus();
+        } else {
+            btnClear.click();
+            if (crClearDni) crClearDni.style.display = 'none';
+            if (crClearAp) crClearAp.style.display = 'none';
+        }
+    };
+    if (crClearDni) crClearDni.addEventListener('click', clearDniListener);
+    if (crClearAp) crClearAp.addEventListener('click', clearApListener);
 
     const tablePacientes = document.getElementById('table-pacientes');
     const tbodyPacientes = document.getElementById('tbody-pacientes');
@@ -15,7 +52,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const btnHastaHoy = document.getElementById('btn-hasta-hoy');
     const patientCountEl = document.getElementById('cr-patient-count');
 
-    // ── Datepicker ──
     const crDateTrigger = document.getElementById('cr-date-trigger');
     const crDateDisplay = document.getElementById('cr-date-display');
     const crDatePopover = document.getElementById('cr-date-popover');
@@ -229,12 +265,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         toggleDatePopover();
     });
 
-    // Close popover on click outside
     document.addEventListener('click', (e) => {
         if (!e.target.closest('.cr-datepicker-wrapper')) closeDatePopover();
     });
 
-    // ========== CHECKBOX SELECT ALL ==========
     document.addEventListener('change', (e) => {
         if (e.target.id === 'checkbox-select-all') {
             if (e.target.checked) {
@@ -255,7 +289,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // ========== GESTIÓN ALERTA FLOTANTE (Inyección en Header) ==========
     const updateAlertaBanner = () => {
         if (isValidating) return;
         if (!templateAlerta || !templateAlerta.content || !templateAlerta.content.children.length) return;
@@ -297,7 +330,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         tryInject();
     };
 
-    // ========== CONTROL OVERLAY DE VALIDACIÓN ==========
     const updateOverlay = (msg) => {
         const el = document.getElementById('overlay-msg');
         if (el) el.textContent = msg;
@@ -317,12 +349,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         updateAlertaBanner();
     };
 
-    // ========== OBTENER ESTADO EFECTIVO ==========
     const getEstadoEfectivo = (p) => p._estado_rpa || p.estado_rpa || null;
     const getSeguroExtraido = (p) => p._seguro_extraido || p.seguro_extraido || null;
     const getUltimaValidacion = (p) => p._ultima_validacion_rpa || p.ultima_validacion_rpa || null;
 
-    // ========== RENDER TABLE ==========
     const renderTable = () => {
         tbodyPacientes.innerHTML = '';
         if (currentPagePatients.length === 0) {
@@ -355,11 +385,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             const ultimaValidacion = getUltimaValidacion(p);
             const isFallecido = p.condicion && p.condicion.toUpperCase() === 'FALLECIDO';
 
-            // Badge Seguro Declarado
             const seguroDeclarado = p.tipo_seguro || 'NO DECLARADO';
             const seguroDeclaradoHTML = `<span class="seguro-badge">${seguroDeclarado}</span>`;
 
-            // Badge Seguro Extraído
             let seguroExtraidoHTML;
             if (seguroExtraido) {
                 seguroExtraidoHTML = `<span class="seguro-badge" style="color: #0f172a;">${seguroExtraido}</span>`;
@@ -367,7 +395,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 seguroExtraidoHTML = `<span class="condicion-badge" style="background:#f1f5f9; color:#94a3b8; border-left:3px solid #cbd5e1;">N/A</span>`;
             }
 
-            // Badge Estado
             let estadoHTML;
             if (estadoRPA === 'ÉXITO' || estadoRPA === 'EXITO') {
                 estadoHTML = `<span class="condicion-badge cond-alta">ÉXITO</span>`;
@@ -380,7 +407,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 estadoHTML = `<span class="condicion-badge" style="background:#f1f5f9; color:#94a3b8; border-left:3px solid #cbd5e1;">N/A</span>`;
             }
 
-            // Badge Condición
             const condicionStyles = {
                 'HOSPITALIZADO': 'background:#e0f2fe; color:#0284c7; border-left:3px solid #0ea5e9;',
                 'ALTA': 'background:#dcfce7; color:#16a34a; border-left:3px solid #22c55e;',
@@ -390,14 +416,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             const condicionStyle = condicionStyles[condicionVal.toUpperCase()] || 'background:#f1f5f9; color:#94a3b8; border-left:3px solid #cbd5e1;';
             const condicionHTML = `<span class="condicion-badge" style="${condicionStyle}">${condicionVal || 'N/A'}</span>`;
 
-            // Última validación
             let ultValidacionHTML = '<span style="color:#94a3b8; font-size:12px;">—</span>';
             if (ultimaValidacion) {
                 const fecha = new Date(ultimaValidacion);
                 ultValidacionHTML = `<span style="font-size:12px; color:#475569;">${fecha.toLocaleDateString('es-PE')} ${fecha.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}</span>`;
             }
 
-            // Botón de acción (solo si NO es ÉXITO)
             let accionHTML = `<span style="color:#cbd5e1; font-size:14px;">—</span>`;
             if (isFallecido) {
                 accionHTML = `<span style="color:#ef4444; font-size:12px; font-weight:bold;"><i class="fa-solid fa-lock"></i> Bloqueado</span>`;
@@ -425,7 +449,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <td style="text-align:center;">${accionHTML}</td>
             `;
 
-            // Checkbox handler
             const checkbox = tr.querySelector('.patient-checkbox');
             checkbox.addEventListener('change', (e) => {
                 const dni = e.target.getAttribute('data-dni');
@@ -442,7 +465,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 updateActionsBar();
             });
 
-            // Botón refresh handler
             const btnRevalidar = tr.querySelector('.btn-revalidar');
             if (btnRevalidar) {
                 btnRevalidar.addEventListener('click', () => {
@@ -451,10 +473,10 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const estado = getEstadoEfectivo(paciente);
 
                     if (estado === 'ALERTA') {
-                        // Abrir modal de cambio de cobertura
+
                         openModalCambioCobertura(paciente);
                     } else {
-                        // Re-validar normalmente
+
                         if (!selectedDNIs.includes(dni)) {
                             if (selectedDNIs.length >= 20) {
                                 showToast('Desmarque un paciente para re-validar este.', true);
@@ -489,7 +511,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     };
 
-    // ========== BÚSQUEDA ACUMULATIVA ==========
     const loadPacientes = async () => {
         const dniHc = inputDniHc.value.trim();
         const apellidos = inputApellidos.value.trim();
@@ -567,6 +588,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     btnClear.addEventListener('click', () => {
         inputDniHc.value = '';
         inputApellidos.value = '';
+        if (crClearDni) crClearDni.style.display = 'none';
+        if (crClearAp) crClearAp.style.display = 'none';
         crRangeStart = null;
         crRangeEnd = null;
         updateDateDisplay();
@@ -584,7 +607,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderTable();
     });
 
-    // ========== CANCELAR VALIDACIÓN ==========
     const btnCancelValidacion = document.getElementById('btn-cancel-validacion');
     if (btnCancelValidacion) {
         btnCancelValidacion.addEventListener('click', () => {
@@ -594,12 +616,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    // ========== VALIDACIÓN RPA ==========
     const btnValidar = document.getElementById('btn-validar');
     btnValidar.addEventListener('click', async () => {
         if (selectedDNIs.length === 0) return;
 
-        // Verificar si hay pacientes no-DNI seleccionados
         const nonDniSelected = selectedDNIs.some(dni => {
             const p = currentPagePatients.find(pac => pac.dni === dni);
             return p && p.tipo_documento && p.tipo_documento !== 'DNI';
@@ -635,7 +655,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            const response = await fetch('https://sistema-sis-production-5b60.up.railway.app/validate-batch', {
+            const response = await fetch('https://residency-evade-subgroup.ngrok-free.dev/validate-batch', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ pacientes: pacientesParaValidar }),
@@ -714,16 +734,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // ========== MODAL CAMBIO COBERTURA ==========
     const modalOverlay = document.getElementById('modal-overlay');
     const modalClose = document.getElementById('modal-close');
     const modalGuardar = document.getElementById('modal-guardar');
     const modalNuevoSeguro = document.getElementById('modal-nuevo-seguro');
 
-    // Variable para almacenar la hospitalización activa del paciente actual
     let hospActiva = null;
 
-    // Abrir directamente el modal de Cambio Cobertura (sin verificación)
     const showModalCobertura = (paciente) => {
         modalPacienteActual = paciente;
 
@@ -734,7 +751,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('modal-seguro-actual').value = seguroActual;
         document.getElementById('modal-seguro-extraido').value = getSeguroExtraido(paciente) || '';
 
-        // Inhabilitar la opción del seguro actual en el select
         const opciones = modalNuevoSeguro.querySelectorAll('option');
         opciones.forEach(opt => {
             opt.disabled = opt.value && opt.value.toUpperCase() === seguroActual.toUpperCase();
@@ -745,9 +761,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         modalOverlay.style.display = 'flex';
     };
 
-    // Punto de entrada principal: verifica hospitalización activa antes de cambio de cobertura
     const openModalCambioCobertura = async (paciente) => {
-        // Consultar si el paciente tiene una hospitalización activa
+
         const { data: hospData, error: hospError } = await supabaseClient
             .from('hospitalizaciones')
             .select('*')
@@ -761,11 +776,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
 
         if (hospData && hospData.length > 0) {
-            // Tiene hospitalización activa → abrir directamente Cambio de Cobertura
+
             hospActiva = hospData[0];
             showModalCobertura(paciente);
         } else {
-            // No tiene hospitalización activa → solicitar Fecha de Ingreso primero
+
             hospActiva = null;
             openModalIngresoRapido(paciente);
         }
@@ -781,11 +796,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (e.target === modalOverlay) closeModal();
     });
 
-    // ========== MODAL INGRESO RÁPIDO ==========
     const modalIngresoOverlay = document.getElementById('modal-ingreso-overlay');
     const modalIngresoClose = document.getElementById('modal-ingreso-close');
     const modalIngresoGuardar = document.getElementById('modal-ingreso-guardar');
-    let pendingIngresoPaciente = null; // Paciente pendiente de ingreso antes de cobertura
+    let pendingIngresoPaciente = null;
 
     const openModalIngresoRapido = (paciente) => {
         pendingIngresoPaciente = paciente;
@@ -793,7 +807,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('modal-ingreso-nombre').textContent = `${paciente.apellidos}, ${paciente.nombres}`;
         document.getElementById('modal-ingreso-info').textContent = `DNI: ${paciente.dni} | HC: ${paciente.historia_clinica || 'N/A'}`;
 
-        // Fecha actual de Perú como valor por defecto
         const peruNow = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Lima' }));
         const isoDate = `${peruNow.getFullYear()}-${String(peruNow.getMonth() + 1).padStart(2, '0')}-${String(peruNow.getDate()).padStart(2, '0')}`;
         const horaActual = peruNow.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
@@ -834,7 +847,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             const paciente = pendingIngresoPaciente;
 
-            // Obtener el siguiente número de registro
             const { data: hospExistentes } = await supabaseClient
                 .from('hospitalizaciones')
                 .select('numero_registro')
@@ -844,11 +856,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const nextNum = (hospExistentes && hospExistentes.length > 0) ? hospExistentes[0].numero_registro + 1 : 1;
 
-            // Obtener usuario actual
             const { data: { session } } = await supabaseClient.auth.getSession();
             const userId = session ? session.user.id : null;
 
-            // Crear la hospitalización
             const { data: newHosp, error: hospError } = await supabaseClient.from('hospitalizaciones').insert([{
                 paciente_id: paciente.id,
                 fecha_ingreso: fechaIngreso,
@@ -861,21 +871,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             if (hospError) throw hospError;
 
-            // Actualizar condición del paciente si no está 'Hospitalizado'
             if (!paciente.condicion || paciente.condicion.toUpperCase() !== 'HOSPITALIZADO') {
                 await supabaseClient.from('pacientes').update({ condicion: 'Hospitalizado' }).eq('id', paciente.id);
                 paciente.condicion = 'Hospitalizado';
             }
 
-            // Guardar la hospitalización activa recién creada
             hospActiva = newHosp;
 
             showToast('Registro de hospitalización creado');
 
-            // Cerrar modal de ingreso
             closeModalIngreso();
 
-            // Abrir automáticamente el modal de Cambio de Cobertura
             showModalCobertura(paciente);
 
         } catch (err) {
@@ -906,7 +912,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const ahora = new Date().toISOString();
             const seguroExtraido = getSeguroExtraido(paciente) || '';
 
-            // 1. Registrar evento de Cambio Cobertura en historial (vinculado a hospitalización)
             const eventoPayload = {
                 paciente_id: paciente.id,
                 tipo_evento: 'Cambio Cobertura',
@@ -915,26 +920,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                 fecha_evento: ahora
             };
 
-            // Vincular a la hospitalización activa si existe
             if (hospActiva && hospActiva.id) {
                 eventoPayload.hospitalizacion_id = hospActiva.id;
             }
 
             await supabaseClient.from('historial_eventos').insert(eventoPayload);
 
-            // 2. Comparar nuevo seguro con extraído
             const nuevoUpper = nuevoSeguro.toUpperCase();
             const extraidoUpper = seguroExtraido.toUpperCase();
             const nuevoEstado = (nuevoUpper === extraidoUpper || extraidoUpper.includes(nuevoUpper) || nuevoUpper.includes(extraidoUpper)) ? 'ÉXITO' : 'ALERTA';
 
-            // 3. Actualizar paciente en BD
             await supabaseClient.from('pacientes').update({
                 tipo_seguro: nuevoSeguro.toUpperCase(),
                 estado_rpa: nuevoEstado,
                 ultima_validacion_rpa: ahora
             }).eq('id', paciente.id);
 
-            // 4. Registrar auditoría
             await supabaseClient.from('validaciones_rpa').insert({
                 paciente_id: paciente.id,
                 dni: paciente.dni,
@@ -944,13 +945,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 fecha_validacion: ahora
             });
 
-            // 5. Actualizar datos locales ANTES de cerrar el modal
             paciente.tipo_seguro = nuevoSeguro.toUpperCase();
             paciente._estado_rpa = nuevoEstado;
             paciente.estado_rpa = nuevoEstado;
             paciente._ultima_validacion_rpa = ahora;
 
-            // 6. Re-renderizar la tabla (fila deja de estar roja si es ÉXITO)
             renderTable();
 
             if (nuevoEstado === 'ÉXITO') {
@@ -959,7 +958,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 showToast('Cobertura actualizada — aún hay discrepancia', true);
             }
 
-            // 7. Cerrar modal después de actualizar todo
             closeModal();
 
         } catch (err) {
@@ -971,7 +969,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // ========== L&#211;GICA DE AUTO-EJECUCI&#211;N DESDE SEGUIMIENTO ==========
     const handleAutoExecute = async () => {
         const urlParams = new URLSearchParams(window.location.search);
         const autoDNI = urlParams.get('dni');
@@ -980,22 +977,20 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (autoDNI) {
             inputDniHc.value = autoDNI;
             if (autoTrigger) {
-                // 1. Ejecutar b&#250;squeda
+
                 await loadPacientes();
 
-                // 2. Seleccionar el registro (la b&#250;squeda ya renderiz&#243; la tabla)
                 const pac = currentPagePatients.find(p => p.dni === autoDNI);
                 if (pac && (!pac.tipo_documento || pac.tipo_documento === 'DNI') && (!pac.condicion || pac.condicion.toUpperCase() !== 'FALLECIDO')) {
                     if (!selectedDNIs.includes(autoDNI)) {
                         selectedDNIs.push(autoDNI);
                         updateActionsBar();
-                        renderTable(); // Re-render para marcar el checkbox visualmente
+                        renderTable();
                     }
 
-                    // 3. Ejecutar validaci&#243;n
                     setTimeout(() => {
                         btnValidar.click();
-                    }, 500); // Peque&#241;a espera para que el usuario vea la selecci&#243;n
+                    }, 500);
                 }
             }
         }
@@ -1005,5 +1000,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     initSusaludCopy();
     btnHastaHoy.classList.add('active');
     triggerActionsSearch();
-    handleAutoExecute();
+    await handleAutoExecute();
+
+    updateCrClear(inputDniHc, crClearDni);
+    updateCrClear(inputApellidos, crClearAp);
 });

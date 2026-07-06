@@ -1,5 +1,15 @@
 document.addEventListener('DOMContentLoaded', async () => {
-    // Inicialización y Auth
+
+    (function () {
+        const tpl = document.getElementById('tpl-calendar-popover');
+        if (tpl) {
+            ['fnac', 'rp-fi'].forEach(function (prefix) {
+                const target = document.getElementById(prefix + '-popover');
+                if (target) target.innerHTML = tpl.innerHTML.replace(/\{prefix\}/g, prefix);
+            });
+        }
+    }());
+
     const client = typeof supabaseClient !== 'undefined' ? supabaseClient : supabase;
     const { data: { session } } = await client.auth.getSession();
 
@@ -9,11 +19,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     const userId = session.user.id;
 
-    // Referencias del DOM
     const viewLista = document.getElementById('view-lista');
     const viewForm = document.getElementById('view-form');
     const btnNew = document.getElementById('local-new-patient-btn');
     const moduleCommands = document.querySelector('.module-commands');
+    const dashboardLegends = document.querySelector('.dashboard-legends');
 
     const form = document.getElementById('registro-form');
     const btnCancelar = document.getElementById('btn-cancelar');
@@ -21,7 +31,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const textGuardar = document.getElementById('guardar-text');
     const spinnerGuardar = document.getElementById('guardar-spinner');
 
-    const toast = document.getElementById('toast');
     const selectSeguro = document.getElementById('paciente-seguro');
     const grupoOtros = document.getElementById('grupo-otros');
     const inputOtros = document.getElementById('paciente-seguro-otros');
@@ -31,8 +40,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const loadingIndicator = document.getElementById('loading-indicator');
     const tableElement = document.getElementById('table-element');
 
-    // Referencias para el filtro de Servicio
     const filterServicio = document.getElementById('filter-servicio');
+    const filterCondicion = document.getElementById('filter-condicion');
     const btnClearFilterServicio = document.getElementById('clear-filter-servicio');
     const inputDni = document.getElementById('paciente-dni');
     const tipoDocumento = document.getElementById('tipo-documento');
@@ -41,11 +50,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const fieldHc = document.getElementById('field-hc');
     const fieldCondicion = document.getElementById('field-condicion');
 
-    // Referencias para Fecha y Hora de Ingreso
     const fechaIngresoData = document.getElementById('fecha-ingreso-data');
     const horaIngresoData = document.getElementById('hora-ingreso-data');
     const btnReintentarHosp = document.getElementById('btn-reintentar-hosp');
-    // Inline popover
+
     const rpFiTrigger = document.getElementById('rp-fi-trigger');
     const rpFiInput = document.getElementById('rp-fi-input');
     const rpFiPopover = document.getElementById('rp-fi-popover');
@@ -58,7 +66,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     const rpFiToday = document.getElementById('rp-fi-today');
     const rpHoraInput = document.getElementById('rp-hora-ingreso');
 
-    // Referencias para el popover de Fecha de Nacimiento
     const fnacInput = document.getElementById('paciente-fecha-nac');
     const fnacTrigger = document.getElementById('fnac-trigger');
     const fnacPopover = document.getElementById('fnac-popover');
@@ -71,7 +78,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     const fnacToday = document.getElementById('fnac-today');
 
     const PREFIX_MAP = { DNI: '', DNI_TEMPORAL: 'E- ', CARNET_EXT: 'C.E ' };
-    const PLACEHOLDER_MAP = { DNI: '12345678', DNI_TEMPORAL: '12345678', CARNET_EXT: '12345678' };
+
+    const SERVICIO_COLORES = {
+        'Cirugía':       { text: '#dc2626', bg: '#fef2f2' },
+        Emergencia:      { text: '#d97706', bg: '#fffbeb' },
+        'Ginecología':   { text: '#db2777', bg: '#fdf2f8' },
+        Medicina:        { text: '#2563eb', bg: '#eff6ff' },
+        'Neonatología':  { text: '#0d9488', bg: '#f0fdfa' },
+        'Pediatría':     { text: '#0891b2', bg: '#ecfeff' },
+        Puerperio:       { text: '#9333ea', bg: '#faf5ff' },
+        'Salud mental':  { text: '#4f46e5', bg: '#eef2ff' },
+        'Shock trauma':  { text: '#ea580c', bg: '#fff7ed' },
+        UVI:             { text: '#e11d48', bg: '#fff1f2' }
+    };
 
     const getRawDni = () => inputDni.value.replace(/[^0-9]/g, '');
 
@@ -86,7 +105,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         dniPrefix.textContent = prefix;
         dniPrefix.style.display = prefix ? 'flex' : 'none';
-        inputDni.placeholder = PLACEHOLDER_MAP[tipo];
+        inputDni.placeholder = '';
         inputDni.style.borderRadius = prefix ? '0 8px 8px 0' : '8px';
 
         dvGroup.style.display = tipo === 'DNI' ? 'block' : 'none';
@@ -100,14 +119,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     const highlightError = (el) => {
-        const target = el.closest('.global-search-box') || el;
+
+        var target = el;
+        if (el.tagName === 'SELECT' && el.style.display === 'none') {
+            var wrapper = document.getElementById('custom-' + el.id);
+            if (wrapper) target = wrapper;
+        } else {
+            var box = el.closest('.global-search-box');
+            if (box) target = box;
+        }
+
         if (target.dataset.errorActive === '1') return;
         target.dataset.errorActive = '1';
-        const origBorder = target.style.borderColor;
-        const origShadow = target.style.boxShadow;
+        var origBorder = target.style.borderColor;
+        var origShadow = target.style.boxShadow;
         target.style.borderColor = '#ef4444';
         target.style.boxShadow = '0 0 0 3px rgba(239,68,68,0.15)';
-        const clearError = () => {
+
+        var clearError = function () {
             target.style.borderColor = origBorder || '';
             target.style.boxShadow = origShadow || '';
             target.dataset.errorActive = '0';
@@ -117,6 +146,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 target.removeEventListener('change', clearError);
             }
         };
+
         el.addEventListener('input', clearError);
         el.addEventListener('change', clearError);
         if (target !== el) {
@@ -126,14 +156,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     const validateForm = () => {
-        // Para ediciones, permitir guardar aunque falten campos opcionales
+
         if (document.getElementById('paciente-id').value) return true;
 
         const missing = [];
         const isDni = (tipoDocumento?.value || 'DNI') === 'DNI';
 
-        if (isDni && getRawDni().length !== 8) {
-            missing.push({ el: inputDni, msg: 'El DNI debe tener exactamente 8 dígitos' });
+        if (isDni) {
+            if (getRawDni().length !== 8) {
+                missing.push({ el: inputDni, msg: 'El DNI debe tener exactamente 8 dígitos' });
+            }
+        } else {
+            var rawDni = getRawDni();
+            if (!rawDni) {
+                missing.push({ el: inputDni, msg: 'El documento es obligatorio' });
+            } else if (rawDni.length < 5) {
+                missing.push({ el: inputDni, msg: 'El documento debe tener al menos 5 dígitos' });
+            }
         }
 
         const apellidos = document.getElementById('paciente-apellidos');
@@ -195,13 +234,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     tipoDocumento.addEventListener('change', handleTipoDocumentoChange);
 
-    // Utility to strip accents and convert to uppercase
     const normalizeText = (text) => {
         if (!text) return '';
         return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase();
     };
 
-    // Auxiliar para seleccionar valor en un select ignorando mayúsculas/minúsculas
     const setSelectValueCaseInsensitive = (selectElement, value) => {
         if (!selectElement || !value) return;
         const normalizedValue = value.toString().trim().toUpperCase();
@@ -215,31 +252,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    // ============================================
-    // AUTOCOMPLETADO Y MODO MODAL
-    // ============================================
     const isModal = new URLSearchParams(window.location.search).get('view') === 'modal';
 
     const checkAutoFill = () => {
         const dataStr = sessionStorage.getItem('cd_auto_fill');
-        
-        // 1. Mostrar formulario inmediatamente si es modal para evitar parpadeo
+
         if (isModal) {
             viewLista.style.display = 'none';
             viewForm.style.display = 'block';
+            if (dashboardLegends) dashboardLegends.style.display = 'none';
             moveBtnOnMobile();
-            const tempStyle = document.getElementById('temp-modal-hide');
-            if (tempStyle) tempStyle.remove();
             document.body.style.display = 'block';
 
-            // Ocultar Condición en modo modal
             if (fieldCondicion) fieldCondicion.style.display = 'none';
-            // Placeholder solo visible cuando se abre desde Consulta-Datos
+
             const hcInput = document.getElementById('paciente-hc');
             if (hcInput) hcInput.placeholder = 'Opcional';
         }
 
-        // Sincronizar display del tipo de documento (prefijo, DV, custom dropdown)
         if (tipoDocumento) {
             handleTipoDocumentoChange();
             if (tipoDocumento.customDropdownUpdate) tipoDocumento.customDropdownUpdate();
@@ -249,7 +279,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             const data = JSON.parse(dataStr);
             sessionStorage.removeItem('cd_auto_fill');
 
-            // 2. Rellenar campos de texto (Inmediato)
             if (data.tipo_documento && tipoDocumento) {
                 tipoDocumento.value = data.tipo_documento;
                 handleTipoDocumentoChange();
@@ -258,13 +287,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('paciente-nombres').value = data.nombres || '';
             document.getElementById('paciente-apellidos').value = data.apellidos || '';
             document.getElementById('paciente-codigo-ver').value = data.codigo_verificacion || '';
-            
+
             if (data.tipo_seguro) {
                 setSelectValueCaseInsensitive(selectSeguro, data.tipo_seguro);
                 if (selectSeguro.customDropdownUpdate) selectSeguro.customDropdownUpdate();
             }
 
-            // 3. Rellenar Fecha
             if (data.fecha_nacimiento) {
                 const parts = data.fecha_nacimiento.split('-');
                 if (parts.length === 3) {
@@ -278,10 +306,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    // checkAutoFill() se ejecutará al final de la inicialización
-
-
-    // ── Máscara automática dd/mm/yyyy ──
     fnacInput.addEventListener('input', function (e) {
         if (e.inputType && e.inputType.startsWith('delete')) return;
         let digits = this.value.replace(/\D/g, '').slice(0, 8);
@@ -291,13 +315,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         this.value = masked;
     });
 
-    // ── Conversión DD/MM/YYYY → YYYY-MM-DD ──
     const parseDisplayToISO = (val) => {
         const p = val.split('/');
         return p.length === 3 ? `${p[2]}-${p[1]}-${p[0]}` : val;
     };
 
-    // ── Máscara dd/mm/aaaa para Fecha de Ingreso ──
     rpFiInput.addEventListener('input', function (e) {
         if (e.inputType && e.inputType.startsWith('delete')) return;
         let digits = this.value.replace(/\D/g, '').slice(0, 8);
@@ -307,7 +329,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         this.value = masked;
     });
 
-    // ── Calendario popover para Fecha de Nacimiento ──
     let fnacPopoverOpen = false;
     let fnacSelectedDate = null;
 
@@ -364,22 +385,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!fnacPopoverOpen) openFnacPopover();
     });
 
-    // ── Focus handler para FI (abre popover al enfocar) ──
     rpFiInput.addEventListener('focus', (e) => {
         if (rpFiTrigger.dataset.fiLocked === 'true') return;
         openRpFiPopover();
     });
 
-    // Variables de Paginación Inteligente y DB
     let currentPage = 1;
-    let rowsPerPage = 20;
     let totalRecords = 0;
+    let cursorFirst = null;
+    let cursorLast = null;
+    let hasPrev = false;
+    let hasNext = false;
     let searchQuery = '';
-    let filterQuery = ''; // Variable para almacenar el filtro de Servicio
+    let filterQuery = '';
+    let condicionFilter = '';
 
-    // ============================================
-    // CARGA DE FILTRO PREVIO
-    // ============================================
+    const resetPagination = () => {
+        cursorFirst = null;
+        cursorLast = null;
+        hasPrev = false;
+        hasNext = false;
+        currentPage = 1;
+    };
+
     const loadServicios = async () => {
         filterServicio.style.color = "#94a3b8";
         if (filterServicio.customDropdownUpdate) {
@@ -387,43 +415,141 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    // ============================================
-    // CARGA DE DATOS LOCALES VS SERVIDOR (PAGINACIÓN)
-    // ============================================
-    const loadPacientes = async () => {
+    const loadPacientes = async (direction = 'first') => {
         try {
             loadingIndicator.style.display = 'block';
             tableElement.style.display = 'none';
 
-            const startRange = (currentPage - 1) * rowsPerPage;
-            const endRange = startRange + rowsPerPage - 1;
+            let query = client.from('pacientes').select('*').limit(21);
 
-            let queryObj = client
-                .from('pacientes')
-                .select('*', { count: 'exact' })
-                .order('creado_en', { ascending: false })
-                .range(startRange, endRange);
+            if (direction === 'next' && cursorLast) {
+                query = query.lt('creado_en', cursorLast).order('creado_en', { ascending: false });
+                currentPage++;
+            } else if (direction === 'prev' && cursorFirst) {
+                query = query.gt('creado_en', cursorFirst).order('creado_en', { ascending: true });
+                currentPage--;
+            } else {
+                query = query.order('creado_en', { ascending: false });
+            }
 
             if (searchQuery) {
                 const normQuery = normalizeText(searchQuery);
-                queryObj = queryObj.or('dni.ilike.%' + normQuery + '%,apellidos.ilike.%' + normQuery + '%,nombres.ilike.%' + normQuery + '%');
+                query = query.or('dni.ilike.%' + normQuery + '%,apellidos.ilike.%' + normQuery + '%,nombres.ilike.%' + normQuery + '%');
             }
 
             if (filterQuery) {
-                // Usamos ilike y aseguramos mayúsculas para coincidir con el Trigger de la DB
-                queryObj = queryObj.ilike('servicio', filterQuery.toUpperCase());
+                query = query.ilike('servicio', filterQuery.toUpperCase());
             }
 
-            const { data, count, error } = await queryObj;
+            if (condicionFilter) {
+                query = query.ilike('condicion', condicionFilter.toUpperCase());
+            }
 
+            const { data, error } = await query;
             if (error) throw error;
-            totalRecords = count || 0;
-            renderTable(data, startRange);
+
+            let items = data || [];
+            if (direction === 'prev') items.reverse();
+
+            const displayItems = items.length > 20 ? items.slice(0, 20) : items;
+
+            if (displayItems.length > 0) {
+                cursorLast = displayItems[displayItems.length - 1].creado_en;
+                cursorFirst = displayItems[0].creado_en;
+
+                let normQ;
+                if (searchQuery) normQ = 'dni.ilike.%' + normalizeText(searchQuery) + '%,apellidos.ilike.%' + normalizeText(searchQuery) + '%,nombres.ilike.%' + normalizeText(searchQuery) + '%';
+
+                let newerQuery = client.from('pacientes').select('*', { count: 'exact', head: true }).gt('creado_en', cursorFirst);
+                if (searchQuery) newerQuery = newerQuery.or(normQ);
+                if (filterQuery) newerQuery = newerQuery.ilike('servicio', filterQuery.toUpperCase());
+                if (condicionFilter) newerQuery = newerQuery.ilike('condicion', condicionFilter.toUpperCase());
+                const { count: cntNewer } = await newerQuery;
+                hasPrev = (cntNewer || 0) > 0;
+
+                let olderQuery = client.from('pacientes').select('*', { count: 'exact', head: true }).lt('creado_en', cursorLast);
+                if (searchQuery) olderQuery = olderQuery.or(normQ);
+                if (filterQuery) olderQuery = olderQuery.ilike('servicio', filterQuery.toUpperCase());
+                if (condicionFilter) olderQuery = olderQuery.ilike('condicion', condicionFilter.toUpperCase());
+                const { count: cntOlder } = await olderQuery;
+                hasNext = (cntOlder || 0) > 0;
+            } else {
+                hasPrev = false;
+                hasNext = false;
+            }
+
+            (async function () {
+                let countQuery = client.from('pacientes').select('*', { count: 'exact', head: true });
+                if (searchQuery) countQuery = countQuery.or('dni.ilike.%' + normalizeText(searchQuery) + '%,apellidos.ilike.%' + normalizeText(searchQuery) + '%,nombres.ilike.%' + normalizeText(searchQuery) + '%');
+                if (filterQuery) countQuery = countQuery.ilike('servicio', filterQuery.toUpperCase());
+                if (condicionFilter) countQuery = countQuery.ilike('condicion', condicionFilter.toUpperCase());
+                const { count } = await countQuery;
+                totalRecords = count || 0;
+            })();
+
+            renderTable(displayItems, 0);
             renderPagination();
+            renderLegends();
         } catch (error) {
         } finally {
             loadingIndicator.style.display = 'none';
             tableElement.style.display = 'table';
+        }
+    };
+
+    const renderLegends = async () => {
+        try {
+            const container = document.getElementById('servicio-legends');
+            if (!container) return;
+
+            let query = client.from('pacientes').select('servicio');
+
+            if (searchQuery) {
+                const normQuery = normalizeText(searchQuery);
+                query = query.or('dni.ilike.%' + normQuery + '%,apellidos.ilike.%' + normQuery + '%,nombres.ilike.%' + normQuery + '%');
+            }
+
+            if (filterQuery) {
+                query = query.ilike('servicio', filterQuery.toUpperCase());
+            }
+
+            if (condicionFilter) {
+                query = query.ilike('condicion', condicionFilter.toUpperCase());
+            }
+
+            const { data, error } = await query;
+            if (error) return;
+
+            const counts = {};
+            (data || []).forEach(function (item) {
+                const svc = (item.servicio || '').trim().toUpperCase();
+                if (svc) counts[svc] = (counts[svc] || 0) + 1;
+            });
+
+            const services = typeof SERVICIOS !== 'undefined' ? SERVICIOS : [];
+            const hasRecords = services.some(function (svc) {
+                return (counts[svc.toUpperCase()] || 0) > 0;
+            });
+
+            if (hasRecords) {
+                container.innerHTML = '';
+                services.forEach(function (svc) {
+                    const key = svc.toUpperCase();
+                    const count = counts[key] || 0;
+                    if (count === 0) return;
+
+                    const colors = SERVICIO_COLORES[svc] || { text: '#475569', bg: '#f1f5f9' };
+                    const el = document.createElement('span');
+                    el.className = 'legend-item';
+                    el.style.background = colors.bg;
+                    el.innerHTML = '\n                        <span class="legend-dot" style="background:' + colors.text + ';"></span>\n                        <span class="legend-label">' + svc.toUpperCase() + '</span>\n                        <span class="legend-count" style="color:' + colors.text + ';">' + count + '</span>\n                    ';
+                    container.appendChild(el);
+                });
+            } else {
+                container.innerHTML = '<span style="font-size:13px; color:#94a3b8; font-weight:500;">Sin registros</span>';
+            }
+        } catch (e) {
+
         }
     };
 
@@ -447,10 +573,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             const row = document.createElement('tr');
             const condClass = getCondicionClass(item.condicion);
 
-            // Peru Time for display
             let fechaNacDisplay = item.fecha_nacimiento;
             if (item.fecha_nacimiento && item.fecha_nacimiento.includes('-')) {
-                // Si viene YYYY-MM-DD
+
                 const parts = item.fecha_nacimiento.split('-');
                 fechaNacDisplay = `${parts[2]}/${parts[1]}/${parts[0]}`;
             }
@@ -473,7 +598,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             tbody.appendChild(row);
         });
 
-        // Add Edit Hooks
         document.querySelectorAll('.local-edit-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const rowId = e.currentTarget.getAttribute('data-id');
@@ -482,7 +606,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             });
         });
 
-
     };
 
     const openEditForm = async (p) => {
@@ -490,15 +613,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('paciente-id').value = p.id;
         document.getElementById('btn-obtener-fnac').style.display = 'none';
 
-        // Bloquear todos los campos temporalmente
         document.getElementById('paciente-dni').disabled = true;
 
-        // Asegurar que HC y Condición sean visibles al editar (podrían estar ocultos desde modal)
         if (fieldHc) fieldHc.style.display = '';
         if (fieldCondicion) fieldCondicion.style.display = '';
 
-        // Volcar data
-        // Setear tipo_documento antes que el DNI para que el prefix se aplique
         if (p.tipo_documento && tipoDocumento) {
             tipoDocumento.value = p.tipo_documento;
             handleTipoDocumentoChange();
@@ -507,7 +626,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('paciente-dni').value = p.dni;
         document.getElementById('paciente-hc').value = p.historia_clinica;
 
-        // Formatear fecha de nacimiento
         if (p.fecha_nacimiento) {
             const parts = p.fecha_nacimiento.split('-');
             fnacInput.value = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : p.fecha_nacimiento;
@@ -542,16 +660,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             inputOtros.required = false;
         }
 
-        console.log('[openEditForm] HC from DB:', JSON.stringify(p.historia_clinica),
-            '| HC input value:', document.getElementById('paciente-hc').value,
-            '| HC disabled:', document.getElementById('paciente-hc').disabled,
-            '| Seguro value:', selectSeguro.value, '| Seguro disabled:', selectSeguro.disabled,
-            '| Servicio value:', servEl.value, '| Servicio disabled:', servEl.disabled,
-            '| FechaNac value:', document.getElementById('paciente-fecha-nac').value,
-            '| Apellidos value:', document.getElementById('paciente-apellidos').value,
-            '| Nombres value:', document.getElementById('paciente-nombres').value);
-
-        // ── Cargar hospitalización existente para Fecha de Ingreso ──
         try {
             const { data: hospData } = await client
                 .from('hospitalizaciones')
@@ -568,7 +676,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             resetFiState();
         }
 
-        // Si falleció, NO permitir editar nada (Comparación insensible)
         const isFallecido = p.condicion && p.condicion.toUpperCase() === 'FALLECIDO';
         form.dataset.originalCondicion = p.condicion || '';
 
@@ -605,6 +712,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         viewLista.style.display = 'none';
         moduleCommands.style.display = 'none';
+        if (dashboardLegends) dashboardLegends.style.display = 'none';
         viewForm.style.display = 'block';
         const headerBack = document.getElementById('btn-header-back');
         if (headerBack) headerBack.style.display = 'inline-flex';
@@ -613,26 +721,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     const renderPagination = () => {
-        const totalPages = Math.ceil(totalRecords / rowsPerPage);
-        DynamicTable.renderPagination({
-            containerId: 'pagination-container',
-            currentPage,
-            totalPages,
-            onPageChange: (page) => {
-                currentPage = page;
-                loadPacientes();
-            }
+        const container = document.getElementById('pagination-container');
+        if (!container) return;
+
+        const totalPages = Math.max(1, Math.ceil(totalRecords / 20));
+
+        container.innerHTML = '\n' +
+            '            <div class="pagination-wrapper">\n' +
+            '                <span class="pagination-info">Página ' + currentPage + ' de ' + totalPages + '</span>\n' +
+            '                <button class="pagination-btn" id="btn-prev-page"' + (hasPrev ? '' : ' disabled') + '>\n' +
+            '                    <span class="btn-icon"><i class="fa-solid fa-chevron-left"></i></span>\n' +
+            '                    <span class="btn-label">Anterior</span>\n' +
+            '                </button>\n' +
+            '                <button class="pagination-btn" id="btn-next-page"' + (hasNext ? '' : ' disabled') + '>\n' +
+            '                    <span class="btn-label">Siguiente</span>\n' +
+            '                    <span class="btn-icon"><i class="fa-solid fa-chevron-right"></i></span>\n' +
+            '                </button>\n' +
+            '            </div>\n' +
+            '        ';
+
+        document.getElementById('btn-prev-page') && document.getElementById('btn-prev-page').addEventListener('click', function () {
+            loadPacientes('prev');
+        });
+        document.getElementById('btn-next-page') && document.getElementById('btn-next-page').addEventListener('click', function () {
+            loadPacientes('next');
         });
     };
 
-    // ============================================
-    // BÚSQUEDA Y MANEJO DE VISTAS (SPA)
-    // ============================================
     const executeSearch = () => {
         const val = btnSearchDni.value.trim();
         if (val) {
             searchQuery = val;
-            currentPage = 1;
+            resetPagination();
             loadPacientes();
         }
     };
@@ -642,21 +762,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (e.key === 'Enter') executeSearch();
     });
 
-
-
-    // ============================================
-    // FILTRO POR SERVICIO
-    // ============================================
     const applyFilterServicio = (val) => {
         if (val) {
             filterQuery = val;
-            currentPage = 1;
-            filterServicio.style.color = "#1e293b"; // Color activo
+            resetPagination();
+            filterServicio.style.color = "#1e293b";
             loadPacientes();
         } else {
             filterQuery = '';
-            filterServicio.style.color = "#94a3b8"; // Color placeholder
-            currentPage = 1;
+            resetPagination();
+            filterServicio.style.color = "#94a3b8";
             loadPacientes();
         }
     };
@@ -665,26 +780,34 @@ document.addEventListener('DOMContentLoaded', async () => {
         applyFilterServicio(e.target.value.trim());
     });
 
+    filterCondicion.addEventListener('change', function (e) {
+        condicionFilter = e.target.value || '';
+        resetPagination();
+        loadPacientes();
+    });
+
     btnClearFilterServicio.addEventListener('click', () => {
-        // Limpiar Filtro de Servicio
+
         filterQuery = '';
         filterServicio.value = '';
-        filterServicio.style.color = "#94a3b8"; // Reset color
+        filterServicio.style.color = "#94a3b8";
         if (filterServicio.customDropdownUpdate) {
             filterServicio.customDropdownUpdate();
         }
 
-        // Limpiar Buscador DNI
+        condicionFilter = '';
+        filterCondicion.value = '';
+        if (filterCondicion.customDropdownUpdate) {
+            filterCondicion.customDropdownUpdate();
+        }
+
         searchQuery = '';
         btnSearchDni.value = '';
 
-        currentPage = 1;
+        resetPagination();
         loadPacientes();
     });
 
-    // ============================================
-    // VALIDACIÓN DE DNI (8 DÍGITOS OBLIGATORIOS)
-    // ============================================
     async function tryAutoFillTemporal(dniVal) {
         if (!dniVal) return;
         const { data, error } = await client
@@ -692,9 +815,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             .select('*')
             .or(`cod_temporal.eq.${dniVal},cod_temporal.eq.E-${dniVal}`)
             .maybeSingle();
-            
+
         if (data) {
-            // Split name
+
             const fullName = (data.nombre_rn || '').trim();
             const parts = fullName.split(/\s+/);
             let apellidos = fullName;
@@ -719,7 +842,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 elNombres.dispatchEvent(new Event('input'));
                 elNombres.dispatchEvent(new Event('change'));
             }
-            
+
             if (data.fecha_nacimiento) {
                 const p = data.fecha_nacimiento.split('-');
                 if (p.length === 3) {
@@ -728,7 +851,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     fnacInput.dispatchEvent(new Event('change'));
                 }
             }
-            
+
             setSelectValueCaseInsensitive(selectSeguro, 'SIS');
             selectSeguro.dispatchEvent(new Event('change'));
             if (selectSeguro.customDropdownUpdate) selectSeguro.customDropdownUpdate();
@@ -742,11 +865,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     inputDni.addEventListener('blur', () => {
         const dniValue = getRawDni();
         const isDni = (tipoDocumento?.value || 'DNI') === 'DNI';
-        
-        if (isDni && dniValue && dniValue.length !== 8) {
-            inputDni.setCustomValidity('El DNI debe contener exactamente 8 dígitos numéricos');
+
+        if (isDni) {
+            if (dniValue && dniValue.length !== 8) {
+                inputDni.setCustomValidity('El DNI debe contener exactamente 8 dígitos numéricos');
+            } else {
+                inputDni.setCustomValidity('');
+            }
         } else {
-            inputDni.setCustomValidity('');
+            if (!dniValue) {
+                inputDni.setCustomValidity('El documento es obligatorio');
+            } else if (dniValue.length < 5) {
+                inputDni.setCustomValidity('El documento debe tener al menos 5 dígitos');
+            } else {
+                inputDni.setCustomValidity('');
+            }
         }
     });
 
@@ -775,9 +908,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // ============================================
-    // AUTO-DETECCIÓN DE DNI EXISTENTE
-    // ============================================
     function removeDniExistsTooltip() {
         const existing = document.querySelector('.dni-exists-tooltip');
         if (existing) {
@@ -799,10 +929,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             .eq('dni', dni)
             .maybeSingle();
 
-        if (error) {
-            console.error('[DNI Check] Error:', error);
-            return;
-        }
+        if (error) return;
 
         if (data && data.id != pacienteId) {
             showDniExistsTooltip(dni, data);
@@ -851,12 +978,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.body.appendChild(tooltip);
     }
 
-    // El control de existencia de DNI se maneja consolidadamente en el listener de input anterior
-
-    // ============================================
-    // OBTENER FECHA DE NACIMIENTO (Cloudflare Worker)
-    // ============================================
-    const WORKER_URL = 'https://dni-lookup-api.seguimientohospitalario5.workers.dev/';
+    const LOCAL_API_URL = 'https://residency-evade-subgroup.ngrok-free.dev/get-dob';
     const btnObtenerFnac = document.getElementById('btn-obtener-fnac');
     const btnFnacText = document.getElementById('btn-fnac-text');
     const fnacSpinner = document.getElementById('fnac-spinner');
@@ -866,30 +988,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     function moveBtnOnMobile() {
         const container = fnacHeaderParent;
         if (!container || !btnObtenerFnac || !dnisGroup) return;
-        const dropdown = container.querySelector('.tipo-doc-group');
-        if (!dropdown) return;
 
-        const MAX_DROPDOWN = 280;
-
+        const isMobile = window.matchMedia('(max-width: 768px)').matches;
         const isInHeader = btnObtenerFnac.parentElement === container;
 
-        if (isInHeader) {
-            if (dropdown.offsetWidth < MAX_DROPDOWN) {
-                dnisGroup.insertAdjacentElement('afterend', btnObtenerFnac);
-            }
-        } else {
-            const origVis = btnObtenerFnac.style.visibility;
-            btnObtenerFnac.style.visibility = 'hidden';
+        if (isMobile && isInHeader) {
+            dnisGroup.insertAdjacentElement('afterend', btnObtenerFnac);
+        } else if (!isMobile && !isInHeader) {
             container.appendChild(btnObtenerFnac);
-            void container.offsetHeight;
-
-            if (dropdown.offsetWidth < MAX_DROPDOWN) {
-                dnisGroup.insertAdjacentElement('afterend', btnObtenerFnac);
-            }
-            btnObtenerFnac.style.visibility = origVis;
         }
 
-        // Aplicar/quitar clases de grid según donde quedó el botón
         const endedInHeader = btnObtenerFnac.parentElement === container;
         btnObtenerFnac.classList.toggle('col-span-2', !endedInHeader);
         btnObtenerFnac.style.marginBottom = endedInHeader ? '' : '14px';
@@ -905,13 +1013,12 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        // Estado visual: cargando
         btnObtenerFnac.disabled = true;
         btnFnacText.textContent = 'Consultando...';
         fnacSpinner.style.display = 'inline-block';
 
         try {
-            const response = await fetch(WORKER_URL, {
+            const response = await fetch(LOCAL_API_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ dni: dniValue })
@@ -919,8 +1026,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const result = await response.json();
 
-            if (result.success && result.fecha_nac) {
-                fnacInput.value = result.fecha_nac;
+            if (result.success && result.fecha_iso) {
+                fnacInput.value = result.fecha_iso;
                 fnacSelectedDate = null;
 
                 if(window.showSystemTooltip) window.showSystemTooltip(`Fecha obtenida: ${result.fecha_nac}`);
@@ -938,22 +1045,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     btnNew.addEventListener('click', () => {
         viewLista.style.display = 'none';
-        moduleCommands.style.display = 'none'; // Ocultar módulos operativos locales
+        moduleCommands.style.display = 'none';
+        if (dashboardLegends) dashboardLegends.style.display = 'none';
         form.reset();
         form.dataset.originalCondicion = '';
         document.getElementById('paciente-id').value = '';
         document.getElementById('btn-obtener-fnac').style.display = 'flex';
 
-        // Limpiar fecha de nacimiento
         fnacInput.value = '';
         fnacSelectedDate = null;
         fnacCal.setSelected(null);
         fnacCal.setView(new Date().getFullYear(), new Date().getMonth());
 
-        // Reset disabled states uniformly
         document.querySelectorAll('.standard-input').forEach(el => el.disabled = false);
 
-        // Reset tipo_documento a DNI y habilitar
         if (tipoDocumento) {
             tipoDocumento.value = 'DNI';
             tipoDocumento.disabled = false;
@@ -961,10 +1066,8 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (tipoDocumento.customDropdownUpdate) tipoDocumento.customDropdownUpdate();
         }
 
-        // Resetear Fecha de Ingreso
         resetFiState();
 
-        // Resetear y habilitar selects del formulario
         selectSeguro.disabled = false;
         if (selectSeguro.customDropdownUpdate) selectSeguro.customDropdownUpdate();
         const servEl = document.getElementById('paciente-servicio');
@@ -972,11 +1075,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         servEl.disabled = false;
         if (servEl.customDropdownUpdate) servEl.customDropdownUpdate();
 
-        // Mostrar HC y Condición (por si venía de modal)
         if (fieldHc) fieldHc.style.display = '';
         if (fieldCondicion) fieldCondicion.style.display = '';
 
-        // Forzar Condición "Hospitalizado" al registrar nuevo y bloquear
         const condicionSelect = document.getElementById('paciente-condicion');
         condicionSelect.value = 'Hospitalizado';
         condicionSelect.disabled = true;
@@ -1000,6 +1101,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             viewForm.style.display = 'none';
             viewLista.style.display = 'block';
             moduleCommands.style.display = 'flex';
+            if (dashboardLegends) dashboardLegends.style.display = 'block';
         }
         const headerBack = document.getElementById('btn-header-back');
         if (headerBack) headerBack.style.display = 'none';
@@ -1017,9 +1119,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // ============================================
-    // CALENDAR POPOVER (mismo diseño que consulta-rapida)
-    // ============================================
     let pendingRetryPacienteId = null;
     let pendingRetryFecha = null;
     let pendingRetryHora = null;
@@ -1029,9 +1128,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const getPeruTimeNow = () => new Date().toLocaleTimeString('en-GB', { timeZone: 'America/Lima', hour: '2-digit', minute: '2-digit', hour12: false });
     const fmtDate = (d) => d ? `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${d.getFullYear()}` : '';
 
-    let fiSelectedDate = null; // shared selected date
+    let fiSelectedDate = null;
 
-    // ── Helpers para gestionar el estado de Fecha de Ingreso ──
     function resetFiState() {
         fiSelectedDate = null;
         fechaIngresoData.value = '';
@@ -1066,7 +1164,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         rpHoraInput.disabled = true;
     }
 
-    // ── Form trigger: abre/cierra el popover calendario (idéntico a Fnac) ──
     let rpFiOpen = false;
 
     const rpFiCal = window.crearCalendario({
@@ -1143,7 +1240,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         horaIngresoData.value = masked;
     });
 
-    // Click fuera de los popovers para cerrarlos
     document.addEventListener('click', (e) => {
         if (rpFiOpen && !rpFiInput.parentElement.contains(e.target) && !e.target.closest('#rp-fi-popover')) {
             closeRpFiPopover();
@@ -1153,7 +1249,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // ── Validación de Fecha y Hora de Ingreso ──
     function validateFiInputs() {
         const fiRaw = rpFiInput.value.trim();
         if (fiRaw && fiRaw.length === 10) {
@@ -1191,9 +1286,97 @@ document.addEventListener('DOMContentLoaded', async () => {
         return true;
     }
 
-    // ============================================
-    // INSERCIÓN DE DATOS (SUPABASE)
-    // ============================================
+    var getFieldError = function (el) {
+
+        if (document.getElementById('paciente-id').value) return null;
+
+        var id = el.id || '';
+
+        if (id.indexOf('custom-') === 0 && el.classList && el.classList.contains('filter-dropdown-wrapper')) {
+            id = id.replace('custom-', '');
+        }
+
+        var field = document.getElementById(id);
+        var isDni = (tipoDocumento && tipoDocumento.value || 'DNI') === 'DNI';
+        var val = field ? (field.value || '').trim() : '';
+
+        switch (id) {
+            case 'paciente-dni':
+                if (isDni) {
+                    if (getRawDni().length !== 8) return 'El DNI debe tener exactamente 8 dígitos';
+                } else {
+                    var rawDni = getRawDni();
+                    if (!rawDni) return 'El documento es obligatorio';
+                    if (rawDni.length < 5) return 'El documento debe tener al menos 5 dígitos';
+                }
+                break;
+            case 'paciente-apellidos':
+                if (!val) return 'El campo Apellidos es obligatorio';
+                break;
+            case 'paciente-nombres':
+                if (!val) return 'El campo Nombres es obligatorio';
+                break;
+            case 'paciente-fecha-nac':
+                if (!val) return 'La Fecha de Nacimiento es obligatoria';
+                break;
+            case 'paciente-hc':
+                if (!isModal && !val) return 'El Nº Historia Clínica es obligatorio';
+                break;
+            case 'paciente-seguro':
+                if (!val) return 'El Tipo de Seguro es obligatorio';
+                break;
+            case 'paciente-codigo-ver':
+                if (isDni && !val) return 'El Código de Verificación es obligatorio';
+                break;
+            case 'paciente-servicio':
+                if (!val || val === 'Seleccione Servicio') return 'El Servicio es obligatorio';
+                break;
+        }
+        return null;
+    };
+
+    form.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter') return;
+
+        if (e.target.tagName === 'TEXTAREA') return;
+
+        if (e.target.closest('.filter-dropdown-wrapper.open')) return;
+
+        if (e.target === btnGuardar || e.target.closest('.btn-module')) return;
+
+        var error = getFieldError(e.target);
+        if (error) {
+            e.preventDefault();
+            if (window.showSystemTooltip) window.showSystemTooltip(error, true);
+            highlightError(e.target);
+            return;
+        }
+
+        e.preventDefault();
+
+        var focusable = form.querySelectorAll('input:not([type="hidden"]):not([disabled]), select:not([disabled]), [tabindex="0"]:not(.is-disabled), textarea:not([disabled]), button:not([disabled])');
+        var current = Array.prototype.indexOf.call(focusable, document.activeElement);
+
+        if (current >= 0 && current < focusable.length - 1) {
+            focusable[current + 1].focus();
+        } else if (!btnGuardar.disabled) {
+            form.dispatchEvent(new Event('submit', { cancelable: true }));
+        }
+    });
+
+    document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Enter') return;
+        if (viewForm.style.display === 'none') return;
+        if (e.target.tagName === 'TEXTAREA') return;
+        if (e.target.closest('.filter-dropdown-wrapper')) return;
+        if (e.target.closest('#' + form.id + ' input, #' + form.id + ' select')) return;
+        if (e.target === btnGuardar || e.target.closest('.btn-module')) return;
+        if (btnGuardar.disabled) return;
+
+        e.preventDefault();
+        form.dispatchEvent(new Event('submit', { cancelable: true }));
+    });
+
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
 
@@ -1203,13 +1386,10 @@ document.addEventListener('DOMContentLoaded', async () => {
             return;
         }
 
-        // Validar todos los campos obligatorios
         if (!validateForm()) return;
 
-        // Validar Fecha y Hora de Ingreso (fecha futura / hora inválida)
         if (!validateFiInputs()) return;
 
-        // Estado visual: Bloquear botón y mostrar spinner
         btnGuardar.disabled = true;
         textGuardar.textContent = 'Guardando...';
         spinnerGuardar.style.display = 'inline-block';
@@ -1228,11 +1408,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         const hcVal = document.getElementById('paciente-hc').value.trim();
         if (hcVal) payload.historia_clinica = hcVal;
 
-        // If newly inserted
         if (!objectId) {
             payload.dni = getRawDni();
 
-            // Obtener fecha en formato ISO (Y-m-d) para Supabase
             const fnacVal = fnacInput.value.trim();
             if (fnacVal && fnacVal.length === 10) {
                 payload.fecha_nacimiento = parseDisplayToISO(fnacVal);
@@ -1262,7 +1440,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 throw errorResp;
             }
 
-            // Crear hospitalización si hay fecha de ingreso registrada
             const finalPacienteId = newPacienteId || objectId;
             const fechaIng = fechaIngresoData.value;
             const horaIng = horaIngresoData.value;
@@ -1301,23 +1478,22 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
             }
 
-            // Si estamos en modo modal (iframe desde consulta-datos), notificar al padre y salir
             if (isModal && window.parent !== window) {
                 window.parent.postMessage({
                     type: 'paciente-registrado',
                     dni: payload.dni || '',
                     pacienteId: finalPacienteId
                 }, '*');
-                return; // El padre se encarga de cerrar el modal y mostrar el tooltip
+                return;
             }
 
-            // Éxito (flujo normal, no modal):
-            currentPage = 1;
+            resetPagination();
             await loadPacientes();
 
             viewForm.style.display = 'none';
             viewLista.style.display = 'block';
             moduleCommands.style.display = 'flex';
+            if (dashboardLegends) dashboardLegends.style.display = 'block';
 
             const msgSuccess = objectId ? 'Paciente Actualizado Exitosamente' : 'Paciente Guardado Exitosamente';
             if(window.showSystemTooltip) window.showSystemTooltip(msgSuccess);
@@ -1325,14 +1501,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         } catch (err) {
             if(window.showSystemTooltip) window.showSystemTooltip(err.message || 'Error al guardar paciente', true);
         } finally {
-            // Restaurar botón
+
             btnGuardar.disabled = false;
             textGuardar.textContent = 'Guardar';
             spinnerGuardar.style.display = 'none';
         }
     });
 
-    // ── Botón de reintento de hospitalización ──
     btnReintentarHosp.addEventListener('click', async () => {
         if (!pendingRetryPacienteId || !pendingRetryFecha) return;
         btnReintentarHosp.disabled = true;
@@ -1370,41 +1545,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // Carga inicial
     loadServicios().then(() => {
         loadPacientes();
     });
 
-    // Cambiar color del select dinámicamente
-    filterServicio.addEventListener('change', (e) => {
-        if (e.target.value === "") {
-            e.target.style.color = "#94a3b8";
-        } else {
-            e.target.style.color = "#1e293b";
-        }
-    });
-    // ============================================
-    // MANEJO DE PARÁMETROS URL (CONSULTA RÁPIDA)
-    // ============================================
     const params = new URLSearchParams(window.location.search);
     const dniParam = params.get('dni');
 
     if (dniParam && dniParam.length === 8) {
-        // 1. Simular clic en "Nuevo" para abrir el formulario
+
         if (btnNew) btnNew.click();
-        
-        // 2. Llenar el DNI
+
         if (inputDni) inputDni.value = dniParam;
-        
-        // 3. Ejecutar automáticamente la obtención de fecha de nacimiento (Consulta Rápida)
+
         setTimeout(() => {
             if (btnObtenerFnac) btnObtenerFnac.click();
         }, 500);
     }
 
-    // ============================================
-    // BOTÓN VOLVER EN EL ENCABEZADO DE LA PÁGINA
-    // ============================================
     const headerLeft = document.querySelector('.top-header .header-left');
     if (headerLeft && !document.getElementById('btn-header-back')) {
         const backBtn = document.createElement('button');
@@ -1418,6 +1576,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             viewForm.style.display = 'none';
             viewLista.style.display = 'block';
             moduleCommands.style.display = 'flex';
+            if (dashboardLegends) dashboardLegends.style.display = 'block';
             backBtn.style.display = 'none';
             removeDniExistsTooltip();
             if (window.adjustWelcomeTextVisibility) window.adjustWelcomeTextVisibility();
@@ -1431,9 +1590,5 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     }
 
-    // ============================================
-    // EJECUCIÓN FINAL DE AUTOCOMPLETADO
-    // ============================================
-    // checkAutoFill se ejecuta al final para asegurar que todo el DOM y componentes estén listos
     checkAutoFill();
 });

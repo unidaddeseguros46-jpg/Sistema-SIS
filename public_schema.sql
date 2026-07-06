@@ -1,6 +1,3 @@
-
-
-
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
@@ -130,7 +127,7 @@ BEGIN
     FROM public.perfiles p
     JOIN public.roles r ON p.id_rol = r.id_rol
     WHERE p.id_usuario = auth.uid();
-    
+
     RETURN role_name;
 END;
 $$;
@@ -145,7 +142,7 @@ CREATE OR REPLACE FUNCTION "public"."get_login_info"("username_in" "text") RETUR
     AS $$
 BEGIN
   RETURN QUERY
-  SELECT 
+  SELECT
     u.email::TEXT,
     r.nombre::TEXT
   FROM public.perfiles p
@@ -184,12 +181,12 @@ DECLARE
     v_ultimo_evento RECORD;
     v_hosp RECORD;
 BEGIN
-    -- 1. Validar que el usuario esté autenticado
+
     IF auth.uid() IS NULL THEN
         RETURN jsonb_build_object('ok', false, 'error', 'No autenticado');
     END IF;
 
-    -- 2. Validar hospitalización
+
     SELECT * INTO v_hosp FROM hospitalizaciones WHERE id = p_hospitalizacion_id;
     IF NOT FOUND THEN
         RETURN jsonb_build_object('ok', false, 'error', 'Hospitalización no encontrada');
@@ -200,7 +197,7 @@ BEGIN
 
     v_paciente_id := v_hosp.paciente_id;
 
-    -- 3. Verificar que no haya OTRA hospitalización activa para este paciente
+
     IF EXISTS (
         SELECT 1 FROM hospitalizaciones
         WHERE paciente_id = v_paciente_id AND activa = true
@@ -208,7 +205,7 @@ BEGIN
         RETURN jsonb_build_object('ok', false, 'error', 'El paciente ya tiene una hospitalización activa');
     END IF;
 
-    -- 4. Verificar que el último evento sea Alta (no Fallecido)
+
     SELECT * INTO v_ultimo_evento
     FROM historial_eventos
     WHERE hospitalizacion_id = p_hospitalizacion_id
@@ -227,15 +224,15 @@ BEGIN
         RETURN jsonb_build_object('ok', false, 'error', 'El último evento no es de tipo Alta');
     END IF;
 
-    -- 5. Eliminar evento de Alta
+
     DELETE FROM historial_eventos WHERE id = v_ultimo_evento.id;
 
-    -- 6. Reabrir hospitalización
+
     UPDATE hospitalizaciones
     SET activa = true, fecha_alta = NULL, hora_alta = NULL
     WHERE id = p_hospitalizacion_id;
 
-    -- 7. Actualizar condición del paciente
+
     UPDATE pacientes SET condicion = 'Hospitalizado' WHERE id = v_paciente_id;
 
     RETURN jsonb_build_object(
@@ -289,21 +286,21 @@ CREATE OR REPLACE FUNCTION "public"."sync_condicion_paciente"() RETURNS "trigger
     SET "search_path" TO 'public'
     AS $$
 BEGIN
-    -- Alta: cerrar hospitalización y actualizar condición
+
     IF NEW.tipo_evento = 'Alta' THEN
         UPDATE pacientes SET condicion = 'Alta' WHERE id = NEW.paciente_id;
         UPDATE hospitalizaciones
           SET activa = false, fecha_alta = NEW.fecha_evento
           WHERE id = NEW.hospitalizacion_id;
 
-    -- Fallecido: cerrar hospitalización y bloquear paciente
+
     ELSIF NEW.tipo_evento = 'Fallecido' THEN
         UPDATE pacientes SET condicion = 'Fallecido' WHERE id = NEW.paciente_id;
         UPDATE hospitalizaciones
           SET activa = false, fecha_alta = NEW.fecha_evento
           WHERE id = NEW.hospitalizacion_id;
 
-    -- Cambio Cobertura: actualizar seguro del paciente
+
     ELSIF NEW.tipo_evento = 'Cambio Cobertura' THEN
         IF NEW.nuevo_seguro IS NOT NULL THEN
             UPDATE pacientes
@@ -312,7 +309,7 @@ BEGIN
             WHERE id = NEW.paciente_id;
         END IF;
 
-    -- Cambio de Servicio: actualizar servicio del paciente y de la hospitalización
+
     ELSIF NEW.tipo_evento = 'Cambio de Servicio' THEN
         IF NEW.detalle IS NOT NULL AND NEW.detalle != '' THEN
             UPDATE pacientes
@@ -323,7 +320,7 @@ BEGIN
             WHERE id = NEW.hospitalizacion_id;
         END IF;
 
-    -- Hospitalizado: actualizar condición (para re-hospitalizaciones)
+
     ELSIF NEW.tipo_evento = 'Hospitalizado' THEN
         UPDATE pacientes SET condicion = 'Hospitalizado' WHERE id = NEW.paciente_id;
     END IF;
@@ -381,12 +378,12 @@ BEGIN
         IF NEW.servicio IS NOT NULL THEN NEW.servicio = UPPER(NEW.servicio); END IF;
         IF NEW.seguro_otros IS NOT NULL THEN NEW.seguro_otros = UPPER(NEW.seguro_otros); END IF;
     END IF;
-    
+
     IF TG_TABLE_NAME = 'perfiles' THEN
         IF NEW.nombre_completo IS NOT NULL THEN NEW.nombre_completo = UPPER(NEW.nombre_completo); END IF;
         IF NEW.apellidos IS NOT NULL THEN NEW.apellidos = UPPER(NEW.apellidos); END IF;
     END IF;
-    
+
     RETURN NEW;
 END;
 $$;
@@ -468,7 +465,7 @@ CREATE TABLE IF NOT EXISTS "public"."historial_eventos" (
     "registrado_por" "uuid",
     "creado_en" timestamp with time zone DEFAULT "now"(),
     "hospitalizacion_id" "uuid" NOT NULL,
-    CONSTRAINT "historial_eventos_tipo_evento_check" CHECK ((("tipo_evento")::"text" = ANY ((ARRAY['Hospitalizado'::character varying, 'Cambio Cobertura'::character varying, 'Cambio de Servicio'::character varying, 'Alta'::character varying, 'Fallecido'::character varying])::"text"[])))
+    CONSTRAINT "historial_eventos_tipo_evento_check" CHECK ((("tipo_evento")::"text" = ANY ((ARRAY['Hospitalizado'::character varying, 'Cambio Cobertura'::character varying, 'Cambio de Servicio'::character varying, 'Alta'::character varying, 'Fallecido'::character varying, 'REFERIDO'::character varying])::"text"[])))
 );
 
 
@@ -1432,38 +1429,3 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "service_role";
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

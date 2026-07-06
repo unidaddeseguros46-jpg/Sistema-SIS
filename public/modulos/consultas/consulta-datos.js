@@ -1,7 +1,6 @@
 document.addEventListener('DOMContentLoaded', async () => {
     const supabase = typeof supabaseClient !== 'undefined' ? supabaseClient : null;
 
-    // Referencias DOM
     const inputDNI = document.getElementById('filter-dni');
     const btnConsultar = document.getElementById('btn-consultar');
     const btnClear = document.getElementById('btn-clear');
@@ -9,12 +8,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     const tbody = document.getElementById('tbody-pacientes');
     const blockingOverlay = document.getElementById('blocking-overlay');
     const overlayMsg = document.getElementById('overlay-msg');
+    const cdClearBtn = document.getElementById('cd-clear-btn');
 
-    // URLs Servicios
-    const WORKER_URL = 'https://dni-lookup-api.seguimientohospitalario5.workers.dev/';
-    const RAILWAY_URL = 'https://sistema-sis-production-5b60.up.railway.app';
+    function updateCdClear() {
+        if (cdClearBtn) cdClearBtn.style.display = inputDNI.value.trim() ? '' : 'none';
+    }
+    inputDNI.addEventListener('input', updateCdClear);
+    if (cdClearBtn) {
+        cdClearBtn.addEventListener('click', function () {
+            inputDNI.value = '';
+            if (cdClearBtn) cdClearBtn.style.display = 'none';
+            inputDNI.focus();
+            resetView();
+        });
+    }
 
-    // Función Toast (reutilizando de layout si existe)
+    const LOCAL_API_URL = 'https://residency-evade-subgroup.ngrok-free.dev';
+
     const showToast = (msg, isError = false) => {
         if (window.showSystemTooltip) {
             window.showSystemTooltip(msg, isError);
@@ -80,10 +90,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (overlayMsg) overlayMsg.textContent = msg;
     };
 
-    // Fetch con reintentos automáticos y timeout
     const fetchWithRetry = async (url, options = {}, retries = 2, timeoutMs = 120000) => {
         const externalSignal = options.signal;
-        
+
         for (let attempt = 0; attempt <= retries; attempt++) {
             if (externalSignal && externalSignal.aborted) {
                 throw new Error('AbortError');
@@ -92,23 +101,22 @@ document.addEventListener('DOMContentLoaded', async () => {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
-            // Escuchar el abort externo para abortar el fetch actual
             const abortHandler = () => controller.abort();
             if (externalSignal) {
                 externalSignal.addEventListener('abort', abortHandler);
             }
-            
+
             try {
                 const response = await fetch(url, { ...options, signal: controller.signal });
                 clearTimeout(timeoutId);
-                
+
                 if (externalSignal) {
                     externalSignal.removeEventListener('abort', abortHandler);
                 }
 
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
                 const data = await response.json();
-                
+
                 if (!data.success && attempt < retries) {
                     await new Promise(r => setTimeout(r, 3000));
                     continue;
@@ -121,8 +129,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 }
 
                 if (err.name === 'AbortError') {
-                    if (externalSignal && externalSignal.aborted) throw err; // Cancelación manual
-                    // Si fue por timeout interno, reintentar si quedan intentos
+                    if (externalSignal && externalSignal.aborted) throw err;
+
                 }
 
                 if (attempt === retries) {
@@ -138,15 +146,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const resetView = () => {
         inputDNI.value = '';
+        if (cdClearBtn) cdClearBtn.style.display = 'none';
         viewResultados.style.display = 'none';
         tbody.innerHTML = '';
         sessionStorage.removeItem('cd_last_result');
     };
 
-    // Control de cancelación de consultas
     let currentSearchController = null;
 
-    // Evento Enter en input DNI
     inputDNI.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') btnConsultar.click();
     });
@@ -177,7 +184,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         viewResultados.style.display = 'none';
         updateOverlay('Consultando fuentes...');
 
-        // Iniciar nuevo controlador de cancelación
         currentSearchController = new AbortController();
         const signal = currentSearchController.signal;
 
@@ -192,72 +198,25 @@ document.addEventListener('DOMContentLoaded', async () => {
                 estado_consulta: 'PROCESANDO'
             };
 
-            // 1. SCRIPT DNI (Cloudflare Worker)
-            updateOverlay('Consultando datos de identidad...');
-            const dniResult = await fetchWithRetry(WORKER_URL, {
+            updateOverlay('Consultando todas las fuentes en paralelo...');
+            const resultado = await fetchWithRetry(`${LOCAL_API_URL}/consulta-completa`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ dni }),
                 signal: signal
             });
 
-            if (dniResult.success) {
-                dataConsolidada.nombres = dniResult.nombres || '';
-                dataConsolidada.apellidos = `${dniResult.apellido_paterno || ''} ${dniResult.apellido_materno || ''}`.trim();
-                dataConsolidada.fecha_nacimiento = dniResult.fecha_iso || '';
+            if (resultado.success) {
+                dataConsolidada.nombres = resultado.nombres || '';
+                dataConsolidada.apellidos = resultado.apellidos || `${resultado.apellido_paterno || ''} ${resultado.apellido_materno || ''}`.trim();
+                dataConsolidada.fecha_nacimiento = resultado.fecha_nacimiento || '';
+                dataConsolidada.codigo_verificacion = resultado.codigo_verificacion || '';
+                dataConsolidada.seguro_validado = resultado.seguro_validado || 'NO ENCONTRADO';
+                dataConsolidada.estado_consulta = resultado.estado_consulta || 'ERROR';
             } else {
-                throw new Error(dniResult.error || 'No se pudo obtener la información de identidad (Servicio DNI)');
+                throw new Error(resultado.error || 'Error en la consulta consolidada');
             }
 
-            // 2. SCRIPT DV (Railway)
-            updateOverlay('Obteniendo Dígito Verificador...');
-            const dvData = await fetchWithRetry(`${RAILWAY_URL}/get-dv`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ dni }),
-                signal: signal
-            });
-            
-            if (dvData.success) {
-                dataConsolidada.codigo_verificacion = dvData.codigo_verificacion;
-                if (!dataConsolidada.nombres) dataConsolidada.nombres = dvData.nombres || '';
-                if (!dataConsolidada.apellidos) {
-                    dataConsolidada.apellidos = `${dvData.apellido_paterno || ''} ${dvData.apellido_materno || ''}`.trim();
-                }
-            } else {
-                throw new Error(dvData.error || 'No se pudo obtener el Código de Verificación (Servicio DV)');
-            }
-
-            // 3. SCRIPT SEGURO (Railway)
-            updateOverlay('Validando seguro en EsSalud...');
-            const seguroResponse = await fetchWithRetry(`${RAILWAY_URL}/validate`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    dni: dni,
-                    fecha_nacimiento: dataConsolidada.fecha_nacimiento,
-                    codigo_verificacion: dataConsolidada.codigo_verificacion
-                }),
-                signal: signal
-            });
-            
-            // El backend devuelve { success: true, result: { success: true/false, seguro, errorType, error } }
-            // O un error 500 que es capturado por fetchWithRetry
-            const seguroData = seguroResponse.result || seguroResponse;
-
-            if (seguroData.success) {
-                dataConsolidada.seguro_validado = seguroData.seguro;
-                if (seguroData.seguro === 'SIN COBERTURA') {
-                    dataConsolidada.estado_consulta = 'SIN SEGURO';
-                } else {
-                    dataConsolidada.estado_consulta = 'ÉXITO';
-                }
-            } else {
-                // Hay un error real (ej. servidor caído, cloudflare challenge, etc)
-                throw new Error(seguroData.error || 'Error desconocido al consultar el seguro en EsSalud.');
-            }
-
-            // 4. GUARDAR EN SUPABASE (Tabla consultas_datos)
             updateOverlay('Almacenando resultados...');
             const { data: { session } } = await supabase.auth.getSession();
             const userId = session ? session.user.id : null;
@@ -273,7 +232,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 creado_por: userId
             }]);
 
-            // 5. RENDERIZAR EN TABLA
             await renderResult(dataConsolidada);
             viewResultados.style.display = 'block';
             sessionStorage.setItem('cd_last_result', JSON.stringify(dataConsolidada));
@@ -298,7 +256,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     btnCloseModal.addEventListener('click', () => {
         modalRegistro.style.display = 'none';
-        iframeRegistro.src = ''; // Limpiar iframe
+        iframeRegistro.src = '';
     });
 
     const renderResult = async (data) => {
@@ -321,7 +279,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const accionHtml = yaRegistrado
             ? `<span style="font-size:12px; color:#94a3b8;">Paciente registrado</span>`
-            : `<button class="btn-agregar-paciente" data-dni="${data.dni}" title="Agregar a mis pacientes" 
+            : `<button class="btn-agregar-paciente" data-dni="${data.dni}" title="Agregar a mis pacientes"
                     style="background:#3b82f6; color:white; border:none; border-radius:8px; padding:6px 12px; cursor:pointer; font-weight:600; transition:all 0.2s;">
                  <i class="fa-solid fa-user-plus"></i> Agregar
                </button>`;
@@ -363,11 +321,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadSusaludCreds();
     initSusaludCopy();
 
-    // ========== LISTENER: MENSAJES DESDE MODAL ==========
     window.addEventListener('message', (event) => {
         if (!event.data) return;
 
-        // Si el modal manda la orden de cerrar (ej. clic en Cancelar)
         if (event.data.action === 'closeModal') {
             modalRegistro.style.display = 'none';
             iframeRegistro.src = '';
@@ -378,19 +334,16 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const { dni, pacienteId } = event.data;
 
-        // 1. Cerrar el modal
         modalRegistro.style.display = 'none';
         iframeRegistro.src = '';
 
-        // 2. Tooltip de éxito
         showToast('Paciente Guardado Exitosamente');
 
-        // 3. Transformar botón "Agregar" → "Ver"
         if (dni) {
             const btn = document.querySelector(`.btn-agregar-paciente[data-dni="${dni}"]`);
             if (btn) {
                 btn.outerHTML = `
-                    <a href="../seguimiento/detalle-paciente.html?id=${pacienteId}" 
+                    <a href="../seguimiento/detalle-paciente.html?id=${pacienteId}"
                        title="Ver detalle del paciente"
                        style="display:inline-flex; align-items:center; gap:5px; background:#10b981; color:white; border:none; border-radius:8px; padding:6px 12px; cursor:pointer; font-weight:600; text-decoration:none; font-size:14px; transition:all 0.2s;">
                         <i class="fa-solid fa-eye"></i> Ver
@@ -399,7 +352,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // ── Restaurar último resultado desde sessionStorage ──
     try {
         const saved = sessionStorage.getItem('cd_last_result');
         if (saved) {
@@ -409,4 +361,5 @@ document.addEventListener('DOMContentLoaded', async () => {
             inputDNI.value = data.dni || '';
         }
     } catch (e) { console.warn(e); }
+    updateCdClear();
 });
