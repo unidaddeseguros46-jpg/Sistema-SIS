@@ -1,4 +1,12 @@
 {
+  "builds": [
+    { "src": "api/rpa.js", "use": "@vercel/node" },
+    { "src": "public/**", "use": "@vercel/static" }
+  ],
+  "routes": [
+    { "src": "/api/rpa", "methods": ["POST"], "dest": "api/rpa.js" },
+    { "src": "/(.*)", "dest": "public/$1" }
+  ],
   "headers": [
     {
       "source": "/(.*)",
