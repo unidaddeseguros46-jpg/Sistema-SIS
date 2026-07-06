@@ -655,9 +655,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            const response = await fetch('https://residency-evade-subgroup.ngrok-free.dev/validate-batch', {
+            const response = await fetch('https://lens-answers-accidents-emerald.trycloudflare.com/validate-batch', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ pacientes: pacientesParaValidar }),
                 signal: signal
             });

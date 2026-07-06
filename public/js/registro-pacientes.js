@@ -978,7 +978,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.body.appendChild(tooltip);
     }
 
-    const LOCAL_API_URL = 'https://residency-evade-subgroup.ngrok-free.dev/get-dob';
+    const LOCAL_API_URL = 'https://lens-answers-accidents-emerald.trycloudflare.com/get-dob';
     const btnObtenerFnac = document.getElementById('btn-obtener-fnac');
     const btnFnacText = document.getElementById('btn-fnac-text');
     const fnacSpinner = document.getElementById('fnac-spinner');
@@ -1020,7 +1020,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             const response = await fetch(LOCAL_API_URL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ dni: dniValue })
             });
 

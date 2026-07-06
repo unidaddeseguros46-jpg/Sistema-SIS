@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    const LOCAL_API_URL = 'https://residency-evade-subgroup.ngrok-free.dev';
+    const LOCAL_API_URL = 'https://lens-answers-accidents-emerald.trycloudflare.com';
 
     const showToast = (msg, isError = false) => {
         if (window.showSystemTooltip) {
@@ -201,7 +201,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             updateOverlay('Consultando todas las fuentes en paralelo...');
             const resultado = await fetchWithRetry(`${LOCAL_API_URL}/consulta-completa`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ dni }),
                 signal: signal
             });
