@@ -242,7 +242,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 showToast('Consulta cancelada por el usuario', false);
             } else {
                 console.error(err);
-                showToast('Error en la consulta consolidada: ' + err.message, true);
+                const errMsg = err.name + ': ' + (err.message || err);
+                showToast('Error en la consulta consolidada: ' + errMsg, true);
+                try { navigator.clipboard.writeText('[RPA Error] ' + errMsg + '\nStack:\n' + (err.stack || '(no stack)')); } catch (_) {}
             }
         } finally {
             blockingOverlay.style.display = 'none';

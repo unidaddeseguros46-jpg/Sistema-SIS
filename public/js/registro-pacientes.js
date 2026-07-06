@@ -1036,7 +1036,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
         } catch (err) {
             console.error('[RPA] Error de conexión:', err);
-            if(window.showSystemTooltip) window.showSystemTooltip('Error de conexión con el servicio', true);
+            const errMsg = err.name + ': ' + (err.message || err);
+            if(window.showSystemTooltip) window.showSystemTooltip(errMsg, true);
+            try { navigator.clipboard.writeText('[RPA Error] ' + errMsg + '\nStack:\n' + (err.stack || '(no stack)')); } catch (_) {}
         } finally {
             btnObtenerFnac.disabled = false;
             btnFnacText.textContent = 'Obtener Fecha de Nacimiento';

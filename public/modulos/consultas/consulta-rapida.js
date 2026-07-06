@@ -722,10 +722,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
         } catch (err) {
+            console.error('[RPA] Error:', err);
             if (err.name === 'AbortError' || err.message === 'AbortError') {
                 showToast('Validación cancelada');
             } else {
-                showToast('Error al conectar con el servicio RPA: ' + err.message, true);
+                const errMsg = err.name + ': ' + (err.message || err);
+                showToast('Error al conectar con el servicio RPA: ' + errMsg, true);
+                try { navigator.clipboard.writeText('[RPA Error] ' + errMsg + '\nStack:\n' + (err.stack || '(no stack)')); } catch (_) {}
             }
         } finally {
             btnValidar.disabled = false;
