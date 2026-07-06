@@ -4,7 +4,7 @@
     { "src": "public/**", "use": "@vercel/static" }
   ],
   "routes": [
-    { "src": "/api/rpa", "methods": ["POST"], "dest": "api/rpa.js" },
+    { "src": "/api/rpa", "methods": ["POST"], "dest": "/api/rpa" },
     { "src": "/(.*)", "dest": "public/$1" }
   ],
   "headers": [
