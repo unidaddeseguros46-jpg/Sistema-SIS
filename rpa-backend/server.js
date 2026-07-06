@@ -5,7 +5,7 @@ const puppeteer = require('puppeteer');
 
 const app = express();
 app.use(compression());
-app.use(cors({ origin: '*', methods: ['GET', 'POST'], allowedHeaders: ['Content-Type'] }));
+app.use(cors({ origin: '*', methods: ['GET', 'POST'], allowedHeaders: ['Content-Type', 'ngrok-skip-browser-warning'] }));
 app.use(express.json());
 
 const PORT = process.env.PORT || 10000;

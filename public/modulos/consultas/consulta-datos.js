@@ -201,7 +201,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             updateOverlay('Consultando todas las fuentes en paralelo...');
             const resultado = await fetchWithRetry(`${LOCAL_API_URL}/consulta-completa`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
                 body: JSON.stringify({ dni }),
                 signal: signal
             });

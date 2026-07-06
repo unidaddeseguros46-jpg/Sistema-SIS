@@ -1020,7 +1020,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             const response = await fetch(LOCAL_API_URL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
                 body: JSON.stringify({ dni: dniValue })
             });
 

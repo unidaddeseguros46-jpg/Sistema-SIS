@@ -657,7 +657,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const response = await fetch('https://residency-evade-subgroup.ngrok-free.dev/validate-batch', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'ngrok-skip-browser-warning': 'true' },
                 body: JSON.stringify({ pacientes: pacientesParaValidar }),
                 signal: signal
             });
