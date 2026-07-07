@@ -978,8 +978,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.body.appendChild(tooltip);
     }
 
-    const isLocal = !window.location.hostname || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const RPA_URL = isLocal ? 'https://lens-answers-accidents-emerald.trycloudflare.com/get-dob' : 'https://vofqatqocfaqcdcuwama.supabase.co/functions/v1/rpa-proxy';
+    const RPA_URL = RPA_BASE;
     const btnObtenerFnac = document.getElementById('btn-obtener-fnac');
     const btnFnacText = document.getElementById('btn-fnac-text');
     const fnacSpinner = document.getElementById('fnac-spinner');
@@ -1019,7 +1018,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         fnacSpinner.style.display = 'inline-block';
 
         try {
-            const body = isLocal ? { dni: dniValue } : { endpoint: 'get-dob', dni: dniValue };
+            const body = { endpoint: 'get-dob', dni: dniValue };
             const response = await fetch(RPA_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1040,7 +1039,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             console.error('[RPA] Error de conexión:', err);
             const errMsg = err.name + ': ' + (err.message || err);
             if(window.showSystemTooltip) window.showSystemTooltip(errMsg, true);
-            try { navigator.clipboard.writeText('[RPA Error] ' + errMsg + '\nStack:\n' + (err.stack || '(no stack)')); } catch (_) {}
         } finally {
             btnObtenerFnac.disabled = false;
             btnFnacText.textContent = 'Obtener Fecha de Nacimiento';

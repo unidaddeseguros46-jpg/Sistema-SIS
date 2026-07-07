@@ -655,9 +655,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 return;
             }
 
-            const isLocal = !window.location.hostname || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-            const RPA_URL = isLocal ? 'https://lens-answers-accidents-emerald.trycloudflare.com/validate-batch' : 'https://vofqatqocfaqcdcuwama.supabase.co/functions/v1/rpa-proxy';
-            const body = isLocal ? { pacientes: pacientesParaValidar } : { endpoint: 'validate-batch', pacientes: pacientesParaValidar };
+            const RPA_URL = RPA_BASE;
+            const body = { endpoint: 'validate-batch', pacientes: pacientesParaValidar };
             const response = await fetch(RPA_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -731,7 +730,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             } else {
                 const errMsg = err.name + ': ' + (err.message || err);
                 showToast('Error al conectar con el servicio RPA: ' + errMsg, true);
-                try { navigator.clipboard.writeText('[RPA Error] ' + errMsg + '\nStack:\n' + (err.stack || '(no stack)')); } catch (_) {}
             }
         } finally {
             btnValidar.disabled = false;

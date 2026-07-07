@@ -23,8 +23,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
-    const isLocal = !window.location.hostname || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    const RPA_URL = isLocal ? 'https://lens-answers-accidents-emerald.trycloudflare.com' : 'https://vofqatqocfaqcdcuwama.supabase.co/functions/v1/rpa-proxy';
+    const RPA_URL = RPA_BASE;
 
     const showToast = (msg, isError = false) => {
         if (window.showSystemTooltip) {
@@ -200,7 +199,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             };
 
             updateOverlay('Consultando todas las fuentes en paralelo...');
-            const body = isLocal ? { dni } : { endpoint: 'consulta-completa', dni };
+            const body = { endpoint: 'consulta-completa', dni };
             const resultado = await fetchWithRetry(RPA_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -246,7 +245,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 console.error(err);
                 const errMsg = err.name + ': ' + (err.message || err);
                 showToast('Error en la consulta consolidada: ' + errMsg, true);
-                try { navigator.clipboard.writeText('[RPA Error] ' + errMsg + '\nStack:\n' + (err.stack || '(no stack)')); } catch (_) {}
             }
         } finally {
             blockingOverlay.style.display = 'none';

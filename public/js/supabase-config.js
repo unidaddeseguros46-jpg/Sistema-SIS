@@ -10,6 +10,7 @@ const localKey = 'sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH';
 const supabaseUrl = isLocal ? localUrl : prodUrl;
 const supabaseKey = isLocal ? localKey : prodKey;
 const edgeFunctionUrl = supabaseUrl;
+const RPA_BASE = `${supabaseUrl}/functions/v1/rpa-proxy`;
 
 const fetchWithTimeout = (url, options = {}) => {
     const controller = new AbortController();
