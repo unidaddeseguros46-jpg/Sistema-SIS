@@ -171,7 +171,7 @@ npm run build    # Ejecuta build.mjs (usa terser y clean-css-cli)
 | Componente | Destino |
 |---|---|
 | `public/` | Host estático (Vercel, Netlify, etc.) |
-| `rpa-backend/` | Railway / Render (Node.js + Puppeteer) |
+| `rpa-backend/` | Laptop del usuario (PM2) |
 | `cloudflare-worker/` | Cloudflare Workers (npx wrangler deploy) |
 | `supabase/functions/` | Supabase Edge Functions (npx supabase functions deploy) |
 

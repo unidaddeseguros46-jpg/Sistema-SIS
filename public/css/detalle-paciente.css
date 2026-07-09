@@ -440,7 +440,45 @@
 .ingreso-popover {
     position: absolute;
     z-index: 10000;
+    font-weight: 400;
+    cursor: auto;
     animation: popoverIn .2s cubic-bezier(.16, 1, .3, 1) forwards
+}
+
+.ingreso-popover.pos-right {
+    top: -10px;
+    left: calc(100% + 12px);
+    right: auto;
+    bottom: auto
+}
+
+.ingreso-popover.pos-left {
+    top: -10px;
+    right: calc(100% + 12px);
+    left: auto;
+    bottom: auto
+}
+
+.ingreso-popover.pos-bottom-right {
+    bottom: calc(100% + 5px);
+    left: calc(100% + 12px);
+    top: auto;
+    right: auto
+}
+
+.ingreso-popover.pos-bottom-left {
+    bottom: calc(100% + 5px);
+    right: calc(100% + 12px);
+    top: auto;
+    left: auto
+}
+
+.ingreso-popover.pos-below {
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    right: auto;
+    bottom: auto
 }
 
 .ingreso-popover-content {
@@ -558,7 +596,8 @@
 }
 
 .events-area:has(.event-register-popover.visible) {
-    gap: 14px
+    gap: 14px;
+    overflow: visible
 }
 
 .events-card {
@@ -905,9 +944,9 @@
     width: 28px;
     height: 28px;
     border: none;
-    background: #f1f5f9;
+    background: #fef2f2;
     border-radius: 6px;
-    color: #64748b;
+    color: #ef4444;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -916,13 +955,14 @@
 }
 
 .event-register-close:hover {
-    background: #e2e8f0;
-    color: #ef4444
+    background: #ef4444;
+    color: #fff
 }
 
 .event-register-body {
-    flex: 1;
+    flex: 1 1 auto;
     overflow-y: auto;
+    min-height: 0;
     padding-right: 4px
 }
 
@@ -1149,6 +1189,11 @@
         gap: 18px
     }
 
+    .ingreso-popover {
+        transform: none;
+        animation: none
+    }
+
     .events-card {
         flex: 1;
         height: auto !important;
@@ -1156,30 +1201,87 @@
         margin: 0
     }
 
+    .folder-item {
+        grid-template-columns: auto 1fr auto auto
+    }
+}
+
+@media (max-width:1400px) {
     .event-register-popover {
-        display: none;
+        position: absolute;
+        z-index: 10000;
+        display: block;
         flex: unset;
+        width: auto;
+        min-width: 280px;
+        max-width: min(340px, 85vw);
+        height: auto;
+        margin: 0;
         transform: none;
-        opacity: 1;
-        pointer-events: auto;
-        width: 100%;
-        min-width: 0;
-        max-width: none;
-        margin: 0
+        opacity: 0;
+        pointer-events: none;
+        padding: 16px 20px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, .12), 0 2px 8px rgba(0, 0, 0, .06);
+        border-radius: 10px;
+        border-left: 4px solid #3b82f6;
+        background: #fff;
+        font-weight: 400;
+        cursor: auto;
+        transition: opacity .2s ease;
+        top: auto;
+        left: auto;
+        right: auto;
+        bottom: auto
     }
 
     .event-register-popover.visible {
-        display: flex;
-        opacity: 1
+        opacity: 1;
+        pointer-events: auto
+    }
+
+    .event-register-popover.pos-right {
+        top: -10px;
+        left: calc(100% + 12px);
+        right: auto;
+        bottom: auto
+    }
+
+    .event-register-popover.pos-left {
+        top: -10px;
+        right: calc(100% + 12px);
+        left: auto;
+        bottom: auto
+    }
+
+    .event-register-popover.pos-bottom-right {
+        bottom: calc(100% + 5px);
+        left: calc(100% + 12px);
+        top: auto;
+        right: auto
+    }
+
+    .event-register-popover.pos-bottom-left {
+        bottom: calc(100% + 5px);
+        right: calc(100% + 12px);
+        top: auto;
+        left: auto
+    }
+
+    .event-register-popover.pos-below {
+        top: calc(100% + 8px);
+        left: 50%;
+        transform: translateX(-50%);
+        right: auto;
+        bottom: auto
     }
 
     .event-register-body {
-        overflow-y: visible;
+        overflow-y: auto;
         flex: none
     }
 
-    .folder-item {
-        grid-template-columns: auto 1fr auto auto
+    .event-register-popover.visible .event-register-body {
+        overflow: visible
     }
 }
 
@@ -1522,5 +1624,23 @@
     cursor: pointer;
     user-select: none;
     line-height: 1
+}
+
+@media (min-width:1025px) {
+    .ingreso-popover {
+        z-index: 9990
+    }
+
+    .ingreso-popover .custom-select-options {
+        z-index: 9991
+    }
+
+    .events-area:has(.event-register-popover.visible) {
+        overflow: visible
+    }
+
+    .event-register-popover.visible .event-register-body {
+        overflow: visible
+    }
 }
 
