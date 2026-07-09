@@ -1,21 +1,20 @@
 const express = require('express');
 const cors = require('cors');
-const compression = require('compression');
-const puppeteer = require('puppeteer');
+const puppeteer = require('puppeteer-core');
+const chromium = require('@sparticuz/chromium');
 
 const app = express();
-app.use(compression());
 app.use(cors({ origin: '*', methods: ['GET', 'POST'], allowedHeaders: ['Content-Type'] }));
 app.use(express.json());
 
 const PORT = process.env.PORT || 10000;
 
-let browserInstance = null;
-
+// Health Check
 app.get('/', (req, res) => {
     res.json({ status: 'active', service: 'RPA Backend - Hospital San José', timestamp: new Date().toISOString() });
 });
 
+// User-Agents rotativos
 const USER_AGENTS = [
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36',
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -31,427 +30,424 @@ function delay(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function initBrowser() {
-    if (!browserInstance) {
-        console.log('[System] Iniciando navegador persistente en memoria...');
-        browserInstance = await puppeteer.launch({
-            args: [
-                '--no-sandbox', 
-                '--disable-setuid-sandbox'
-            ],
-            defaultViewport: { width: 1280, height: 900 },
-            headless: 'new'
-        });
-        console.log('[System] Navegador persistente listo.');
-    }
-    return browserInstance;
-}
-
-async function setupFastPage(browser) {
-    // Contexto incógnito: cookies y caché limpios por cada consulta
-    // Evita rate-limiting de sitios que detectan sesiones repetidas
-    const context = await browser.createIncognitoBrowserContext();
-    const page = await context.newPage();
-    await page.setUserAgent(getRandomUA());
-
-    await page.setRequestInterception(true);
-    page.on('request', (req) => {
-        if (req.isInterceptResolutionHandled()) return;
-        const type = req.resourceType();
-        if (['image', 'stylesheet', 'font', 'media'].includes(type)) {
-            req.abort().catch(() => {});
-        } else {
-            req.continue().catch(() => {});
-        }
+/**
+ * Lanzar navegador ligero optimizado para cloud
+ */
+async function launchBrowser() {
+    console.log('[Browser] Lanzando Chromium...');
+    const browser = await puppeteer.launch({
+        args: chromium.args.concat([
+            '--no-sandbox',
+            '--disable-setuid-sandbox',
+            '--disable-dev-shm-usage',
+            '--disable-accelerated-2d-canvas',
+            '--no-first-run',
+            '--no-zygote',
+            '--single-process',
+            '--disable-gpu'
+        ]),
+        defaultViewport: { width: 1280, height: 900 },
+        executablePath: await chromium.executablePath(),
+        headless: chromium.headless
     });
-    return { page, context };
+    console.log('[Browser] Listo.');
+    return browser;
 }
 
-const ESSALUD_API_URL = 'https://apps.essalud.gob.pe/dondemeatiendo-service/api/consultarAcreditacion';
-const RECAPTCHA_SITE_KEY = '6LdtWAIgAAAAALmCBcz7Ql4XxAaJee78gK0-nZUZ';
-
+/**
+ * Scraping de un paciente en "¿Dónde me atiendo?" de EsSalud
+ * URL: https://dondemeatiendo.essalud.gob.pe/#/consulta
+ * 
+ * FLUJO COMPLETO:
+ * 1. Llenar DNI en input#mat-input-0
+ * 2. Llenar Fecha de Nacimiento en input#mat-input-1
+ * 3. Llenar CUI (Código Verificación) en input#mat-input-2
+ * 4. Click en checkbox de cláusula → abre modal
+ * 5. Scrollear modal hasta abajo
+ * 6. Click en botón "Aceptar" del modal
+ * 7. Click en botón "Consultar"
+ * 8. Extraer resultado
+ */
 async function scrapePaciente(paciente, browser) {
     const { dni, fecha_nacimiento, codigo_verificacion } = paciente;
+    const page = await browser.newPage();
+    await page.setUserAgent(getRandomUA());
+
+    // Bloqueo de recursos innecesarios para optimizar velocidad
+    await page.setRequestInterception(true);
+    page.on('request', (req) => {
+        const type = req.resourceType();
+        if (['image', 'font', 'stylesheet', 'media'].includes(type)) {
+            req.abort();
+        } else {
+            req.continue();
+        }
+    });
 
     try {
-        console.log(`[RPA] Consultando DNI ${dni} vía API EsSalud`);
+        console.log(`[RPA] Iniciando consulta DNI: ${dni}`);
 
-        const fechaFormateada = formatearFecha(fecha_nacimiento);
-
-        // Navegar a la página para establecer sesión y obtener captcha
-        const { page, context } = await setupFastPage(browser);
+        // ========== NAVEGAR AL PORTAL ==========
         await page.goto('https://dondemeatiendo.essalud.gob.pe/#/consulta', {
             waitUntil: 'networkidle2',
             timeout: 30000
-        }).catch(() => {});
-        await delay(5000);
+        });
+        await delay(1000);
 
-        // Llamar a la API directamente desde el navegador (cookies, headers correctos)
-        const resultado = await page.evaluate(async ({ dni, fecha, dv, apiUrl, siteKey }) => {
-            async function obtenerToken(intentos = 0) {
-                try {
-                    if (typeof grecaptcha !== 'undefined' && grecaptcha.ready) {
-                        return await new Promise(resolve => {
-                            grecaptcha.ready(() => {
-                                grecaptcha.execute(siteKey, { action: 'submit' })
-                                    .then(resolve).catch(() => resolve(''));
-                            });
-                        });
-                    }
-                    if (intentos < 5) {
-                        await new Promise(r => setTimeout(r, 1000));
-                        return obtenerToken(intentos + 1);
-                    }
-                } catch {}
-                return '';
+        // ========== 1. NÚMERO DE DOCUMENTO (DNI) ==========
+        await page.waitForSelector('input#mat-input-0', { timeout: 12000 });
+        await page.click('input#mat-input-0');
+        await page.type('input#mat-input-0', dni, { delay: 60 });
+        console.log(`[RPA] DNI ${dni} ingresado`);
+        await delay(200);
+
+        // ========== 2. FECHA DE NACIMIENTO ==========
+        if (fecha_nacimiento) {
+            let fechaFormateada = fecha_nacimiento;
+            if (fecha_nacimiento.includes('-')) {
+                const parts = fecha_nacimiento.split('-');
+                fechaFormateada = `${parts[2]}/${parts[1]}/${parts[0]}`;
             }
-
-            const token = await obtenerToken();
-            const url = token ? `${apiUrl}?captchaToken=${encodeURIComponent(token)}` : apiUrl;
-            const resp = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    codOpcion: '1', codTipDoc: '1', numDoc: dni,
-                    digitoVerif: dv, fecNacimiento: fecha
-                })
-            });
-            if (!resp.ok) return { error: `HTTP_${resp.status}` };
-            const text = await resp.text();
-            return text ? JSON.parse(text) : { error: 'EMPTY_BODY' };
-        }, { dni, fecha: fechaFormateada, dv: codigo_verificacion, apiUrl: ESSALUD_API_URL, siteKey: RECAPTCHA_SITE_KEY });
-
-        await context.close();
-
-        console.log(`[RPA] DNI ${dni}: API →`, JSON.stringify(resultado).substring(0, 600));
-
-        if (resultado.error) {
-            console.warn(`[RPA] DNI ${dni}: ${resultado.error}`);
-            return { dni, success: true, seguro: resultado.desError || 'NO ENCONTRADO' };
+            await page.click('input#mat-input-1');
+            await page.type('input#mat-input-1', fechaFormateada, { delay: 60 });
+            console.log(`[RPA] Fecha ingresada: ${fechaFormateada}`);
+            await delay(200);
         }
 
-        const vItem = (resultado.vDataItem && resultado.vDataItem[0]) || {};
-        const seguro = resultado.desError || vItem.tipoAfiliacion || 'NO ENCONTRADO';
+        // ========== 3. CUI (DÍGITO VERIFICADOR) ==========
+        if (codigo_verificacion) {
+            await page.click('input#mat-input-2');
+            await page.type('input#mat-input-2', codigo_verificacion, { delay: 60 });
+            console.log(`[RPA] CUI ingresado: ${codigo_verificacion}`);
+            await delay(200);
+        }
 
-        console.log(`[RPA] DNI ${dni} → ${seguro} | Centro: ${vItem.desCentro || ''}`);
-        return {
-            dni, success: true, seguro,
-            centro_asistencial: vItem.desCentro || '',
-            direccion: vItem.dirCentro || '',
-            red_asistencial: vItem.red || '',
-            tipo_seguro: vItem.tipoSeguro || '',
-            tipo_afiliacion: vItem.tipoAfiliacion || '',
-            fin_vigencia: vItem.finVigencia || ''
-        };
+        // ========== 4. CHECKBOX DE CLÁUSULA ==========
+        await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+        await delay(1000);
+
+        let checkboxClicked = false;
+        const checkboxSelectors = [
+            'mat-checkbox', '.mat-mdc-checkbox', '.mat-checkbox',
+            'input[type="checkbox"]', '.mdc-checkbox', '.mdc-checkbox__native-control'
+        ];
+
+        for (const sel of checkboxSelectors) {
+            try {
+                const el = await page.$(sel);
+                if (el) {
+                    await el.click();
+                    checkboxClicked = true;
+                    console.log(`[RPA] Checkbox clickeado con selector: ${sel}`);
+                    break;
+                }
+            } catch (e) { }
+        }
+
+        if (!checkboxClicked) {
+            console.log(`[RPA] Intentando click por texto...`);
+            await page.evaluate(() => {
+                const labels = Array.from(document.querySelectorAll('label, span, div, mat-checkbox'));
+                const el = labels.find(l => l.textContent.includes('Acepto'));
+                if (el) el.click();
+            });
+            checkboxClicked = true;
+            console.log(`[RPA] Checkbox clickeado por texto`);
+        }
+
+        if (!checkboxClicked) {
+            throw new Error('No se pudo encontrar el checkbox de cláusula');
+        }
+        await delay(800);
+
+        // ========== 5. SCROLLEAR MODAL HASTA ABAJO ==========
+        await page.waitForSelector('mat-dialog-container', { timeout: 8000 });
+        console.log(`[RPA] Modal de cláusula abierto`);
+
+        await page.evaluate(() => {
+            const dialog = document.querySelector('mat-dialog-container');
+            if (dialog) dialog.scrollTop = dialog.scrollHeight;
+            const content = dialog?.querySelector('.mat-mdc-dialog-content') ||
+                           dialog?.querySelector('[mat-dialog-content]');
+            if (content) content.scrollTop = content.scrollHeight;
+        });
+        await delay(500);
+
+        // ========== 6. CLICK EN "ACEPTAR" DEL MODAL ==========
+        await page.click('mat-dialog-container button.mat-primary');
+        console.log(`[RPA] Botón "Aceptar" clickeado`);
+        await delay(800);
+
+        // ========== 7. CLICK EN "CONSULTAR" ==========
+        await page.click('button.ess-btn-primary');
+        console.log(`[RPA] Botón "Consultar" clickeado`);
+
+        // ========== 8. ESPERAR Y EXTRAER RESULTADO (OPTIMIZADO) ==========
+        console.log(`[RPA] Esperando resultado dinámicamente...`);
+        try {
+            await Promise.race([
+                page.waitForFunction(() => {
+                    const txt = document.body.innerText;
+                    return txt.includes('Afiliado a:') || 
+                           txt.includes('NO TIENE DERECHO DE COBERTURA') ||
+                           txt.includes('No se encontraron resultados');
+                }, { timeout: 15000 }),
+                delay(12000) // Fallback
+            ]);
+        } catch (waitErr) {
+            console.warn(`[RPA] Timeout esperando resultado dinámico, intentando extraer lo que haya...`);
+        }
+
+        const data = await page.evaluate(() => {
+            const body = document.body.innerText;
+
+            if (body.includes('NO TIENE DERECHO DE COBERTURA') || 
+                body.includes('No se encontraron resultados')) {
+                return { seguro: 'SIN COBERTURA' };
+            }
+
+            const matchAfiliado = body.match(/Afiliado a:\s*\n?\s*(.+)/i);
+            const seguro = matchAfiliado ? matchAfiliado[1].trim().toUpperCase() : 'NO ENCONTRADO';
+
+            return { seguro, textoVisible: body.substring(0, 500) };
+        });
+
+        console.log(`[RPA] DNI ${dni} → Seguro: ${data.seguro}`);
+        return { dni, success: true, seguro: data.seguro };
 
     } catch (error) {
         console.error(`[RPA] Error DNI ${dni}:`, error.message);
-        return { dni, success: false, seguro: 'ERROR', errorType: 'INTERNAL_ERROR', error: error.message };
+        const isNetworkErr = error.message.includes('ERR_') || error.message.includes('Timeout');
+        return { 
+            dni, 
+            success: false, 
+            seguro: 'ERROR',
+            errorType: isNetworkErr ? 'SOURCE_DOWN' : 'INTERNAL_ERROR',
+            error: isNetworkErr ? 'El portal de EsSalud está inactivo o la conexión falló.' : error.message
+        };
+    } finally {
+        await page.close();
     }
 }
 
-function formatearFecha(fecha) {
-    if (!fecha) return '';
-    if (!fecha.includes('-')) return fecha;
-    const [year, month, day] = fecha.split('-');
-    return `${day}/${month}/${year}`;
-}
-
+/**
+ * Scraping de Código de Verificación en dniperu.com
+ * URL: https://dniperu.com/digito-verificador-dni/
+ */
 async function scrapeDV(dni, browser) {
-    const { page, context } = await setupFastPage(browser);
-    try {
-        console.log(`[DV] Consultando DV para DNI: ${dni}`);
-        await page.goto('https://dniperu.com/digito-verificador-dni/', {
-            waitUntil: 'domcontentloaded', timeout: 15000
-        });
-        await page.waitForSelector('input#cc_nombres_1dni', { timeout: 8000 });
+    const page = await browser.newPage();
+    await page.setUserAgent(getRandomUA());
 
-        const dv = await page.evaluate(async (dni) => {
-            async function postForm(data) {
-                const fd = new FormData();
-                for (const [k, v] of Object.entries(data)) fd.append(k, v);
-                const r = await fetch('https://dniperu.com/wp-admin/admin-ajax.php', {
-                    method: 'POST', body: fd, credentials: 'same-origin'
-                });
-                return r.json();
-            }
-            async function fetchToken(ctx) {
-                const r = await postForm({ action: 'cc_get_tokens', context: ctx, company: '', count: '1' });
-                return r.success && r.data ? r.data : null;
-            }
-            async function query(action, params, ctx) {
-                let r = await postForm({ ...params, action });
-                if (r.data && r.data.code === 'token_required') {
-                    const t = await fetchToken(ctx);
-                    if (t) r = await postForm({ ...params, action, cc_token: t.cc_token, cc_sig: t.cc_sig });
-                }
-                return r;
-            }
-            const nResp = await query('buscar_nombres', { dni4: dni, company: '', buscar_dni: 'Buscar' }, 'buscar_nombres');
-            if (nResp.success && nResp.data) {
-                const m = nResp.data.message || '';
-                const md = m.match(/Codigo de Verificacion:\s*(\d)/i);
-                if (md) return md[1];
-            }
-            return '';
-        }, dni);
-
-        if (dv) {
-            console.log(`[DV] DNI ${dni} → DV: ${dv}`);
-            return { success: true, nombres: '', apellido_paterno: '', apellido_materno: '', codigo_verificacion: dv };
+    // Bloqueo de recursos innecesarios (Imágenes, CSS, Fuentes) para dniperu.com
+    await page.setRequestInterception(true);
+    page.on('request', (req) => {
+        const type = req.resourceType();
+        // Permitimos scripts y document, bloqueamos lo demás para aligerar la carga publicitaria
+        if (['image', 'font', 'stylesheet', 'media'].includes(type)) {
+            req.abort();
+        } else {
+            req.continue();
         }
-        throw new Error('No se pudo obtener el DV');
+    });
+
+    try {
+        console.log(`[DV] Iniciando consulta DNI: ${dni}`);
+        await page.goto('https://dniperu.com/digito-verificador-dni/', {
+            waitUntil: 'domcontentloaded', // Más rápido que networkidle2
+            timeout: 30000
+        });
+
+        // Esperar a que el input sea visible
+        await page.waitForSelector('input#cc_nombres_1dni', { timeout: 15000 });
+        
+        // Scroll hasta el input para evitar interferencia visual
+        await page.evaluate(() => {
+            const el = document.querySelector('input#cc_nombres_1dni');
+            if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        });
+
+        // Reducir delay de tipeo de 100ms a 20ms por tecla
+        await page.type('input#cc_nombres_1dni', dni, { delay: 20 });
+        
+        // Click en buscar
+        await page.evaluate(() => {
+            const btn = document.querySelector('button.js-cc-submit');
+            if (btn) btn.click();
+        });
+        console.log(`[DV] Búsqueda iniciada`);
+
+        // Esperar el resultado en el textarea dinámicamente (que tenga contenido útil)
+        await page.waitForFunction(() => {
+            const textarea = document.querySelector('textarea.js-cc-copy-source');
+            return textarea && textarea.value && textarea.value.length > 20;
+        }, { timeout: 15000 });
+
+        const resultText = await page.evaluate(() => {
+            return document.querySelector('textarea.js-cc-copy-source').value;
+        });
+
+        // Extraer datos usando regex que se detiene al final de la línea
+        const matchDV = resultText.match(/Codigo de Verificacion:\s*(\d+)/i);
+        const matchNombres = resultText.match(/Nombres:\s*([^\r\n]+)/i);
+        const matchPaterno = resultText.match(/Apellido Paterno:\s*([^\r\n]+)/i);
+        const matchMaterno = resultText.match(/Apellido Materno:\s*([^\r\n]+)/i);
+
+        const dv = matchDV ? matchDV[1] : null;
+        const nombres = matchNombres ? matchNombres[1].trim() : '';
+        const paterno = matchPaterno ? matchPaterno[1].trim() : '';
+        const materno = matchMaterno ? matchMaterno[1].trim() : '';
+
+        if (dv === null) throw new Error('No se pudo extraer el código de verificación del texto');
+
+        console.log(`[DV] DNI ${dni} → Código: ${dv} | Paciente: ${paterno} ${materno}, ${nombres}`);
+        
+        return { 
+            dni, 
+            success: true, 
+            codigo_verificacion: dv,
+            nombres: nombres,
+            apellido_paterno: paterno,
+            apellido_materno: materno
+        };
+
     } catch (error) {
         console.error(`[DV] Error DNI ${dni}:`, error.message);
-        return { success: false, error: error.message };
-    } finally {
-        await context.close();
-    }
-}
-
-async function scrapeDOB(dni, browser) {
-    const { page, context } = await setupFastPage(browser);
-
-    try {
-        console.log(`[DOB] Consultando fecha nacimiento DNI: ${dni}`);
-        await page.goto('https://dniperu.com/saber-edad-con-dni/', {
-            waitUntil: 'domcontentloaded',
-            timeout: 15000
-        });
-        await page.waitForSelector('input#cc_fecha_1dni', { timeout: 8000 });
-
-        const result = await page.evaluate(async (dni) => {
-            async function postForm(data) {
-                const fd = new FormData();
-                for (const [k, v] of Object.entries(data)) fd.append(k, v);
-                const r = await fetch('https://dniperu.com/wp-admin/admin-ajax.php', {
-                    method: 'POST', body: fd, credentials: 'same-origin'
-                });
-                return r.json();
-            }
-
-            async function fetchToken(ctx) {
-                const r = await postForm({ action: 'cc_get_tokens', context: ctx, company: '', count: '1' });
-                return r.success && r.data ? r.data : null;
-            }
-
-            async function query(action, params, ctx) {
-                let r = await postForm({ ...params, action });
-                if (r.data && r.data.code === 'token_required') {
-                    const t = await fetchToken(ctx);
-                    if (t) r = await postForm({ ...params, action, cc_token: t.cc_token, cc_sig: t.cc_sig });
-                }
-                return r;
-            }
-
-            const fResp = await query('buscar_fecha', { dni, company: '' }, 'buscar_fecha');
-            let fecha = '', nombres = '';
-            if (fResp.success && fResp.data) {
-                fecha = fResp.data.fechaNacimiento || '';
-                nombres = fResp.data.nombres || '';
-            }
-
-            const nResp = await query('buscar_nombres', { dni4: dni, company: '', buscar_dni: 'Buscar' }, 'buscar_nombres');
-            let apPaterno = '', apMaterno = '', codigoVerificacion = '';
-            if (nResp.success && nResp.data) {
-                const m = nResp.data.message || '';
-                const mp = m.match(/Apellido Paterno:\s*(.+)/i);
-                const mm = m.match(/Apellido Materno:\s*(.+)/i);
-                const mDv = m.match(/Codigo de Verificacion:\s*(\d)/i);
-                apPaterno = mp ? mp[1].trim() : '';
-                apMaterno = mm ? mm[1].trim() : '';
-                codigoVerificacion = mDv ? mDv[1] : '';
-            }
-
-            return { fecha, nombres, apPaterno, apMaterno, codigo_verificacion: codigoVerificacion };
-        }, dni);
-
-        const fecha_nac = result.fecha;
-        const nombres = result.nombres || '';
-        const apellido_paterno = result.apPaterno || '';
-        const apellido_materno = result.apMaterno || '';
-        const codigo_verificacion = result.codigo_verificacion || '';
-
-        let fecha_iso = '';
-        if (fecha_nac) {
-            const parts = fecha_nac.split('/');
-            fecha_iso = `${parts[2]}-${parts[1]}-${parts[0]}`;
-        }
-
-        if (fecha_nac) {
-            console.log(`[DOB] DNI ${dni} → Fecha: ${fecha_nac}, ${apellido_paterno} ${apellido_materno}, ${nombres}, DV: ${codigo_verificacion}`);
-        }
-
-        return {
-            success: !!fecha_nac,
-            fecha_nac,
-            fecha_iso,
-            nombres,
-            apellido_paterno,
-            apellido_materno,
-            codigo_verificacion
+        const isNetworkErr = error.message.includes('ERR_') || error.message.includes('Timeout');
+        return { 
+            dni, 
+            success: false, 
+            errorType: isNetworkErr ? 'SOURCE_DOWN' : 'INTERNAL_ERROR',
+            error: isNetworkErr ? 'El portal DNIPeru está inactivo o la conexión falló.' : error.message 
         };
-    } catch (error) {
-        console.error(`[DOB] Error DNI ${dni}:`, error.message);
-        return { success: false, error: error.message, nombres: '', apellido_paterno: '', apellido_materno: '' };
     } finally {
-        await context.close();
+        await page.close();
     }
 }
 
-// ==========================================
-// ENDPOINTS
-// ==========================================
+// ==================== ENDPOINTS ====================
 
+// Obtener Dígito Verificador (Individual) — con reintentos
 app.post('/get-dv', async (req, res) => {
     const { dni } = req.body;
     if (!dni) return res.status(400).json({ error: 'DNI requerido' });
 
-    try {
-        const browser = await initBrowser();
-        const result = await scrapeDV(dni, browser);
-        if (result.success) return res.json(result);
-        return res.status(400).json(result);
-    } catch (err) {
-        return res.status(500).json({ success: false, error: err.message });
+    const MAX_RETRIES = 3;
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        let browser;
+        try {
+            console.log(`[DV] Intento ${attempt}/${MAX_RETRIES} para DNI ${dni}`);
+            browser = await launchBrowser();
+            const result = await scrapeDV(dni, browser);
+            if (result.success) {
+                return res.json(result);
+            }
+            // Si no fue exitoso pero no lanzó excepción, reintentar
+            console.warn(`[DV] Intento ${attempt} falló: ${result.error || 'sin datos'}`);
+            if (attempt === MAX_RETRIES) return res.json(result);
+            await delay(2000);
+        } catch (err) {
+            console.error(`[DV] Intento ${attempt} error: ${err.message}`);
+            if (attempt === MAX_RETRIES) {
+                return res.status(500).json({ success: false, error: err.message });
+            }
+            await delay(2000);
+        } finally {
+            if (browser) await browser.close();
+        }
     }
 });
 
+// Obtener Dígito Verificador (Lote)
 app.post('/get-dv-batch', async (req, res) => {
-    const { pacientes } = req.body;
-    if (!Array.isArray(pacientes) || pacientes.length === 0) return res.status(400).json({ error: 'Lista requerida' });
+    const { dnis } = req.body;
+    if (!Array.isArray(dnis) || dnis.length === 0) {
+        return res.status(400).json({ error: 'Lista de DNIs requerida' });
+    }
 
+    let browser;
     try {
-        const browser = await initBrowser();
+        browser = await launchBrowser();
         const results = [];
-        for (const dni of pacientes) {
-            const r = await scrapeDV(dni, browser);
-            results.push({ dni, ...r });
+        for (let i = 0; i < dnis.length; i++) {
+            const result = await scrapeDV(dnis[i], browser);
+            results.push(result);
+            if (i < dnis.length - 1) await delay(1500);
         }
         res.json({ success: true, results });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
+    } finally {
+        if (browser) await browser.close();
     }
 });
 
-app.post('/get-dob', async (req, res) => {
-    const { dni } = req.body;
-    if (!dni) return res.status(400).json({ error: 'DNI requerido' });
-
-    for (let attempt = 1; attempt <= 2; attempt++) {
-        try {
-            const browser = await initBrowser();
-            const result = await scrapeDOB(dni, browser);
-            if (result.success) return res.json({ success: true, ...result });
-            if (attempt === 2) return res.json({ success: false, error: 'No se pudo obtener la fecha de nacimiento' });
-            await delay(500);
-        } catch (err) {
-            if (attempt === 2) return res.status(500).json({ success: false, error: err.message });
-            await delay(500);
-        }
-    }
-});
-
+// Validación individual — con reintentos
 app.post('/validate', async (req, res) => {
     const { dni, fecha_nacimiento, codigo_verificacion } = req.body;
     if (!dni) return res.status(400).json({ error: 'DNI requerido' });
 
-    const browser = await initBrowser();
-    const result = await scrapePaciente({ dni, fecha_nacimiento, codigo_verificacion }, browser);
-    if (result.success) return res.json({ success: true, result });
-    return res.status(500).json({ success: false, error: result.error });
+    const MAX_RETRIES = 3;
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+        let browser;
+        try {
+            console.log(`[RPA] Intento ${attempt}/${MAX_RETRIES} para DNI ${dni}`);
+            browser = await launchBrowser();
+            const result = await scrapePaciente({ dni, fecha_nacimiento, codigo_verificacion }, browser);
+            if (result.success) {
+                return res.json({ success: true, result });
+            }
+            // Si el scraping devolvió success:false, reintentar
+            console.warn(`[RPA] Intento ${attempt} falló: ${result.seguro || 'error desconocido'}`);
+            if (attempt === MAX_RETRIES) return res.json({ success: true, result });
+            await delay(3000);
+        } catch (err) {
+            console.error(`[RPA] Intento ${attempt} error: ${err.message}`);
+            if (attempt === MAX_RETRIES) {
+                return res.status(500).json({ success: false, error: err.message });
+            }
+            await delay(3000);
+        } finally {
+            if (browser) await browser.close();
+        }
+    }
 });
 
+// Validación en lote
 app.post('/validate-batch', async (req, res) => {
     const { pacientes } = req.body;
-    if (!Array.isArray(pacientes) || pacientes.length === 0) return res.status(400).json({ error: 'Lista requerida' });
+    if (!Array.isArray(pacientes) || pacientes.length === 0) {
+        return res.status(400).json({ error: 'Lista de pacientes requerida' });
+    }
 
+    console.log(`[RPA] Solicitud batch: ${pacientes.length} pacientes`);
+
+    let browser;
     try {
-        const browser = await initBrowser();
-        const results = await Promise.all(pacientes.map(pac => scrapePaciente(pac, browser)));
+        browser = await launchBrowser();
+        const results = [];
+
+        for (let i = 0; i < pacientes.length; i++) {
+            console.log(`[RPA] Procesando ${i + 1}/${pacientes.length}`);
+            const result = await scrapePaciente(pacientes[i], browser);
+            results.push(result);
+
+            // Pausa entre consultas para estabilizar
+            if (i < pacientes.length - 1) await delay(2000);
+        }
+
         const exitosos = results.filter(r => r.success).length;
+        console.log(`[RPA] Completado: ${exitosos}/${results.length} exitosos`);
+
         res.json({ success: true, total: results.length, exitosos, results });
     } catch (err) {
+        console.error('[API] Error batch:', err.message);
         res.status(500).json({ success: false, error: err.message });
+    } finally {
+        if (browser) await browser.close();
     }
 });
 
-// Endpoint combinado: DOB (Puppeteer) + DV (matemático) en paralelo, luego validate con los datos obtenidos
-app.post('/consulta-completa', async (req, res) => {
-    const { dni } = req.body;
-    if (!dni) return res.status(400).json({ error: 'DNI requerido' });
-
-    console.log(`[COMPLETA] Iniciando consulta integral para DNI: ${dni}`);
-    const startTime = Date.now();
-
-    try {
-        const browser = await initBrowser();
-
-        console.log(`[COMPLETA] Consultando DOB...`);
-        const dobResult = await scrapeDOB(dni, browser);
-        const dv = dobResult.codigo_verificacion || '';
-
-        const apPaterno = dobResult.apellido_paterno || '';
-        const apMaterno = dobResult.apellido_materno || '';
-        const apellidos = (apPaterno || apMaterno) ? `${apPaterno} ${apMaterno}`.trim() : '';
-
-        const data = {
-            dni,
-            nombres: dobResult.nombres || '',
-            apellidos,
-            apellido_paterno: apPaterno,
-            apellido_materno: apMaterno,
-            fecha_nacimiento: dobResult.fecha_iso || '',
-            fecha_nac: dobResult.fecha_nac || '',
-            codigo_verificacion: dv,
-            seguro_validado: 'NO CONSULTADO',
-            estado_consulta: 'PROCESANDO'
-        };
-
-        let validateResult;
-        if (!data.fecha_nacimiento || !data.codigo_verificacion) {
-            console.log(`[COMPLETA] DNI ${dni}: Abortando EsSalud por falta de fecha de nacimiento o DV.`);
-            validateResult = { success: false, seguro: 'DATOS INCOMPLETOS' };
-        } else {
-            console.log(`[COMPLETA] Validando seguro en EsSalud...`);
-            validateResult = await scrapePaciente({
-                dni,
-                fecha_nacimiento: data.fecha_nacimiento,
-                codigo_verificacion: data.codigo_verificacion
-            }, browser);
-        }
-
-        if (validateResult.success) {
-            data.seguro_validado = validateResult.seguro;
-            data.centro_asistencial = validateResult.centro_asistencial || '';
-            data.direccion = validateResult.direccion || '';
-            data.red_asistencial = validateResult.red_asistencial || '';
-            data.tipo_seguro = validateResult.tipo_seguro || '';
-            data.tipo_afiliacion = validateResult.tipo_afiliacion || '';
-            data.fin_vigencia = validateResult.fin_vigencia || '';
-            data.estado_consulta = validateResult.seguro === 'SIN COBERTURA' ? 'SIN SEGURO' : 'ÉXITO';
-        } else {
-            data.seguro_validado = validateResult.seguro || 'ERROR';
-            data.estado_consulta = 'ERROR';
-        }
-
-        const totalTime = Date.now() - startTime;
-        console.log(`[COMPLETA] DNI ${dni} completado en ${(totalTime / 1000).toFixed(1)}s → Seguro: ${data.seguro_validado}`);
-
-        res.json({ success: true, ...data });
-    } catch (err) {
-        console.error(`[COMPLETA] Error DNI ${dni}:`, err.message);
-        res.status(500).json({ success: false, error: err.message });
-    }
+app.listen(PORT, () => {
+    console.log(`[Server] RPA Backend escuchando en puerto ${PORT}`);
+    console.log(`[Server] Endpoints: POST /validate | POST /validate-batch`);
 });
-
-initBrowser().then(() => {
-    app.listen(PORT, () => {
-        console.log(`[Server] RPA Backend escuchando en puerto ${PORT}`);
-        console.log(`[Server] Motor Chromium está inicializado y caliente en memoria.`);
-        console.log(`[Server] Endpoints: /get-dob | /get-dv | /validate | /validate-batch | /consulta-completa`);
-    });
-}).catch(err => {
-    console.error("[System] Error crítico al iniciar Chromium:", err);
-});
-
