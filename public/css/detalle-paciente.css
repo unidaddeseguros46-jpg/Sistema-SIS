@@ -595,11 +595,6 @@
     transition: gap .28s cubic-bezier(.4, 0, .2, 1)
 }
 
-.events-area:has(.event-register-popover.visible) {
-    gap: 14px;
-    overflow: visible
-}
-
 .events-card {
     flex: 1;
     margin: 0;
@@ -612,10 +607,6 @@
     flex-direction: column;
     overflow: hidden;
     min-width: 0
-}
-
-.events-area:has(.event-register-popover.visible) .events-card {
-    flex: 0 0 calc(200% / 3 - 14px / 3)
 }
 
 .events-empty {
@@ -896,29 +887,80 @@
 }
 
 .event-register-popover {
-    flex: 0 0 calc(100% / 3 - 28px / 3);
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    background: #fff;
-    border-radius: 12px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, .04);
-    padding: 16px 20px;
+    position: absolute;
+    z-index: 10000;
+    display: block;
+    flex: unset;
+    width: auto;
+    min-width: 280px;
+    max-width: min(340px, 85vw);
+    height: auto;
+    margin: 0;
+    transform: none;
     opacity: 0;
     pointer-events: none;
-    margin-right: calc(-100% / 3 + 28px / 3);
-    transform: translateX(40px);
-    transition:
-        margin-right .28s cubic-bezier(.4, 0, .2, 1),
-        transform .28s cubic-bezier(.4, 0, .2, 1),
-        opacity .22s ease
+    padding: 16px 20px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .12), 0 2px 8px rgba(0, 0, 0, .06);
+    border-radius: 10px;
+    border-left: 4px solid #3b82f6;
+    background: #fff;
+    font-weight: 400;
+    cursor: auto;
+    transition: opacity .2s ease;
+    top: auto;
+    left: auto;
+    right: auto;
+    bottom: auto
 }
 
 .event-register-popover.visible {
-    margin-right: 0;
-    transform: translateX(0);
     opacity: 1;
     pointer-events: auto
+}
+
+.event-register-popover.pos-right {
+    top: -10px;
+    left: calc(100% + 12px);
+    right: auto;
+    bottom: auto
+}
+
+.event-register-popover.pos-left {
+    top: -10px;
+    right: calc(100% + 12px);
+    left: auto;
+    bottom: auto
+}
+
+.event-register-popover.pos-bottom-right {
+    bottom: calc(100% + 5px);
+    left: calc(100% + 12px);
+    top: auto;
+    right: auto
+}
+
+.event-register-popover.pos-bottom-left {
+    bottom: calc(100% + 5px);
+    right: calc(100% + 12px);
+    top: auto;
+    left: auto
+}
+
+.event-register-popover.pos-below {
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    right: auto;
+    bottom: auto
+}
+
+.event-register-body {
+    overflow-y: auto;
+    flex: none
+}
+
+.event-register-popover.visible .event-register-body {
+    overflow: visible
 }
 
 .calendar-section {
@@ -1203,85 +1245,6 @@
 
     .folder-item {
         grid-template-columns: auto 1fr auto auto
-    }
-}
-
-@media (max-width:1400px) {
-    .event-register-popover {
-        position: absolute;
-        z-index: 10000;
-        display: block;
-        flex: unset;
-        width: auto;
-        min-width: 280px;
-        max-width: min(340px, 85vw);
-        height: auto;
-        margin: 0;
-        transform: none;
-        opacity: 0;
-        pointer-events: none;
-        padding: 16px 20px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, .12), 0 2px 8px rgba(0, 0, 0, .06);
-        border-radius: 10px;
-        border-left: 4px solid #3b82f6;
-        background: #fff;
-        font-weight: 400;
-        cursor: auto;
-        transition: opacity .2s ease;
-        top: auto;
-        left: auto;
-        right: auto;
-        bottom: auto
-    }
-
-    .event-register-popover.visible {
-        opacity: 1;
-        pointer-events: auto
-    }
-
-    .event-register-popover.pos-right {
-        top: -10px;
-        left: calc(100% + 12px);
-        right: auto;
-        bottom: auto
-    }
-
-    .event-register-popover.pos-left {
-        top: -10px;
-        right: calc(100% + 12px);
-        left: auto;
-        bottom: auto
-    }
-
-    .event-register-popover.pos-bottom-right {
-        bottom: calc(100% + 5px);
-        left: calc(100% + 12px);
-        top: auto;
-        right: auto
-    }
-
-    .event-register-popover.pos-bottom-left {
-        bottom: calc(100% + 5px);
-        right: calc(100% + 12px);
-        top: auto;
-        left: auto
-    }
-
-    .event-register-popover.pos-below {
-        top: calc(100% + 8px);
-        left: 50%;
-        transform: translateX(-50%);
-        right: auto;
-        bottom: auto
-    }
-
-    .event-register-body {
-        overflow-y: auto;
-        flex: none
-    }
-
-    .event-register-popover.visible .event-register-body {
-        overflow: visible
     }
 }
 
@@ -1635,12 +1598,137 @@
         z-index: 9991
     }
 
-    .events-area:has(.event-register-popover.visible) {
-        overflow: visible
-    }
-
     .event-register-popover.visible .event-register-body {
         overflow: visible
+    }
+}
+
+@media (min-width:1440px) {
+    .detalle-top-row {
+        gap: 24px;
+        margin-bottom: 24px
+    }
+
+    .patient-card {
+        width: clamp(440px, 30vw, 720px);
+        min-width: 440px;
+        padding: 20px 28px 16px
+    }
+
+    .patient-name {
+        font-size: 17px
+    }
+
+    .patient-avatar {
+        width: 50px;
+        height: 50px
+    }
+
+    .patient-avatar .material-symbols-rounded {
+        font-size: 28px
+    }
+
+    .stat-cards-row {
+        gap: 20px
+    }
+
+    .stat-card {
+        padding: 18px 22px
+    }
+
+    .stat-icon {
+        width: 50px;
+        height: 50px
+    }
+
+    .stat-card:nth-child(1) .stat-icon .material-symbols-rounded,
+    .stat-card:nth-child(2) .stat-icon .material-symbols-rounded,
+    .stat-card:nth-child(3) .stat-icon .material-symbols-rounded {
+        font-size: 28px
+    }
+
+    .stat-value {
+        font-size: 26px
+    }
+
+    .stat-label {
+        font-size: 12px
+    }
+
+    .detalle-main-row {
+        gap: 24px
+    }
+
+    .calendar-section {
+        width: clamp(440px, 30vw, 720px);
+        min-width: 440px;
+        padding: 24px 28px
+    }
+
+    .cal-filters {
+        margin-bottom: 20px;
+        padding-bottom: 18px
+    }
+
+    .cal-title {
+        font-size: 18px
+    }
+
+    .cal-nav-btn {
+        width: 36px;
+        height: 36px;
+        font-size: 15px
+    }
+
+    .cal-weekdays span {
+        font-size: 12px;
+        padding: 6px 0
+    }
+
+    .cal-day {
+        font-size: 16px
+    }
+
+    .events-card {
+        padding: 24px 28px
+    }
+
+    .events-header {
+        padding-bottom: 18px;
+        margin-bottom: 20px
+    }
+
+    .events-title {
+        font-size: 16px
+    }
+
+    .events-registro-badge {
+        font-size: 12px
+    }
+
+    .timeline-event-name {
+        font-size: 14px
+    }
+
+    .timeline-event-detail {
+        font-size: 13px
+    }
+
+    .folder-item {
+        padding: 14px 18px;
+        gap: 14px
+    }
+
+    .folder-title {
+        font-size: 14px
+    }
+
+    .folder-days-value {
+        font-size: 18px
+    }
+
+    .event-register-popover {
+        max-width: min(400px, 85vw)
     }
 }
 
