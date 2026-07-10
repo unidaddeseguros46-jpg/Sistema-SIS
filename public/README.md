@@ -38,8 +38,7 @@ public/
 │   ├── filter-dropdown.js         # Dropdown personalizado compartido (createFilterDropdown)
 │   ├── custom-select.js           # Select personalizado alternativo (formularios)
 │   ├── servicios.js               # Lista global de servicios (SERVICIOS)
-│   ├── dynamic-table.js           # Tabla dinámica (data-table)
-│   ├── calendario-popover.js      # Popover de calendario para fechas
+│   │   ├── calendario-popover.js      # Popover de calendario para fechas
 │   └── (cada módulo tiene su .js) # Lógica específica del módulo
 ├── modulos/
 │   ├── pacientes/

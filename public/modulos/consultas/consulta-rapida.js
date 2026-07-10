@@ -74,6 +74,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     let hastaHoyActive = true;
     let crCurrentPage = 1;
     let crRowsPerPage = 20;
+    let crCursorFirst = null;
+    let crCursorLast = null;
+    let crHasPrev = false;
+    let crHasNext = false;
     let modalPacienteActual = null;
     let susaludCreds = null;
 
@@ -230,7 +234,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             showToast('Seleccione un rango de fechas o active "Hasta hoy" para buscar.', true);
             return;
         }
-        crCurrentPage = 1;
+        resetPaginacion();
         loadPacientes();
     };
 
@@ -362,8 +366,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             updatePatientCount();
             return;
         }
-
-        const start = (crCurrentPage - 1) * crRowsPerPage;
 
         const formatDniDisplay = (dni, tipo) => {
             const PREFIX_MAP = { DNI: '', DNI_TEMPORAL: 'E- ', CARNET_EXT: 'C.E ' };
@@ -498,25 +500,33 @@ document.addEventListener('DOMContentLoaded', async () => {
         updatePatientCount();
     };
 
+    const resetPaginacion = () => {
+        crCurrentPage = 1;
+        crCursorFirst = null;
+        crCursorLast = null;
+        crHasPrev = false;
+        crHasNext = false;
+    };
+
     const renderPagination = () => {
-        const totalPages = Math.ceil(totalPatients / crRowsPerPage) || 1;
-        DynamicTable.renderPagination({
-            containerId: 'pagination-consulta',
-            currentPage: crCurrentPage,
-            totalPages,
-            onPageChange: (page) => {
-                crCurrentPage = page;
-                loadPacientes();
-            }
+        const totalPages = Math.max(1, Math.ceil(totalPatients / crRowsPerPage));
+        renderPaginacion({
+            contenedor: paginationContainer,
+            pagina: crCurrentPage,
+            totalPaginas: totalPages,
+            habilitarAnterior: crHasPrev,
+            habilitarSiguiente: crHasNext,
+            alAnterior: () => loadPacientes('prev'),
+            alSiguiente: () => loadPacientes('next')
         });
     };
 
-    const loadPacientes = async () => {
+    const loadPacientes = async (direction = 'first') => {
         const dniHc = inputDniHc.value.trim();
         const apellidos = inputApellidos.value.trim();
         const condicionVal = filterCondicion.value;
         const servicioVal = filterServicio.value;
-        let { start: fechaDesde, end: fechaHasta } = getDateRangeValues();
+        let fechaDesde, fechaHasta;
 
         selectedDNIs = [];
         updateActionsBar();
@@ -532,34 +542,64 @@ document.addEventListener('DOMContentLoaded', async () => {
         tablePacientes.style.display = 'none';
         paginationContainer.innerHTML = '';
 
-        try {
-            const startRange = (crCurrentPage - 1) * crRowsPerPage;
-            const endRange = startRange + crRowsPerPage - 1;
+        if (direction === 'next') crCurrentPage++;
+        else if (direction === 'prev') crCurrentPage--;
 
-            let query = supabaseClient.from('pacientes').select('*', { count: 'exact' }).order('creado_en', { ascending: false }).range(startRange, endRange);
-
-            if (dniHc) query = query.or(`dni.ilike.%${dniHc}%,historia_clinica.ilike.%${dniHc}%`);
-            if (apellidos) query = query.ilike('apellidos', `%${normalizeText(apellidos)}%`);
-            if (fechaDesde) query = query.gte('creado_en', `${fechaDesde}T00:00:00`);
-            if (fechaHasta) query = query.lte('creado_en', `${fechaHasta}T23:59:59`);
-            if (condicionVal) query = query.eq('condicion', condicionVal);
-            if (servicioVal) query = query.eq('servicio', servicioVal);
+        const aplicarFiltros = (q) => {
+            if (dniHc) q = q.or(`dni.ilike.%${dniHc}%,historia_clinica.ilike.%${dniHc}%`);
+            if (apellidos) q = q.ilike('apellidos', `%${normalizeText(apellidos)}%`);
+            if (fechaDesde) q = q.gte('creado_en', `${fechaDesde}T00:00:00`);
+            if (fechaHasta) q = q.lte('creado_en', `${fechaHasta}T23:59:59`);
+            if (condicionVal) q = q.eq('condicion', condicionVal);
+            if (servicioVal) q = q.eq('servicio', servicioVal);
             if (hastaHoyActive) {
                 const ahora = new Date();
                 const pad = n => String(n).padStart(2, '0');
                 const hoyStr = `${ahora.getFullYear()}-${pad(ahora.getMonth()+1)}-${pad(ahora.getDate())}`;
-                query = query.lte('creado_en', `${hoyStr}T23:59:59`);
+                q = q.lte('creado_en', `${hoyStr}T23:59:59`);
             }
+            return q;
+        };
 
-            const { data, error, count } = await query;
+        try {
+            const result = await consultarPaginado({
+                cliente: supabaseClient,
+                tabla: 'pacientes',
+                direccion: direction,
+                cursorAnterior: crCursorFirst,
+                cursorSiguiente: crCursorLast,
+                filtros: aplicarFiltros,
+            });
 
-            if (error) throw error;
+            if (result.error) throw result.error;
 
-            currentPagePatients = data || [];
-            totalPatients = count || 0;
+            currentPagePatients = result.items;
+            crCursorFirst = result.cursorAnterior;
+            crCursorLast = result.cursorSiguiente;
 
-            if (data.length === 0) {
-                showToast('No se encontraron pacientes.');
+            crHasPrev = await verificarAnterior({
+                cliente: supabaseClient,
+                tabla: 'pacientes',
+                cursor: crCursorFirst,
+                filtros: aplicarFiltros,
+            });
+
+            crHasNext = await verificarSiguiente({
+                cliente: supabaseClient,
+                tabla: 'pacientes',
+                cursor: crCursorLast,
+                filtros: aplicarFiltros,
+            });
+
+            totalPatients = await contarRegistros({
+                cliente: supabaseClient,
+                tabla: 'pacientes',
+                filtros: aplicarFiltros,
+            });
+
+            if (currentPagePatients.length === 0 && crCurrentPage > 1) {
+                resetPaginacion();
+                return loadPacientes();
             }
 
             renderTable();
@@ -572,14 +612,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     btnSearch.addEventListener('click', () => {
-        crCurrentPage = 1;
+        resetPaginacion();
         loadPacientes();
     });
 
     [inputDniHc, inputApellidos].forEach(input => {
         input.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
-                crCurrentPage = 1;
+                resetPaginacion();
                 loadPacientes();
             }
         });
@@ -603,7 +643,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         totalPatients = 0;
         selectedDNIs = [];
         updateActionsBar();
-        crCurrentPage = 1;
+        resetPaginacion();
         renderTable();
     });
 
@@ -709,6 +749,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                             fecha_validacion: ahora
                         });
                     } catch (dbErr) {
+                        console.warn('Error al guardar validación en DB:', dbErr);
                     }
 
                     if (estado === 'ALERTA') {

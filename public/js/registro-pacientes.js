@@ -453,12 +453,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             const displayItems = items.length > 20 ? items.slice(0, 20) : items;
 
+            let normQ;
+            if (searchQuery) normQ = 'dni.ilike.%' + normalizeText(searchQuery) + '%,apellidos.ilike.%' + normalizeText(searchQuery) + '%,nombres.ilike.%' + normalizeText(searchQuery) + '%';
+
             if (displayItems.length > 0) {
                 cursorLast = displayItems[displayItems.length - 1].creado_en;
                 cursorFirst = displayItems[0].creado_en;
-
-                let normQ;
-                if (searchQuery) normQ = 'dni.ilike.%' + normalizeText(searchQuery) + '%,apellidos.ilike.%' + normalizeText(searchQuery) + '%,nombres.ilike.%' + normalizeText(searchQuery) + '%';
 
                 let newerQuery = client.from('pacientes').select('*', { count: 'exact', head: true }).gt('creado_en', cursorFirst);
                 if (searchQuery) newerQuery = newerQuery.or(normQ);
@@ -478,19 +478,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                 hasNext = false;
             }
 
-            (async function () {
-                let countQuery = client.from('pacientes').select('*', { count: 'exact', head: true });
-                if (searchQuery) countQuery = countQuery.or('dni.ilike.%' + normalizeText(searchQuery) + '%,apellidos.ilike.%' + normalizeText(searchQuery) + '%,nombres.ilike.%' + normalizeText(searchQuery) + '%');
-                if (filterQuery) countQuery = countQuery.ilike('servicio', filterQuery.toUpperCase());
-                if (condicionFilter) countQuery = countQuery.ilike('condicion', condicionFilter.toUpperCase());
-                const { count } = await countQuery;
-                totalRecords = count || 0;
-            })();
+            let countQuery = client.from('pacientes').select('*', { count: 'exact', head: true });
+            if (searchQuery) countQuery = countQuery.or(normQ);
+            if (filterQuery) countQuery = countQuery.ilike('servicio', filterQuery.toUpperCase());
+            if (condicionFilter) countQuery = countQuery.ilike('condicion', condicionFilter.toUpperCase());
+            const { count } = await countQuery;
+            totalRecords = count || 0;
 
-            renderTable(displayItems, 0);
+            renderTable(displayItems);
             renderPagination();
             renderLegends();
         } catch (error) {
+            console.warn('Error al cargar pacientes:', error);
         } finally {
             loadingIndicator.style.display = 'none';
             tableElement.style.display = 'table';
@@ -549,7 +548,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 container.innerHTML = '<span style="font-size:13px; color:#94a3b8; font-weight:500;">Sin registros</span>';
             }
         } catch (e) {
-
+            console.warn('Error al cargar ingreso:', e);
         }
     };
 
@@ -562,7 +561,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         return 'cond-cambio';
     };
 
-    const renderTable = (items, startIndex = 0) => {
+    const renderTable = (items) => {
         tbody.innerHTML = '';
         if (!items || items.length === 0) {
             tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 40px; color:#94a3b8; font-size: 15px;">No se encontraron registros.</td></tr>`;
@@ -721,30 +720,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     const renderPagination = () => {
-        const container = document.getElementById('pagination-container');
-        if (!container) return;
-
         const totalPages = Math.max(1, Math.ceil(totalRecords / 20));
-
-        container.innerHTML = '\n' +
-            '            <div class="pagination-wrapper">\n' +
-            '                <span class="pagination-info">Página ' + currentPage + ' de ' + totalPages + '</span>\n' +
-            '                <button class="pagination-btn" id="btn-prev-page"' + (hasPrev ? '' : ' disabled') + '>\n' +
-            '                    <span class="btn-icon"><i class="fa-solid fa-chevron-left"></i></span>\n' +
-            '                    <span class="btn-label">Anterior</span>\n' +
-            '                </button>\n' +
-            '                <button class="pagination-btn" id="btn-next-page"' + (hasNext ? '' : ' disabled') + '>\n' +
-            '                    <span class="btn-label">Siguiente</span>\n' +
-            '                    <span class="btn-icon"><i class="fa-solid fa-chevron-right"></i></span>\n' +
-            '                </button>\n' +
-            '            </div>\n' +
-            '        ';
-
-        document.getElementById('btn-prev-page') && document.getElementById('btn-prev-page').addEventListener('click', function () {
-            loadPacientes('prev');
-        });
-        document.getElementById('btn-next-page') && document.getElementById('btn-next-page').addEventListener('click', function () {
-            loadPacientes('next');
+        renderPaginacion({
+            contenedor: document.getElementById('pagination-container'),
+            pagina: currentPage,
+            totalPaginas: totalPages,
+            habilitarAnterior: hasPrev,
+            habilitarSiguiente: hasNext,
+            alAnterior: () => loadPacientes('prev'),
+            alSiguiente: () => loadPacientes('next')
         });
     };
 
