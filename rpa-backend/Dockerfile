@@ -1,7 +1,8 @@
 FROM node:18-slim
 
-# Instalar SOLO las librerías que Chromium necesita
+# Instalar Chromium y sus librerías desde el sistema
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    chromium \
     libnss3 \
     libatk1.0-0 \
     libatk-bridge2.0-0 \
@@ -26,6 +27,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
+
 WORKDIR /app
 
 COPY package*.json ./
@@ -34,3 +38,5 @@ RUN npm install --omit=dev
 COPY server.js ./
 
 CMD ["npm", "start"]
+
+# Forzar rebuild de Railway 2026-07-09 18:47:43

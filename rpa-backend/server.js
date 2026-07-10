@@ -35,6 +35,7 @@ async function initBrowser() {
     if (!browserInstance) {
         console.log('[System] Iniciando navegador persistente en memoria...');
         browserInstance = await puppeteer.launch({
+            executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || undefined,
             args: [
                 '--no-sandbox', 
                 '--disable-setuid-sandbox'
@@ -127,11 +128,24 @@ async function scrapePaciente(paciente, browser) {
 
         if (resultado.error) {
             console.warn(`[RPA] DNI ${dni}: ${resultado.error}`);
-            return { dni, success: true, seguro: resultado.desError || 'NO ENCONTRADO' };
+            return { dni, success: true, seguro: resultado.desError || 'NO TIENE DERECHO DE COBERTURA' };
         }
 
         const vItem = (resultado.vDataItem && resultado.vDataItem[0]) || {};
-        const seguro = resultado.desError || vItem.tipoAfiliacion || 'NO ENCONTRADO';
+        let seguro = resultado.desError || vItem.tipoAfiliacion || 'NO TIENE DERECHO DE COBERTURA';
+
+        // Validar si la cobertura ha expirado basándose en finVigenciaAcreditacion (DD/MM/YYYY)
+        if (vItem.finVigenciaAcreditacion) {
+            const parts = vItem.finVigenciaAcreditacion.split('/');
+            if (parts.length === 3) {
+                const fin = new Date(`${parts[2]}-${parts[1]}-${parts[0]}T23:59:59`);
+                if (new Date() > fin) {
+                    seguro = 'NO TIENE DERECHO DE COBERTURA';
+                }
+            }
+        } else if (!vItem.tipoAfiliacion && (!resultado.codError || resultado.codError !== "0")) {
+            seguro = 'NO TIENE DERECHO DE COBERTURA';
+        }
 
         console.log(`[RPA] DNI ${dni} → ${seguro} | Centro: ${vItem.desCentro || ''}`);
         return {
@@ -273,18 +287,36 @@ async function scrapeDOB(dni, browser) {
         const codigo_verificacion = result.codigo_verificacion || '';
 
         let fecha_iso = '';
+        let final_fecha_nac = fecha_nac;
+        
         if (fecha_nac) {
-            const parts = fecha_nac.split('/');
-            fecha_iso = `${parts[2]}-${parts[1]}-${parts[0]}`;
+            if (fecha_nac.includes('-')) {
+                const parts = fecha_nac.split('-');
+                if (parts[0].length === 4) {
+                    fecha_iso = fecha_nac;
+                    final_fecha_nac = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                } else {
+                    fecha_iso = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                    final_fecha_nac = `${parts[0]}/${parts[1]}/${parts[2]}`;
+                }
+            } else {
+                const parts = fecha_nac.split('/');
+                if (parts[0].length === 4) {
+                    fecha_iso = `${parts[0]}-${parts[1]}-${parts[2]}`;
+                    final_fecha_nac = `${parts[2]}/${parts[1]}/${parts[0]}`;
+                } else {
+                    fecha_iso = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                }
+            }
         }
 
-        if (fecha_nac) {
-            console.log(`[DOB] DNI ${dni} → Fecha: ${fecha_nac}, ${apellido_paterno} ${apellido_materno}, ${nombres}, DV: ${codigo_verificacion}`);
+        if (final_fecha_nac) {
+            console.log(`[DOB] DNI ${dni} → Fecha: ${final_fecha_nac}, ${apellido_paterno} ${apellido_materno}, ${nombres}, DV: ${codigo_verificacion}`);
         }
 
         return {
-            success: !!fecha_nac,
-            fecha_nac,
+            success: !!final_fecha_nac,
+            fecha_nac: final_fecha_nac,
             fecha_iso,
             nombres,
             apellido_paterno,
@@ -429,7 +461,7 @@ app.post('/consulta-completa', async (req, res) => {
             data.tipo_seguro = validateResult.tipo_seguro || '';
             data.tipo_afiliacion = validateResult.tipo_afiliacion || '';
             data.fin_vigencia = validateResult.fin_vigencia || '';
-            data.estado_consulta = validateResult.seguro === 'SIN COBERTURA' ? 'SIN SEGURO' : 'ÉXITO';
+            data.estado_consulta = 'ÉXITO';
         } else {
             data.seguro_validado = validateResult.seguro || 'ERROR';
             data.estado_consulta = 'ERROR';

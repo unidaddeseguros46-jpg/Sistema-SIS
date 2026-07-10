@@ -236,7 +236,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             await renderResult(dataConsolidada);
             viewResultados.style.display = 'block';
             sessionStorage.setItem('cd_last_result', JSON.stringify(dataConsolidada));
-            showToast('Consulta completada exitosamente');
+            if (dataConsolidada.estado_consulta === 'ERROR_DOB') {
+                showToast('RENIEC: No se encontraron datos para este DNI', true);
+            } else if (dataConsolidada.seguro_validado === 'NO TIENE DERECHO DE COBERTURA') {
+                showToast('Consulta Exitosa: DNI validado, pero sin cobertura activa', false);
+            } else if (dataConsolidada.seguro_validado === 'NO ENCONTRADO') {
+                showToast('Consulta Exitosa: DNI no registrado en EsSalud', false);
+            } else if (dataConsolidada.estado_consulta === 'ERROR') {
+                showToast('Ocurrió un error en la conexión', true);
+            } else {
+                showToast('Consulta completada exitosamente', false);
+            }
 
         } catch (err) {
             if (err.name === 'AbortError' || err.message === 'AbortError') {
@@ -256,9 +266,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     const iframeRegistro = document.getElementById('iframe-registro');
     const btnCloseModal = document.getElementById('close-modal');
 
+    iframeRegistro.src = '../pacientes/registro-pacientes.html?view=modal';
+
+    const postToIframe = (msg) => {
+        if (iframeRegistro.contentWindow) {
+            iframeRegistro.contentWindow.postMessage(msg, '*');
+        } else {
+            iframeRegistro.addEventListener('load', () => {
+                iframeRegistro.contentWindow.postMessage(msg, '*');
+            }, { once: true });
+        }
+    };
+
     btnCloseModal.addEventListener('click', () => {
         modalRegistro.style.display = 'none';
-        iframeRegistro.src = '';
     });
 
     const renderResult = async (data) => {
@@ -310,8 +331,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                     tipo_documento: 'DNI'
                 };
                 sessionStorage.setItem('cd_auto_fill', JSON.stringify(autoFillData));
-                iframeRegistro.src = '../pacientes/registro-pacientes.html?view=modal';
                 modalRegistro.style.display = 'flex';
+                postToIframe({ type: 'check-auto-fill' });
             });
         }
 
@@ -328,7 +349,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (event.data.action === 'closeModal') {
             modalRegistro.style.display = 'none';
-            iframeRegistro.src = '';
             return;
         }
 
@@ -337,7 +357,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const { dni, pacienteId } = event.data;
 
         modalRegistro.style.display = 'none';
-        iframeRegistro.src = '';
 
         showToast('Paciente Guardado Exitosamente');
 

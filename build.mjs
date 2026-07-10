@@ -3,7 +3,6 @@ import { readdirSync, statSync } from 'fs';
 import { join } from 'path';
 
 const JS_EXCLUDE = new Set([
-  'modal-inline-head.js',
   'modal-prellenado.js',
   'supabase-config.js'
 ]);
