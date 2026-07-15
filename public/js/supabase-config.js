@@ -7,8 +7,8 @@ const prodKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsIn
 const localUrl = 'http://127.0.0.1:54321';
 const localKey = 'sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH';
 
-const supabaseUrl = isLocal ? localUrl : prodUrl;
-const supabaseKey = isLocal ? localKey : prodKey;
+const supabaseUrl = prodUrl;
+const supabaseKey = prodKey;
 const edgeFunctionUrl = supabaseUrl;
 const RPA_BASE = `${supabaseUrl}/functions/v1/rpa-proxy`;
 

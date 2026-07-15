@@ -264,7 +264,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const modalRegistro = document.getElementById('modal-registro');
     const iframeRegistro = document.getElementById('iframe-registro');
-    const btnCloseModal = document.getElementById('close-modal');
 
     iframeRegistro.src = '../pacientes/registro-pacientes.html?view=modal';
 
@@ -278,8 +277,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    btnCloseModal.addEventListener('click', () => {
-        modalRegistro.style.display = 'none';
+    modalRegistro.addEventListener('click', (e) => {
+        if (e.target === modalRegistro) {
+            modalRegistro.style.display = 'none';
+        }
     });
 
     const renderResult = async (data) => {

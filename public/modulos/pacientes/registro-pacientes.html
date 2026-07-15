@@ -50,22 +50,31 @@
         }
         body.is-modal .page-content {
             margin-left: 0 !important;
-            padding: 15px !important;
+            padding: 0 !important;
             max-width: 100% !important;
+            height: 100% !important;
+            display: flex !important;
+            flex-direction: column !important;
         }
-        body.is-modal .main-wrapper {
-            background: white !important;
-            min-height: auto !important;
-            padding-left: 0 !important;
+        body.is-modal #view-form {
+            flex: 1 !important;
+            display: flex !important;
+            flex-direction: column !important;
         }
         body.is-modal .standard-form-container {
-            background: none !important;
-            padding: 0 !important;
-            box-shadow: none !important;
-            border-radius: 0 !important;
+            flex: 1 !important;
+            display: flex !important;
+            flex-direction: column !important;
+            min-height: 0 !important;
         }
-        body.is-modal .blue-toptag-form {
-            border-top: none !important;
+        body.is-modal .form-actions {
+            margin-top: auto !important;
+        }
+        body.is-modal .main-wrapper {
+            background: transparent !important;
+            min-height: auto !important;
+            height: 100% !important;
+            padding-left: 0 !important;
         }
         html.is-modal {
             height: 100% !important;
@@ -76,6 +85,10 @@
             min-height: 0 !important;
             overflow-y: auto !important;
             overflow-x: hidden !important;
+            background: white !important;
+        }
+        body.is-modal #form-welcome-title {
+            display: block !important;
         }
         #modal-loading {
             display: none;

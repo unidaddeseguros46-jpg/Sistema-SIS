@@ -147,46 +147,12 @@
         }
 
         #modal-registro .modal-card {
-            background: white;
-            width: 90%;
-            max-width: 1000px;
+            width: calc(100% - 350px);
+            min-width: 500px;
             height: 90%;
-            border-radius: 15px;
             position: relative;
-            overflow: hidden;
             display: flex;
             flex-direction: column;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-        }
-
-        #modal-registro .modal-header {
-            padding: 15px 25px;
-            border-bottom: 1px solid #e2e8f0;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: #f8fafc;
-        }
-
-        #modal-registro .modal-header h3 {
-            margin: 0;
-            font-size: 18px;
-            color: #0f172a;
-            font-weight: 700;
-        }
-
-        #modal-registro .modal-header h3 i {
-            margin-right: 10px;
-            color: #3b82f6;
-        }
-
-        #close-modal {
-            background: none;
-            border: none;
-            font-size: 24px;
-            cursor: pointer;
-            color: #94a3b8;
-            transition: color 0.2s;
         }
 
         #iframe-registro {
@@ -194,6 +160,8 @@
             border: none;
             width: 100%;
             height: 100%;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
         }
     </style>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" media="print" onload="this.media='all'">
@@ -269,10 +237,6 @@
             </div>
             <div id="modal-registro">
                 <div class="modal-card">
-                    <div class="modal-header">
-                        <h3><i class="fa-solid fa-user-plus"></i>Completar Registro de Paciente</h3>
-                        <button id="close-modal">&times;</button>
-                    </div>
                     <iframe id="iframe-registro" src=""></iframe>
                 </div>
             </div>
