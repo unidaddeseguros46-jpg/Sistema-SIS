@@ -1,211 +1,158 @@
 ﻿// =========================================================================
 // UNIDAD DE SEGUROS - SISTEMA HOSPITALARIO
-// Archivo: public/js/seguimiento-pacientes.js (Soporte DNI, C.E, E- + Paginación 30)
+// Archivo: public/js/seguimiento-pacientes.js
 // =========================================================================
 
 document.addEventListener("DOMContentLoaded", async () => {
   const supabase = typeof supabaseClient !== "undefined" ? supabaseClient : window.supabase;
-  if (!supabase) {
-    console.error("Cliente de Supabase no disponible.");
-    return;
-  }
+  const { data: { session } } = await supabase.auth.getSession();
 
-  // 1. Validar sesión
-  const { data: { session: currentSession } } = await supabase.auth.getSession();
-  if (!currentSession) {
+  if (!session) {
     window.location.href = "../../index.html";
     return;
   }
 
-  // 2. Elementos del DOM
-  const inputDniHc = document.getElementById("filter-dni-hc") || document.querySelector('input[placeholder*="DNI"]');
-  const inputApellidos = document.getElementById("filter-apellidos") || document.querySelector('input[placeholder*="apellidos"]');
-  const selectCondicion = document.getElementById("filter-condicion");
+  const userId = session.user.id;
+  const inputDniHc = document.getElementById("filter-dni-hc");
+  const inputApellidos = document.getElementById("filter-apellidos");
   const selectSeguro = document.getElementById("filter-seguro");
   const selectServicio = document.getElementById("filter-servicio");
+  const selectCondicion = document.getElementById("filter-condicion");
   const btnSearch = document.getElementById("btn-search");
+  const altaCountEl = document.getElementById("alta-count");
   const tbodyPacientes = document.getElementById("tbody-pacientes");
   const loadingIndicator = document.getElementById("loading-indicator");
   const tablePacientes = document.getElementById("table-pacientes");
 
-  // Variables de estado para Paginación (30 en 30)
-  const ITEMS_PER_PAGE = 30;
+  if (window.showGuideTooltip) {
+    window.showGuideTooltip(
+      "seguimiento_pacs",
+      "Haga click en la fila de un paciente para actualizar su información",
+      5000,
+      true,
+      { oncePerSession: false }
+    );
+  }
+
+  // Configuración de paginación: 30 en 30
+  const PAGE_SIZE = 30;
+  let lastCreatedAt = null;
+  let firstCreatedAt = null;
+  let hasNext = false;
+  let hasPrev = false;
   let currentPage = 1;
-  let allPacientesFiltered = [];
-  let globalHospMap = new Map();
+  let totalRecords = 0;
+
+  const selectedPatientsMap = new Map();
+  let hospMap = new Map();
 
   // =========================================================================
-  // ESTILOS CSS INYECTADOS PARA ACABADO PROFESIONAL
+  // ESTILOS SUTILES COMPLEMENTARIOS (SIN ALTERAR EL CSS NATIVO DE LA TABLA)
   // =========================================================================
-  const inyectarEstilosProfesionales = () => {
-    if (document.getElementById("estilos-seguimiento-pro")) return;
+  const inyectarEstilosComplementarios = () => {
+    if (document.getElementById("estilos-extra-seguimiento")) return;
     const style = document.createElement("style");
-    style.id = "estilos-seguimiento-pro";
+    style.id = "estilos-extra-seguimiento";
     style.innerHTML = `
-      #table-pacientes tbody tr {
-        transition: background-color 0.15s ease;
-      }
-      #table-pacientes tbody tr:hover {
-        background-color: #f8fafc !important;
-      }
-      .copy-chip {
+      .inline-copy-btn {
         display: inline-flex;
         align-items: center;
-        gap: 5px;
-        padding: 2px 6px;
-        border-radius: 5px;
-        border: 1px solid transparent;
+        gap: 4px;
         background: transparent;
+        border: none;
+        padding: 2px 4px;
+        border-radius: 4px;
+        color: inherit;
+        font: inherit;
         cursor: pointer;
-        transition: all 0.15s ease;
+        transition: background 0.15s ease, color 0.15s ease;
       }
-      .copy-chip:hover {
-        background: #f1f5f9;
-        border-color: #cbd5e1;
+      .inline-copy-btn:hover {
+        background: rgba(37, 99, 235, 0.08);
+        color: #2563eb;
       }
-      .copy-chip .copy-icon {
-        opacity: 0.35;
-        transition: opacity 0.15s ease;
+      .inline-copy-btn .copy-ico {
+        font-size: 10px;
+        color: #94a3b8;
+        opacity: 0.6;
+        transition: opacity 0.15s ease, color 0.15s ease;
       }
-      .copy-chip:hover .copy-icon {
+      .inline-copy-btn:hover .copy-ico {
         opacity: 1;
         color: #2563eb;
       }
-      .badge-seguro-pro {
+      .dv-pill {
         display: inline-flex;
         align-items: center;
-        font-size: 11px;
+        gap: 3px;
+        font-family: monospace;
+        font-size: 10.5px;
         font-weight: 700;
-        color: #1d4ed8;
-        background: #eff6ff;
-        border: 1px solid #dbeafe;
-        border-left: 3.5px solid #2563eb;
-        padding: 3px 10px;
-        border-radius: 5px;
-        letter-spacing: 0.02em;
-      }
-      .btn-accion-pro {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 32px;
-        height: 32px;
-        color: #2563eb;
-        background: transparent;
-        border-radius: 8px;
-        text-decoration: none;
-        transition: all 0.15s ease;
-      }
-      .btn-accion-pro:hover {
-        background: #eff6ff;
-        color: #1d4ed8;
-        transform: translateY(-1px);
-      }
-      .page-btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        min-width: 32px;
-        height: 32px;
-        padding: 0 8px;
-        font-size: 12px;
-        font-weight: 600;
-        border-radius: 8px;
-        border: 1px solid #e2e8f0;
-        background: #ffffff;
         color: #475569;
+        background: #f1f5f9;
+        border: 1px solid #e2e8f0;
+        padding: 1px 6px;
+        border-radius: 5px;
+        margin-left: 4px;
         cursor: pointer;
         transition: all 0.15s ease;
       }
-      .page-btn:hover:not(:disabled) {
-        background: #f1f5f9;
+      .dv-pill:hover {
+        background: #e2e8f0;
         color: #0f172a;
+      }
+      .fnac-sub {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 11px;
+        color: #64748b;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        padding: 1px 6px;
+        border-radius: 5px;
+        margin-top: 3px;
+        cursor: pointer;
+        transition: all 0.15s ease;
+      }
+      .fnac-sub:hover {
+        background: #f1f5f9;
+        color: #1e293b;
         border-color: #cbd5e1;
       }
-      .page-btn.active {
-        background: #2563eb;
-        color: #ffffff;
-        border-color: #2563eb;
-        box-shadow: 0 1px 3px rgba(37, 99, 235, 0.25);
+      .estancia-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 10.5px;
+        font-weight: 600;
+        color: #047857;
+        background: #ecfdf5;
+        border: 1px solid #a7f3d0;
+        padding: 2px 7px;
+        border-radius: 5px;
+        margin-left: 6px;
+        cursor: pointer;
+        transition: all 0.15s ease;
       }
-      .page-btn:disabled {
-        opacity: 0.45;
-        cursor: not-allowed;
+      .estancia-pill:hover {
+        background: #d1fae5;
       }
     `;
     document.head.appendChild(style);
   };
-  inyectarEstilosProfesionales();
+  inyectarEstilosComplementarios();
 
   // =========================================================================
-  // IDENTIFICADOR Y FORMATEADOR DE DOCUMENTOS: DNI, "C.E" y "E-"
-  // =========================================================================
-  const analizarDocumento = (rawDoc, tipoDocCol = "") => {
-    if (!rawDoc) {
-      return { display: "-", valorCopiar: "", tipo: "NONE", prefijo: "", numero: "-", permiteDV: false };
-    }
-
-    const str = String(rawDoc).trim().toUpperCase();
-    const tDoc = String(tipoDocCol || "").trim().toUpperCase();
-
-    // 1. Detectar código especial "E-" (Ej: E-001234, E001234 o tipo E)
-    if (str.startsWith("E-") || /^E\d+$/.test(str) || tDoc === "E") {
-      const numLimpio = str.replace(/^E-?/, "").trim();
-      const displayFmt = `E-${numLimpio}`;
-      return {
-        display: displayFmt,
-        valorCopiar: displayFmt,
-        tipo: "E",
-        prefijo: "E-",
-        numero: numLimpio,
-        permiteDV: false
-      };
-    }
-
-    // 2. Detectar Carnet de Extranjería "C.E"
-    // Reconoce si empieza con "C.E", "CE", si la columna tipo_documento dice CE,
-    // o si es un número de 9 dígitos o de 8 dígitos que empieza en "09" / "00" (típico de CE en SIS/GalenHos)
-    const esExplicitoCE = str.startsWith("C.E") || str.startsWith("CE") || tDoc.includes("CE") || tDoc.includes("EXTRANJERIA");
-    const soloDigitos = str.replace(/\D/g, "");
-    const esLongitudCE = /^\d{9,12}$/.test(str) || (str.length === 8 && (str.startsWith("00") || str.startsWith("09")));
-
-    if (esExplicitoCE || esLongitudCE) {
-      const numCE = soloDigitos || str.replace(/^C\.?E\.?\s*-?\s*/i, "").trim();
-      return {
-        display: `C.E ${numCE}`,
-        valorCopiar: numCE, // Copia solo los dígitos para pegado rápido en portales
-        tipo: "CE",
-        prefijo: "C.E",
-        numero: numCE,
-        permiteDV: false
-      };
-    }
-
-    // 3. DNI Estándar (8 dígitos) u otros
-    return {
-      display: str,
-      valorCopiar: str,
-      tipo: "DNI",
-      prefijo: "",
-      numero: str,
-      permiteDV: /^\d{8}$/.test(str)
-    };
-  };
-
-  // =========================================================================
-  // ALINEAR BOTÓN ESSALUD JUNTO A "LIMPIAR FILTROS" Y "BUSCAR"
+  // INSERTAR BOTÓN ESSALUD ALINEADO A LA IZQUIERDA DE "LIMPIAR FILTROS"
   // =========================================================================
   const insertarBotonEsSalud = () => {
     if (document.getElementById("btn-essalud-top")) return;
-
-    const botones = Array.from(document.querySelectorAll("button, a"));
-    const btnLimpiar = botones.find(b => b.textContent && b.textContent.toLowerCase().includes("limpiar"));
-
+    const btnLimpiar = document.getElementById("btn-clear-input");
     if (btnLimpiar && btnLimpiar.parentElement) {
       const parent = btnLimpiar.parentElement;
       parent.style.display = "flex";
       parent.style.alignItems = "center";
-      parent.style.justifyContent = "flex-end";
       parent.style.gap = "8px";
 
       const aEssalud = document.createElement("a");
@@ -213,110 +160,93 @@ document.addEventListener("DOMContentLoaded", async () => {
       aEssalud.href = "https://dondemeatiendo.essalud.gob.pe/#/consulta";
       aEssalud.target = "_blank";
       aEssalud.rel = "noopener noreferrer";
-      aEssalud.style.cssText = "display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 14px;background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:10px;font-size:12px;font-weight:700;text-decoration:none;transition:all 0.2s;white-space:nowrap;margin-left:auto;";
+      aEssalud.style.cssText =
+        "display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 14px;background:#2563eb;color:#ffffff;border-radius:8px;font-size:12.5px;font-weight:600;text-decoration:none;box-shadow:0 1px 2px rgba(0,0,0,0.08);transition:background 0.2s;white-space:nowrap;";
       aEssalud.innerHTML = `<i class="fa-solid fa-arrow-up-right-from-square" style="font-size:11px;"></i> <span>Consulta EsSalud</span>`;
-      aEssalud.onmouseenter = () => {
-        aEssalud.style.background = "#2563eb";
-        aEssalud.style.color = "#ffffff";
-        aEssalud.style.borderColor = "#2563eb";
-      };
-      aEssalud.onmouseleave = () => {
-        aEssalud.style.background = "#eff6ff";
-        aEssalud.style.color = "#1d4ed8";
-        aEssalud.style.borderColor = "#bfdbfe";
-      };
+      aEssalud.onmouseenter = () => { aEssalud.style.background = "#1d4ed8"; };
+      aEssalud.onmouseleave = () => { aEssalud.style.background = "#2563eb"; };
 
       parent.insertBefore(aEssalud, btnLimpiar);
     }
   };
   insertarBotonEsSalud();
 
-  // Utilidades de Fechas
-  const getLocalDateLima = () => {
-    return new Date(new Date().toLocaleString("en-US", { timeZone: "America/Lima" }));
-  };
+  // =========================================================================
+  // FUNCIONES AUXILIARES Y DE FORMATO
+  // =========================================================================
+  const getLimaDate = () => new Date(new Date().toLocaleString("en-US", { timeZone: "America/Lima" }));
+
+  const normalizeText = (str) =>
+    str ? str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase() : "";
 
   const formatDateDisplay = (dateStr) => {
     if (!dateStr) return "-";
     const clean = String(dateStr).split("T")[0];
     const parts = clean.split("-");
-    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
-    return clean;
+    return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : clean;
   };
 
   const calculateDaysHospitalized = (fechaIngreso, fechaAlta) => {
     if (!fechaIngreso) return 0;
     const start = new Date(String(fechaIngreso).split("T")[0] + "T00:00:00");
-    const end = fechaAlta ? new Date(String(fechaAlta).split("T")[0] + "T00:00:00") : getLocalDateLima();
+    const end = fechaAlta ? new Date(String(fechaAlta).split("T")[0] + "T00:00:00") : getLimaDate();
     const diff = end.getTime() - start.getTime();
     return Math.max(0, Math.round(diff / (1000 * 60 * 60 * 24)));
   };
 
-  // Colores por Servicio (Fiel a tu segunda imagen)
-  const getEstiloServicio = (servicio) => {
-    const s = String(servicio || "").toUpperCase();
-    if (s.includes("EMERGENCIA") || s.includes("SHOCK")) return "background:#fffbeb;color:#d97706;border:1px solid #fde68a;";
-    if (s.includes("NEONAT")) return "background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;";
-    if (s.includes("PEDIAT")) return "background:#f0f9ff;color:#0284c7;border:1px solid #bae6fd;";
-    if (s.includes("PUERP")) return "background:#f5f3ff;color:#7c3aed;border:1px solid #ddd6fe;";
-    if (s.includes("GINECO")) return "background:#fdf2f8;color:#db2777;border:1px solid #fbcfe8;";
-    if (s.includes("CIRUG")) return "background:#fef2f2;color:#dc2626;border:1px solid #fecaca;";
-    if (s.includes("MEDICINA")) return "background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;";
-    if (s.includes("SALUD MENTAL")) return "background:#eef2ff;color:#4f46e5;border:1px solid #c7d2fe;";
-    if (s.includes("UVI") || s.includes("UCI")) return "background:#fff1f2;color:#e11d48;border:1px solid #fecdd3;";
-    return "background:#f8fafc;color:#475569;border:1px solid #e2e8f0;";
+  const showToast = (msg, isError = false) => {
+    try {
+      if (window.showSystemTooltip) {
+        window.showSystemTooltip(msg, isError);
+        return;
+      }
+    } catch (e) {
+      console.warn("[Toast] showSystemTooltip falló:", e);
+    }
+    const toast = document.createElement("div");
+    toast.textContent = msg;
+    Object.assign(toast.style, {
+      position: "fixed",
+      bottom: "30px",
+      right: "30px",
+      zIndex: "99999",
+      background: isError ? "#fef2f2" : "#f0fdf4",
+      color: isError ? "#dc2626" : "#15803d",
+      borderLeft: "4px solid " + (isError ? "#ef4444" : "#22c55e"),
+      padding: "12px 20px",
+      borderRadius: "10px",
+      fontWeight: "600",
+      fontSize: "14px",
+      boxShadow: "0 10px 25px rgba(0,0,0,0.15)"
+    });
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2500);
   };
 
-  // Estilo de Condición (Verde para ALTA, Azul para HOSPITALIZADO)
-  const getEstiloCondicion = (condicion) => {
-    const c = String(condicion || "").toUpperCase();
-    if (c.includes("ALTA")) {
-      return "background:#dcfce7;color:#15803d;border:1px solid #bbf7d0;";
-    }
-    if (c.includes("REFERID") || c.includes("TRANSFER")) {
-      return "background:#fef3c7;color:#b45309;border:1px solid #fde68a;";
-    }
-    if (c.includes("FALLEC")) {
-      return "background:#f1f5f9;color:#334155;border:1px solid #cbd5e1;";
-    }
-    return "background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;";
-  };
-
-  // Toast flotante de copiado
-  const showToast = (message) => {
-    let toast = document.getElementById("toast-seguimiento");
-    if (!toast) {
-      toast = document.createElement("div");
-      toast.id = "toast-seguimiento";
-      toast.style.cssText = "position:fixed;top:20px;right:20px;z-index:9999;background:#0f172a;color:#fff;padding:10px 16px;border-radius:10px;font-size:12px;font-weight:600;box-shadow:0 10px 25px rgba(0,0,0,0.18);display:flex;align-items:center;gap:8px;transition:all 0.25s ease;opacity:0;transform:translateY(-10px);pointer-events:none;";
-      document.body.appendChild(toast);
-    }
-    toast.innerHTML = `<i class="fa-solid fa-circle-check" style="color:#34d399;"></i> <span>${message}</span>`;
-    toast.style.opacity = "1";
-    toast.style.transform = "translateY(0)";
-    setTimeout(() => {
-      toast.style.opacity = "0";
-      toast.style.transform = "translateY(-10px)";
-    }, 1800);
-  };
-
-  // Copiar al portapapeles
   window.copiarDatoAlPortapapeles = (e, valor, label) => {
     e.stopPropagation();
     if (!valor || valor === "-") return;
     navigator.clipboard.writeText(String(valor).trim()).then(() => {
-      showToast(`${label} copiado: ${valor}`);
+      showToast(`${label} copiado: ${valor}`, false);
       const btn = e.currentTarget;
-      const icon = btn.querySelector("i");
+      const icon = btn.querySelector("i.copy-ico");
       if (icon) {
         const prev = icon.className;
-        icon.className = "fa-solid fa-check text-emerald-600 copy-icon";
-        setTimeout(() => { icon.className = prev; }, 1200);
+        icon.className = "fa-solid fa-check copy-ico";
+        icon.style.color = "#16a34a";
+        icon.style.opacity = "1";
+        setTimeout(() => {
+          icon.className = prev;
+          icon.style.color = "";
+          icon.style.opacity = "";
+        }, 1200);
       }
     });
   };
 
-  // Modal de Rango de Hospitalización
+  // =========================================================================
+  // MODAL DE RANGO DE HOSPITALIZACIÓN Y ESTANCIA
+  // =========================================================================
   window.mostrarModalRangoHospitalizacion = (e, pJsonStr) => {
     e.stopPropagation();
     const p = JSON.parse(decodeURIComponent(pJsonStr));
@@ -329,7 +259,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!modal) {
       modal = document.createElement("div");
       modal.id = "modal-rango-estancia";
-      modal.style.cssText = "position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,0.55);backdrop-filter:blur(3px);padding:16px;";
+      modal.style.cssText =
+        "position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,0.6);backdrop-filter:blur(3px);padding:16px;";
       document.body.appendChild(modal);
     }
 
@@ -338,63 +269,61 @@ document.addEventListener("DOMContentLoaded", async () => {
         <div style="padding:14px 20px;background:#0f172a;color:#fff;display:flex;align-items:center;justify-content:space-between;">
           <div style="display:flex;align-items:center;gap:8px;">
             <i class="fa-regular fa-calendar-days" style="color:#60a5fa;"></i>
-            <span style="font-size:13px;font-weight:700;">Detalle de Estancia Hospitalaria</span>
+            <span style="font-size:13px;font-weight:700;">Rango de Hospitalización y Estancia</span>
           </div>
           <button type="button" onclick="document.getElementById('modal-rango-estancia').remove()" style="background:none;border:none;color:#94a3b8;font-size:18px;cursor:pointer;">✕</button>
         </div>
 
-        <div style="padding:14px 20px;background:#f8fafc;border-bottom:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;gap:12px;">
+        <div style="padding:14px 20px;background:#f0f7ff;border-bottom:1px solid #dbeafe;display:flex;align-items:center;justify-content:space-between;gap:12px;">
           <div>
-            <span style="font-size:10px;font-weight:700;color:#2563eb;text-transform:uppercase;letter-spacing:0.04em;">PACIENTE</span>
-            <div style="font-size:13px;font-weight:700;color:#0f172a;margin-top:1px;">${p.apellidos}, ${p.nombres}</div>
-            <div style="font-size:11px;color:#64748b;font-family:monospace;margin-top:2px;">
-              Doc: <strong>${p.docDisplay}</strong> ${p.codigoVerificacion ? `(DV: ${p.codigoVerificacion})` : ""} · HC: ${p.historiaClinica || "-"}
+            <span style="font-size:10px;font-weight:700;color:#1d4ed8;text-transform:uppercase;">PACIENTE</span>
+            <div style="font-size:13px;font-weight:700;color:#0f172a;">${p.apellidos}, ${p.nombres}</div>
+            <div style="font-size:11px;color:#64748b;font-family:monospace;">
+              ${p.docLabel}: <strong>${p.dni}</strong> ${p.codigoVerificacion ? `(DV: ${p.codigoVerificacion})` : ""} · HC: ${p.historiaClinica || "—"}
             </div>
           </div>
-          <span style="font-size:10px;font-weight:700;padding:4px 10px;border-radius:6px;${getEstiloCondicion(p.condicion)}">
-            ${p.condicion}
-          </span>
+          <span class="condicion-badge ${p.condClass}">${p.condicion}</span>
         </div>
 
         <div style="padding:18px 20px;display:flex;flex-direction:column;gap:14px;font-size:12px;color:#334155;">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
             <div style="padding:12px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;">
-              <span style="font-size:10px;font-weight:700;text-transform:uppercase;color:#059669;display:block;margin-bottom:4px;">● Fecha de Ingreso</span>
+              <span style="font-size:10px;font-weight:700;text-transform:uppercase;color:#047857;display:block;margin-bottom:4px;">● Fecha de Ingreso</span>
               <div style="font-size:14px;font-weight:700;font-family:monospace;color:#0f172a;">${fechaIngresoFmt}</div>
-              <div style="font-size:10px;color:#64748b;margin-top:4px;">Servicio: <strong>${p.servicioIngreso || p.servicio}</strong></div>
+              <div style="font-size:10px;color:#94a3b8;margin-top:4px;">Servicio: <strong>${p.servicioIngreso || p.servicio}</strong></div>
             </div>
 
             <div style="padding:12px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;">
-              <span style="font-size:10px;font-weight:700;text-transform:uppercase;color:#2563eb;display:block;margin-bottom:4px;">● ${esAlta ? 'Fecha de Alta' : 'Estado Actual'}</span>
+              <span style="font-size:10px;font-weight:700;text-transform:uppercase;color:#1d4ed8;display:block;margin-bottom:4px;">● ${esAlta ? "Fecha de Alta" : "Estado Actual"}</span>
               <div style="font-size:14px;font-weight:700;font-family:monospace;color:#0f172a;">${fechaAltaFmt}</div>
-              <div style="font-size:10px;color:#64748b;margin-top:4px;">Servicio: <strong>${p.servicio}</strong></div>
+              <div style="font-size:10px;color:#94a3b8;margin-top:4px;">Servicio: <strong>${p.servicio}</strong></div>
             </div>
           </div>
 
           <div style="padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;display:flex;align-items:center;justify-content:space-between;">
-            <span style="font-weight:600;color:#475569;">Tiempo Total de Estancia:</span>
+            <span style="font-weight:600;color:#475569;">Tiempo de Estancia Hospitalaria:</span>
             <span style="font-size:12px;font-weight:800;color:#1e40af;background:#dbeafe;padding:4px 12px;border-radius:8px;">
-              ${p.diasHospitalizado} ${p.diasHospitalizado === 1 ? 'día' : 'días'}
+              ${p.diasHospitalizado} ${p.diasHospitalizado === 1 ? "día" : "días"}
             </span>
           </div>
 
           <div style="padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;">
-            <span style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;display:block;margin-bottom:6px;">Datos Rápidos (Clic para copiar):</span>
-            <div style="display:grid;grid-template-columns:1.2fr 0.8fr 1.2fr;gap:6px;text-align:center;">
-              <button type="button" onclick="copiarDatoAlPortapapeles(event, '${p.docCopiar}', 'Documento')" style="background:#fff;padding:5px;border-radius:6px;border:1px solid #e2e8f0;font-family:monospace;font-weight:700;cursor:pointer;font-size:11px;">${p.docDisplay}</button>
-              <button type="button" onclick="copiarDatoAlPortapapeles(event, '${p.codigoVerificacion || ""}', 'DV')" style="background:#fff;padding:5px;border-radius:6px;border:1px solid #e2e8f0;font-family:monospace;font-weight:700;cursor:pointer;font-size:11px;">DV: ${p.codigoVerificacion || "-"}</button>
-              <button type="button" onclick="copiarDatoAlPortapapeles(event, '${formatDateDisplay(p.fechaNacimiento)}', 'Fecha Nacimiento')" style="background:#fff;padding:5px;border-radius:6px;border:1px solid #e2e8f0;font-family:monospace;font-weight:700;cursor:pointer;font-size:11px;">Nac: ${formatDateDisplay(p.fechaNacimiento)}</button>
+            <span style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;display:block;margin-bottom:6px;">Datos para Consulta EsSalud (Clic para copiar):</span>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1.2fr;gap:6px;text-align:center;">
+              <button type="button" onclick="copiarDatoAlPortapapeles(event, '${p.dni}', 'Documento')" style="background:#fff;padding:5px;border-radius:6px;border:1px solid #e2e8f0;font-family:monospace;font-weight:700;cursor:pointer;">${p.dni}</button>
+              <button type="button" onclick="copiarDatoAlPortapapeles(event, '${p.codigoVerificacion || ""}', 'DV')" style="background:#fff;padding:5px;border-radius:6px;border:1px solid #e2e8f0;font-family:monospace;font-weight:700;cursor:pointer;">DV: ${p.codigoVerificacion || "-"}</button>
+              <button type="button" onclick="copiarDatoAlPortapapeles(event, '${formatDateDisplay(p.fechaNacimiento)}', 'Fecha Nacimiento')" style="background:#fff;padding:5px;border-radius:6px;border:1px solid #e2e8f0;font-family:monospace;font-weight:700;cursor:pointer;">${formatDateDisplay(p.fechaNacimiento)}</button>
             </div>
           </div>
         </div>
 
         <div style="padding:12px 20px;background:#f8fafc;border-top:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;">
           <a href="https://dondemeatiendo.essalud.gob.pe/#/consulta" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;font-size:11px;font-weight:600;color:#1d4ed8;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;text-decoration:none;">
-            <i class="fa-solid fa-arrow-up-right-from-square"></i> Consultar EsSalud
+            <i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir EsSalud
           </a>
           <div style="display:flex;align-items:center;gap:8px;">
             <button type="button" onclick="document.getElementById('modal-rango-estancia').remove()" style="padding:6px 14px;font-size:12px;color:#475569;background:#fff;border:1px solid #cbd5e1;border-radius:8px;cursor:pointer;">Cerrar</button>
-            <a href="detalle-paciente.html?id=${p.id}" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;font-size:12px;font-weight:700;color:#fff;background:#2563eb;border-radius:8px;text-decoration:none;">Ver Ficha</a>
+            <a href="detalle-paciente.html?id=${p.id}" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;font-size:12px;font-weight:700;color:#fff;background:#2563eb;border-radius:8px;text-decoration:none;">Ver Detalle</a>
           </div>
         </div>
       </div>
@@ -402,412 +331,549 @@ document.addEventListener("DOMContentLoaded", async () => {
     modal.onclick = () => modal.remove();
   };
 
-  const esFiltroTodos = (val) => {
-    if (!val) return true;
-    const str = String(val).trim().toUpperCase();
-    return str === "" || str === "TODOS" || str === "ALL" || str === "SELECCIONAR" || str.includes("TODOS");
-  };
-
-  const obtenerValorSelect = (el, labelKeyword) => {
-    if (el) return el.value;
-    const labels = Array.from(document.querySelectorAll("label"));
-    const targetLabel = labels.find(l => l.textContent && l.textContent.toLowerCase().includes(labelKeyword));
-    if (targetLabel && targetLabel.parentElement) {
-      const sel = targetLabel.parentElement.querySelector("select");
-      if (sel) return sel.value;
-    }
-    return "";
-  };
-
   // =========================================================================
-  // CARGAR PACIENTES DESDE SUPABASE
+  // LÓGICA ORIGINAL DE CHECKS DIARIOS
   // =========================================================================
-  const loadPatients = async () => {
-    insertarBotonEsSalud();
-    currentPage = 1;
-
-    if (loadingIndicator) {
-      loadingIndicator.style.display = "block";
-      loadingIndicator.classList.remove("hidden");
-    }
-
+  const loadChecksDiarios = async () => {
     try {
-      // Usamos select("*") para traer también tipo_documento si existe en la tabla sin romper el query
-      let query = supabase
-        .from("pacientes")
-        .select("*")
-        .order("apellidos", { ascending: true })
-        .limit(1000);
-
-      const valCond = obtenerValorSelect(selectCondicion, "condici");
-      const valSeguro = obtenerValorSelect(selectSeguro, "seguro");
-      const valServicio = obtenerValorSelect(selectServicio, "servicio");
-      const rawDniHc = inputDniHc ? inputDniHc.value.trim() : "";
-      const valApellidos = inputApellidos ? inputApellidos.value.trim() : "";
-
-      if (!esFiltroTodos(valCond)) {
-        query = query.ilike("condicion", `%${valCond.trim()}%`);
-      }
-      if (!esFiltroTodos(valSeguro)) {
-        query = query.ilike("tipo_seguro", `%${valSeguro.trim()}%`);
-      }
-      if (!esFiltroTodos(valServicio)) {
-        query = query.ilike("servicio", `%${valServicio.trim()}%`);
-      }
-      if (rawDniHc) {
-        // Si el usuario busca "C.E 09187156" o "CE 09187156", extraemos también el número limpio
-        // para que coincida tanto si en la BD está con "C.E" como si está solo con los dígitos
-        const terminoLimpio = rawDniHc.replace(/^C\.?E\.?\s*/i, "").trim();
-        query = query.or(`dni.ilike.%${rawDniHc}%,dni.ilike.%${terminoLimpio}%,historia_clinica.ilike.%${terminoLimpio}%`);
-      }
-      if (valApellidos) {
-        query = query.or(`apellidos.ilike.%${valApellidos}%,nombres.ilike.%${valApellidos}%`);
-      }
-
-      const { data: pacientes, error } = await query;
+      const today = getLimaDate().toISOString().split("T")[0];
+      const { data: checks, error } = await supabase
+        .from("checks_diarios")
+        .select("paciente_id")
+        .eq("usuario_id", userId)
+        .eq("fecha_check", today);
       if (error) throw error;
 
-      if (tablePacientes) {
-        tablePacientes.classList.remove("hidden");
-        tablePacientes.style.display = "table";
-        if (tablePacientes.parentElement) {
-          tablePacientes.parentElement.classList.remove("hidden");
-          tablePacientes.parentElement.style.display = "block";
-        }
+      const ids = (checks || []).map(c => c.paciente_id);
+      if (ids.length === 0) return;
+
+      const { data: pacs, error: errPacs } = await supabase
+        .from("pacientes")
+        .select("id, dni, apellidos, nombres, servicio")
+        .in("id", ids);
+      if (errPacs) throw errPacs;
+
+      (pacs || []).forEach(p => {
+        selectedPatientsMap.set(p.id, {
+          dni: p.dni,
+          apellidos: p.apellidos,
+          nombres: p.nombres,
+          servicio: p.servicio || ""
+        });
+      });
+    } catch (e) {
+      console.warn("Error loading checks:", e);
+    }
+  };
+
+  const updateSelectedCounter = () => {
+    if (!altaCountEl) return;
+    const count = selectedPatientsMap.size;
+    altaCountEl.textContent = count > 0 ? `${count} seleccionados` : "";
+  };
+
+  const resetPagination = () => {
+    lastCreatedAt = null;
+    firstCreatedAt = null;
+    hasNext = false;
+    hasPrev = false;
+    currentPage = 1;
+  };
+
+  // =========================================================================
+  // BÚSQUEDA Y PAGINACIÓN DE 30 EN 30 (USANDO LÓGICA ORIGINAL DE CURSOR)
+  // =========================================================================
+  const aplicarFiltrosQuery = (query, valDniHc, valApellidos, valSeguro, valServicio, valCondicion) => {
+    if (valDniHc) {
+      const limpio = valDniHc.replace(/^(C\.?E\.?|E-)\s*/i, "").trim();
+      query = query.or(`dni.ilike.%${limpio}%,historia_clinica.ilike.%${limpio}%`);
+    }
+    if (valApellidos) {
+      query = query.ilike("apellidos", `%${normalizeText(valApellidos)}%`);
+    }
+    if (valSeguro) {
+      query = query.eq("tipo_seguro", valSeguro.toUpperCase());
+    }
+    if (valServicio) {
+      query = query.eq("servicio", valServicio.toUpperCase());
+    }
+    if (valCondicion) {
+      query = query.ilike("condicion", valCondicion);
+    }
+    return query;
+  };
+
+  const searchPatients = async (direction = "first") => {
+    const valDniHc = inputDniHc ? inputDniHc.value.trim() : "";
+    const valApellidos = inputApellidos ? inputApellidos.value.trim() : "";
+    const valSeguro = selectSeguro ? selectSeguro.value : "";
+    const valServicio = selectServicio ? selectServicio.value : "";
+    const valCondicion = selectCondicion ? selectCondicion.value : "";
+
+    try {
+      if (loadingIndicator) loadingIndicator.style.display = "block";
+      if (tablePacientes) tablePacientes.style.display = "none";
+
+      let query = supabase.from("pacientes").select("*").limit(PAGE_SIZE + 1);
+
+      if (direction === "next" && lastCreatedAt) {
+        query = query.lt("creado_en", lastCreatedAt).order("creado_en", { ascending: false });
+        currentPage++;
+      } else if (direction === "prev" && firstCreatedAt) {
+        query = query.gt("creado_en", firstCreatedAt).order("creado_en", { ascending: true });
+        currentPage--;
+      } else {
+        query = query.order("creado_en", { ascending: false });
       }
 
-      allPacientesFiltered = pacientes || [];
+      query = aplicarFiltrosQuery(query, valDniHc, valApellidos, valSeguro, valServicio, valCondicion);
 
-      if (allPacientesFiltered.length === 0) {
-        if (tbodyPacientes) {
-          tbodyPacientes.innerHTML = `
-            <tr>
-              <td colspan="8" class="text-center py-12 text-slate-500">
-                <i class="fa-solid fa-filter-circle-xmark text-3xl text-slate-300 block mb-2"></i>
-                <div class="font-bold text-slate-700 text-sm">No se encontraron pacientes con los filtros seleccionados</div>
-                <div class="text-xs text-slate-400 mt-1">Verifique los filtros activos o presione <strong>"Limpiar Filtros"</strong>.</div>
-              </td>
-            </tr>`;
-        }
-        renderPaginationControls(0);
-        return;
+      const { data, error } = await query;
+      if (error) throw error;
+
+      let results = data || [];
+      if (direction === "prev") results.reverse();
+
+      const pageItems = results.length > PAGE_SIZE ? results.slice(0, PAGE_SIZE) : results;
+
+      if (pageItems.length > 0) {
+        lastCreatedAt = pageItems[pageItems.length - 1].creado_en;
+        firstCreatedAt = pageItems[0].creado_en;
+
+        // Verificar si hay página anterior
+        let prevQuery = supabase.from("pacientes").select("*", { count: "exact", head: true }).gt("creado_en", firstCreatedAt);
+        prevQuery = aplicarFiltrosQuery(prevQuery, valDniHc, valApellidos, valSeguro, valServicio, valCondicion);
+        const { count: prevCount } = await prevQuery;
+        hasPrev = (prevCount || 0) > 0;
+
+        // Verificar si hay página siguiente
+        let nextQuery = supabase.from("pacientes").select("*", { count: "exact", head: true }).lt("creado_en", lastCreatedAt);
+        nextQuery = aplicarFiltrosQuery(nextQuery, valDniHc, valApellidos, valSeguro, valServicio, valCondicion);
+        const { count: nextCount } = await nextQuery;
+        hasNext = (nextCount || 0) > 0;
+      } else {
+        hasNext = false;
+        hasPrev = false;
       }
 
-      // Consultar hospitalizaciones asociadas
-      globalHospMap = new Map();
-      try {
-        const pIds = allPacientesFiltered.map(p => p.id);
-        for (let i = 0; i < pIds.length; i += 200) {
-          const chunk = pIds.slice(i, i + 200);
+      // Conteo total exacto para la paginación
+      let countQuery = supabase.from("pacientes").select("*", { count: "exact", head: true });
+      countQuery = aplicarFiltrosQuery(countQuery, valDniHc, valApellidos, valSeguro, valServicio, valCondicion);
+      const { count: total, error: countErr } = await countQuery;
+      if (!countErr) totalRecords = total || 0;
+
+      // Cargar hospitalizaciones para los pacientes de la página actual
+      hospMap = new Map();
+      if (pageItems.length > 0) {
+        try {
+          const pIds = pageItems.map(p => p.id);
           const { data: hosps } = await supabase
             .from("hospitalizaciones")
             .select("id, paciente_id, fecha_ingreso, fecha_alta, servicio, activa")
-            .in("paciente_id", chunk);
+            .in("paciente_id", pIds);
 
           (hosps || []).forEach(h => {
-            if (!globalHospMap.has(h.paciente_id) || h.activa) {
-              globalHospMap.set(h.paciente_id, h);
+            if (!hospMap.has(h.paciente_id) || h.activa) {
+              hospMap.set(h.paciente_id, h);
             }
           });
+        } catch (eHosp) {
+          console.warn("Aviso al consultar hospitalizaciones:", eHosp);
         }
-      } catch (eHosp) {
-        console.warn("Aviso al consultar hospitalizaciones:", eHosp);
       }
 
-      renderCurrentPage();
-    } catch (err) {
-      console.error("Error al cargar pacientes:", err);
-      if (tbodyPacientes) {
-        tbodyPacientes.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-red-500 font-semibold">Error al cargar pacientes: ${err.message}</td></tr>`;
-      }
-      renderPaginationControls(0);
+      renderRows(pageItems);
+      updatePaginationUI();
+    } catch (e) {
+      console.error(e);
+      showToast("Error al buscar pacientes", true);
     } finally {
-      if (loadingIndicator) {
-        loadingIndicator.style.display = "none";
-        loadingIndicator.classList.add("hidden");
-      }
+      if (loadingIndicator) loadingIndicator.style.display = "none";
+      if (tablePacientes) tablePacientes.style.display = "table";
     }
   };
 
   // =========================================================================
-  // RENDERIZADO DE PÁGINA ACTUAL Y CONTROLES DE PAGINACIÓN (30 EN 30)
+  // RENDERIZADO CON LAS CLASES CSS ORIGINALES DE LA PRIMERA VERSIÓN
   // =========================================================================
-  const renderCurrentPage = () => {
-    const totalRecords = allPacientesFiltered.length;
-    const totalPages = Math.ceil(totalRecords / ITEMS_PER_PAGE) || 1;
-    if (currentPage > totalPages) currentPage = totalPages;
-    if (currentPage < 1) currentPage = 1;
-
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    const endIndex = startIndex + ITEMS_PER_PAGE;
-    const pageSlice = allPacientesFiltered.slice(startIndex, endIndex);
-
-    renderTable(pageSlice, globalHospMap);
-    renderPaginationControls(totalRecords);
+  const renderServicioBadge = (servicio) => {
+    if (!servicio) return "-";
+    const colorObj = window.SERVICIO_COLORES && window.SERVICIO_COLORES[servicio.toUpperCase()];
+    return colorObj
+      ? `<span class="servicio-badge" style="background:${colorObj.bg};color:${colorObj.text};">${servicio}</span>`
+      : `<span class="servicio-badge">${servicio}</span>`;
   };
 
-  const renderPaginationControls = (totalRecords) => {
-    let paginationContainer = document.getElementById("pagination-pacientes-container");
+  const formatearPrefijoDoc = (dni, tipoDocumento) => {
+    const prefijo = {
+      DNI: "",
+      DNI_TEMPORAL: "E- ",
+      CARNET_EXT: "C.E "
+    }[tipoDocumento] || "";
+    return prefijo ? prefijo + dni : dni;
+  };
 
-    if (totalRecords <= ITEMS_PER_PAGE) {
-      if (paginationContainer) paginationContainer.remove();
+  const renderRows = (pacientes) => {
+    const checkAll = document.getElementById("checkbox-select-all");
+    if (checkAll) checkAll.checked = false;
+
+    tbodyPacientes.innerHTML = "";
+
+    if (pacientes.length === 0) {
+      tbodyPacientes.innerHTML =
+        '<tr><td colspan="8" style="text-align:center; padding: 30px; color:#94a3b8;">No se encontraron pacientes.</td></tr>';
       return;
     }
 
-    if (!paginationContainer && tablePacientes && tablePacientes.parentElement) {
-      paginationContainer = document.createElement("div");
-      paginationContainer.id = "pagination-pacientes-container";
-      paginationContainer.style.cssText = "display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#ffffff;border-top:1px solid #f1f5f9;border-radius:0 0 12px 12px;flex-wrap:wrap;gap:10px;";
-      tablePacientes.parentElement.appendChild(paginationContainer);
-    }
+    pacientes.forEach(p => {
+      const tr = document.createElement("tr");
+      tr.style.cursor = "pointer";
 
-    if (!paginationContainer) return;
+      const condLower = (p.condicion || "").toLowerCase();
+      const condClass = condLower
+        ? condLower === "hospitalizado"
+          ? "cond-hospitalizado"
+          : condLower === "fallecido"
+          ? "cond-fallecido"
+          : "cond-alta"
+        : "";
+      const isFallecido = condLower === "fallecido";
+      const isChecked = selectedPatientsMap.has(p.id);
 
-    const totalPages = Math.ceil(totalRecords / ITEMS_PER_PAGE);
-    const startItem = (currentPage - 1) * ITEMS_PER_PAGE + 1;
-    const endItem = Math.min(currentPage * ITEMS_PER_PAGE, totalRecords);
+      const tipoDoc = p.tipo_documento || "DNI";
+      const docFormateado = formatearPrefijoDoc(p.dni, tipoDoc);
+      const tieneDV =
+        tipoDoc === "DNI" &&
+        p.codigo_verificacion !== null &&
+        p.codigo_verificacion !== undefined &&
+        String(p.codigo_verificacion).trim() !== "";
 
-    let pagesHtml = "";
-    const maxVisible = 5;
-    let startPage = Math.max(1, currentPage - 2);
-    let endPage = Math.min(totalPages, startPage + maxVisible - 1);
-    if (endPage - startPage < maxVisible - 1) {
-      startPage = Math.max(1, endPage - maxVisible + 1);
-    }
-
-    if (startPage > 1) {
-      pagesHtml += `<button type="button" class="page-btn" data-page="1">1</button>`;
-      if (startPage > 2) pagesHtml += `<span style="color:#94a3b8;font-size:12px;padding:0 4px;">...</span>`;
-    }
-
-    for (let i = startPage; i <= endPage; i++) {
-      pagesHtml += `<button type="button" class="page-btn ${i === currentPage ? "active" : ""}" data-page="${i}">${i}</button>`;
-    }
-
-    if (endPage < totalPages) {
-      if (endPage < totalPages - 1) pagesHtml += `<span style="color:#94a3b8;font-size:12px;padding:0 4px;">...</span>`;
-      pagesHtml += `<button type="button" class="page-btn" data-page="${totalPages}">${totalPages}</button>`;
-    }
-
-    paginationContainer.innerHTML = `
-      <div style="font-size:12px;color:#64748b;">
-        Mostrando <strong style="color:#0f172a;">${startItem} - ${endItem}</strong> de <strong style="color:#0f172a;">${totalRecords}</strong> pacientes
-      </div>
-      <div style="display:flex;align-items:center;gap:6px;">
-        <button type="button" class="page-btn" data-page="${currentPage - 1}" ${currentPage === 1 ? "disabled" : ""} title="Página anterior">
-          <i class="fa-solid fa-chevron-left" style="font-size:10px;"></i>
-        </button>
-        ${pagesHtml}
-        <button type="button" class="page-btn" data-page="${currentPage + 1}" ${currentPage === totalPages ? "disabled" : ""} title="Página siguiente">
-          <i class="fa-solid fa-chevron-right" style="font-size:10px;"></i>
-        </button>
-      </div>
-    `;
-
-    paginationContainer.querySelectorAll(".page-btn").forEach(btn => {
-      btn.addEventListener("click", () => {
-        if (btn.disabled) return;
-        const targetPage = parseInt(btn.getAttribute("data-page"), 10);
-        if (!isNaN(targetPage) && targetPage !== currentPage) {
-          currentPage = targetPage;
-          renderCurrentPage();
-          if (tablePacientes) {
-            tablePacientes.scrollIntoView({ behavior: "smooth", block: "start" });
-          }
-        }
-      });
-    });
-  };
-
-  // =========================================================================
-  // RENDERIZAR FILAS DE LA TABLA (CON DETECCIÓN DE DNI, "C.E" Y "E-")
-  // =========================================================================
-  const renderTable = (list, hospMap) => {
-    if (!tbodyPacientes) return;
-    tbodyPacientes.innerHTML = "";
-
-    list.forEach(p => {
+      // Datos de estancia hospitalaria
       const hosp = hospMap.get(p.id) || null;
       const fechaIngreso = hosp ? hosp.fecha_ingreso : null;
       const fechaAlta = hosp ? hosp.fecha_alta : null;
       const diasHospitalizado = calculateDaysHospitalized(fechaIngreso, fechaAlta);
 
-      // Analizar documento para distinguir DNI, C.E y E-
-      const docInfo = analizarDocumento(p.dni, p.tipo_documento || p.tipo_doc);
-      const tieneDV = docInfo.permiteDV && p.codigo_verificacion !== null && p.codigo_verificacion !== undefined && String(p.codigo_verificacion).trim() !== "" && String(p.codigo_verificacion).trim() !== "-";
+      const modalPayload = encodeURIComponent(
+        JSON.stringify({
+          id: p.id,
+          dni: p.dni || "-",
+          docLabel: tipoDoc === "CARNET_EXT" ? "C.E" : tipoDoc === "DNI_TEMPORAL" ? "E-" : "DNI",
+          codigoVerificacion: tieneDV ? String(p.codigo_verificacion).trim() : "",
+          fechaNacimiento: p.fecha_nacimiento || "",
+          apellidos: p.apellidos || "",
+          nombres: p.nombres || "",
+          historiaClinica: p.historia_clinica || "—",
+          servicio: p.servicio || "",
+          servicioIngreso: hosp ? hosp.servicio : p.servicio,
+          condicion: p.condicion || "—",
+          condClass: condClass,
+          fechaIngreso: fechaIngreso,
+          fechaAlta: fechaAlta,
+          diasHospitalizado: diasHospitalizado
+        })
+      );
 
-      const pacienteData = {
-        id: p.id,
-        dni: p.dni || "-",
-        docDisplay: docInfo.display,
-        docCopiar: docInfo.valorCopiar,
-        codigoVerificacion: tieneDV ? String(p.codigo_verificacion).trim() : "",
-        fechaNacimiento: p.fecha_nacimiento || "",
-        apellidos: p.apellidos || "",
-        nombres: p.nombres || "",
-        historiaClinica: p.historia_clinica || "-",
-        tipoSeguro: p.tipo_seguro || "SIS",
-        servicio: p.servicio || "EMERGENCIA",
-        servicioIngreso: hosp ? hosp.servicio : p.servicio,
-        condicion: p.condicion || "HOSPITALIZADO",
-        fechaIngreso: fechaIngreso,
-        fechaAlta: fechaAlta,
-        diasHospitalizado: diasHospitalizado
-      };
+      tr.innerHTML = `
+        <td style="text-align:center; cursor: pointer;">
+          <input type="checkbox" class="patient-check" data-id="${p.id}"
+            data-dni="${p.dni}"
+            data-apellidos="${p.apellidos}"
+            data-nombres="${p.nombres}"
+            data-servicio="${p.servicio || ""}"
+            ${isChecked ? "checked" : ""}
+            ${isFallecido ? "disabled" : ""}>
+        </td>
+        <td style="white-space: nowrap;">
+          <button type="button" class="inline-copy-btn" onclick="copiarDatoAlPortapapeles(event, '${p.dni}', 'Documento')" title="Clic para copiar ${docFormateado}">
+            <span>${docFormateado}</span>
+            <i class="fa-regular fa-copy copy-ico"></i>
+          </button>
+          ${tieneDV ? `
+            <button type="button" class="dv-pill" onclick="copiarDatoAlPortapapeles(event, '${p.codigo_verificacion}', 'Dígito Verificador')" title="Dígito Verificador (Clic para copiar)">
+              <span>DV: ${p.codigo_verificacion}</span>
+            </button>
+          ` : ""}
+        </td>
+        <td>
+          <div>${p.apellidos}, ${p.nombres}</div>
+          ${p.fecha_nacimiento ? `
+            <button type="button" class="fnac-sub" onclick="copiarDatoAlPortapapeles(event, '${formatDateDisplay(p.fecha_nacimiento)}', 'Fecha Nacimiento')" title="Fecha de Nacimiento (Clic para copiar)">
+              <i class="fa-solid fa-cake-candles" style="font-size:9.5px;color:#94a3b8;"></i>
+              <span>F. Nac: ${formatDateDisplay(p.fecha_nacimiento)}</span>
+              <i class="fa-regular fa-copy" style="font-size:9px;color:#94a3b8;"></i>
+            </button>
+          ` : ""}
+        </td>
+        <td>${p.historia_clinica || "—"}</td>
+        <td><span class="seguro-badge">${p.tipo_seguro}</span></td>
+        <td>${renderServicioBadge(p.servicio)}</td>
+        <td style="white-space: nowrap;">
+          <span class="condicion-badge ${condClass}">${p.condicion || "—"}</span>
+          ${fechaIngreso ? `
+            <button type="button" class="estancia-pill" onclick="mostrarModalRangoHospitalizacion(event, '${modalPayload}')" title="Ingreso: ${formatDateDisplay(fechaIngreso)} · Ver estancia">
+              <i class="fa-regular fa-calendar-days" style="font-size:10px;"></i>
+              <span>${diasHospitalizado}d</span>
+            </button>
+          ` : ""}
+        </td>
+        <td style="text-align: center;">
+          <button class="btn-table-action quick-query"
+            title="${tipoDoc === "DNI" ? "Consulta Rápida (DNI)" : "No disponible para este tipo de documento"}"
+            data-dni="${p.dni}"
+            data-tipo-documento="${tipoDoc}">
+            <i class="fa-solid fa-address-card"></i>
+          </button>
+        </td>
+      `;
 
-      const pJsonStr = encodeURIComponent(JSON.stringify(pacienteData));
-      const tr = document.createElement("tr");
-      tr.className = "group cursor-pointer border-b border-slate-100 text-xs";
+      // Evento click en celda de checkbox (Checks Diarios)
+      const tdCheck = tr.querySelector("td:first-child");
+      tdCheck.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        const checkInput = tdCheck.querySelector(".patient-check");
+        if (!checkInput || checkInput.disabled) return;
 
-      tr.addEventListener("click", () => {
+        const today = getLimaDate().toISOString().split("T")[0];
+        if (selectedPatientsMap.has(p.id)) {
+          selectedPatientsMap.delete(p.id);
+          checkInput.checked = false;
+          try {
+            await supabase
+              .from("checks_diarios")
+              .delete()
+              .eq("paciente_id", p.id)
+              .eq("usuario_id", userId)
+              .eq("fecha_check", today);
+          } catch (err) {
+            console.warn(err);
+          }
+        } else {
+          selectedPatientsMap.set(p.id, {
+            dni: p.dni,
+            apellidos: p.apellidos,
+            nombres: p.nombres,
+            servicio: p.servicio || ""
+          });
+          checkInput.checked = true;
+          try {
+            await supabase
+              .from("checks_diarios")
+              .upsert(
+                { paciente_id: p.id, usuario_id: userId, fecha_check: today },
+                { onConflict: "paciente_id,usuario_id,fecha_check" }
+              );
+          } catch (err) {
+            console.warn(err);
+          }
+        }
+        updateSelectedCounter();
+      });
+
+      // Evento click en la fila para ir al detalle
+      tr.addEventListener("click", (e) => {
+        if (e.target.closest(".quick-query") || e.target.closest("td:first-child")) return;
         window.location.href = `detalle-paciente.html?id=${p.id}`;
       });
 
-      // Renderizado visual del documento según su tipo (C.E, E- o DNI)
-      let docHtml = "";
-      if (docInfo.tipo === "CE") {
-        docHtml = `
-          <button type="button" class="copy-chip" onclick="copiarDatoAlPortapapeles(event, '${docInfo.valorCopiar}', 'C.E')" title="Carnet de Extranjería · Clic para copiar">
-            <span style="font-size:12px;font-weight:600;color:#334155;">C.E ${docInfo.numero}</span>
-            <i class="fa-regular fa-copy copy-icon" style="font-size:10px;"></i>
-          </button>
-        `;
-      } else if (docInfo.tipo === "E") {
-        docHtml = `
-          <button type="button" class="copy-chip" onclick="copiarDatoAlPortapapeles(event, '${docInfo.valorCopiar}', 'Código E-')" title="Código Especial · Clic para copiar">
-            <span style="font-size:12px;font-weight:600;color:#334155;">${docInfo.display}</span>
-            <i class="fa-regular fa-copy copy-icon" style="font-size:10px;"></i>
-          </button>
-        `;
-      } else {
-        docHtml = `
-          <button type="button" class="copy-chip" onclick="copiarDatoAlPortapapeles(event, '${docInfo.valorCopiar}', 'DNI')" title="DNI · Clic para copiar">
-            <span style="font-size:12px;font-weight:600;color:#334155;">${docInfo.display}</span>
-            <i class="fa-regular fa-copy copy-icon" style="font-size:10px;"></i>
-          </button>
-          ${tieneDV ? `
-            <button type="button" class="copy-chip" onclick="copiarDatoAlPortapapeles(event, '${p.codigo_verificacion}', 'Dígito Verificador')"
-              style="background:#f8fafc;border:1px solid #e2e8f0;padding:1px 5px;border-radius:4px;"
-              title="Dígito Verificador: ${p.codigo_verificacion} · Clic para copiar">
-              <span style="font-family:monospace;font-size:10px;font-weight:700;color:#64748b;">-${String(p.codigo_verificacion).trim()}</span>
-            </button>
-          ` : ""}
-        `;
-      }
-
-      tr.innerHTML = `
-        <!-- 1. Checkbox -->
-        <td class="py-3 px-4 text-center" onclick="event.stopPropagation()">
-          <input type="checkbox" class="pac-checkbox rounded border-slate-300 text-blue-600 cursor-pointer" data-id="${p.id}" />
-        </td>
-
-        <!-- 2. Documento (DNI, C.E, E-) + DV (solo cuando es DNI válido) -->
-        <td class="py-3 px-3 whitespace-nowrap">
-          <div style="display:flex;align-items:center;gap:4px;">
-            ${docHtml}
-          </div>
-        </td>
-
-        <!-- 3. Paciente + Fecha de Nacimiento discreta -->
-        <td class="py-3 px-3">
-          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-            <span style="font-size:12px;font-weight:600;color:#1e293b;text-transform:uppercase;letter-spacing:0.01em;">
-              ${p.apellidos || ""}, ${p.nombres || ""}
-            </span>
-            ${p.fecha_nacimiento ? `
-              <button type="button" class="copy-chip" onclick="copiarDatoAlPortapapeles(event, '${formatDateDisplay(p.fecha_nacimiento)}', 'Fecha Nacimiento')"
-                style="padding:1px 6px;font-size:10.5px;color:#64748b;background:#f8fafc;border:1px solid #f1f5f9;border-radius:4px;"
-                title="Fecha de Nacimiento · Clic para copiar">
-                <i class="fa-solid fa-cake-candles" style="font-size:9px;color:#94a3b8;"></i>
-                <span>${formatDateDisplay(p.fecha_nacimiento)}</span>
-              </button>
-            ` : ""}
-          </div>
-        </td>
-
-        <!-- 4. Nº Historia -->
-        <td class="py-3 px-3 font-mono text-slate-600" style="font-size:12px;">
-          ${p.historia_clinica || "-"}
-        </td>
-
-        <!-- 5. Tipo de Seguro (Con borde izquierdo azul igual a tu 2da imagen) -->
-        <td class="py-3 px-3 whitespace-nowrap">
-          <span class="badge-seguro-pro">
-            ${p.tipo_seguro || "SIS"}
-          </span>
-        </td>
-
-        <!-- 6. Servicio -->
-        <td class="py-3 px-3 whitespace-nowrap">
-          <span style="display:inline-block;font-size:10px;font-weight:700;padding:3px 9px;border-radius:5px;text-transform:uppercase;letter-spacing:0.02em;${getEstiloServicio(p.servicio)}">
-            ${p.servicio || "-"}
-          </span>
-        </td>
-
-        <!-- 7. Condición & Estancia -->
-        <td class="py-3 px-3 whitespace-nowrap">
-          <div style="display:inline-flex;align-items:center;gap:6px;">
-            <span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:5px;text-transform:uppercase;letter-spacing:0.02em;${getEstiloCondicion(p.condicion)}">
-              ${p.condicion || "HOSPITALIZADO"}
-            </span>
-            ${fechaIngreso ? `
-              <button type="button" onclick="mostrarModalRangoHospitalizacion(event, '${pJsonStr}')"
-                style="display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;color:#047857;background:#ecfdf5;border:1px solid #a7f3d0;padding:2px 7px;border-radius:5px;cursor:pointer;transition:all 0.15s;"
-                title="Ingreso: ${formatDateDisplay(fechaIngreso)} · Clic para ver detalle de estancia">
-                <i class="fa-regular fa-calendar-check" style="font-size:10px;"></i>
-                <span>${diasHospitalizado}d</span>
-              </button>
-            ` : ""}
-          </div>
-        </td>
-
-        <!-- 8. Acción (Ícono limpio igual a la 2da imagen) -->
-        <td class="py-3 px-3 text-center whitespace-nowrap" onclick="event.stopPropagation()">
-          <a href="detalle-paciente.html?id=${p.id}" class="btn-accion-pro" title="Ver detalle del paciente">
-            <i class="fa-solid fa-address-card" style="font-size:16px;"></i>
-          </a>
-        </td>
-      `;
+      // Evento click en el botón de Consulta Rápida
+      tr.querySelector(".quick-query").addEventListener("click", (e) => {
+        e.stopPropagation();
+        const tDoc = e.currentTarget.dataset.tipoDocumento || "DNI";
+        const dniVal = e.currentTarget.dataset.dni;
+        if (tDoc === "DNI") {
+          window.location.href = `../consultas/consulta-rapida.html?dni=${dniVal}&auto=true`;
+        } else if (window.showSystemTooltip) {
+          window.showSystemTooltip(
+            "Este paciente no cuenta con\nCódigo de Verificación\npara realizar la consulta",
+            true
+          );
+        }
+      });
 
       tbodyPacientes.appendChild(tr);
     });
   };
 
   // =========================================================================
-  // EVENT LISTENERS (FILTRADO AUTOMÁTICO Y BOTONES)
+  // PAGINACIÓN DE 30 EN 30 (SOLO SE MUESTRA SI HAY MÁS DE 30 DATOS)
   // =========================================================================
-  if (btnSearch) btnSearch.addEventListener("click", loadPatients);
+  const updatePaginationUI = () => {
+    const container = document.getElementById("pagination-container");
+    if (!container) return;
 
-  document.querySelectorAll("select").forEach(sel => {
-    sel.addEventListener("change", loadPatients);
+    // Si hay 30 o menos registros en el filtro, se limpia/oculta la paginación
+    if (totalRecords <= PAGE_SIZE) {
+      container.innerHTML = "";
+      container.style.display = "none";
+      return;
+    }
+
+    container.style.display = "";
+    const totalPaginas = Math.max(1, Math.ceil(totalRecords / PAGE_SIZE));
+
+    if (typeof renderPaginacion === "function") {
+      renderPaginacion({
+        contenedor: container,
+        pagina: currentPage,
+        totalPaginas: totalPaginas,
+        habilitarAnterior: hasPrev,
+        habilitarSiguiente: hasNext,
+        alAnterior: () => searchPatients("prev"),
+        alSiguiente: () => searchPatients("next")
+      });
+    }
+  };
+
+  // =========================================================================
+  // LISTENERS DE SELECCIÓN MASIVA, FILTROS Y LIMPIEZA
+  // =========================================================================
+  document.addEventListener("change", async (e) => {
+    if (e.target.id === "checkbox-select-all") {
+      const today = getLimaDate().toISOString().split("T")[0];
+      const checks = [...document.querySelectorAll(".patient-check:not(:disabled)")];
+      const ids = checks.map(c => c.dataset.id);
+
+      if (e.target.checked) {
+        checks.forEach(c => {
+          selectedPatientsMap.set(c.dataset.id, {
+            dni: c.dataset.dni,
+            apellidos: c.dataset.apellidos,
+            nombres: c.dataset.nombres,
+            servicio: c.dataset.servicio || ""
+          });
+          c.checked = true;
+        });
+        try {
+          await supabase.from("checks_diarios").upsert(
+            ids.map(id => ({ paciente_id: id, usuario_id: userId, fecha_check: today })),
+            { onConflict: "paciente_id,usuario_id,fecha_check" }
+          );
+        } catch (err) {
+          console.warn(err);
+        }
+      } else {
+        selectedPatientsMap.clear();
+        document.querySelectorAll(".patient-check").forEach(c => (c.checked = false));
+        try {
+          await supabase
+            .from("checks_diarios")
+            .delete()
+            .eq("usuario_id", userId)
+            .eq("fecha_check", today)
+            .in("paciente_id", ids);
+        } catch (err) {
+          console.warn(err);
+        }
+      }
+      updateSelectedCounter();
+    }
   });
 
-  [inputDniHc, inputApellidos].forEach(inp => {
-    if (inp) {
-      inp.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          e.preventDefault();
-          loadPatients();
+  [inputDniHc, inputApellidos, selectSeguro, selectServicio, selectCondicion].forEach(el => {
+    if (!el) return;
+    el.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") {
+        resetPagination();
+        searchPatients();
+      }
+    });
+  });
+
+  [selectSeguro, selectServicio, selectCondicion].forEach(el => {
+    if (!el) return;
+    el.addEventListener("change", () => {
+      resetPagination();
+      searchPatients();
+    });
+  });
+
+  if (btnSearch) {
+    btnSearch.addEventListener("click", () => {
+      resetPagination();
+      searchPatients();
+    });
+  }
+
+  const btnClearInput = document.getElementById("btn-clear-input");
+  if (btnClearInput) {
+    btnClearInput.addEventListener("click", () => {
+      if (inputDniHc) inputDniHc.value = "";
+      if (document.getElementById("clear-dni-hc")) {
+        document.getElementById("clear-dni-hc").style.display = "none";
+      }
+      if (inputApellidos) inputApellidos.value = "";
+      if (document.getElementById("clear-apellidos")) {
+        document.getElementById("clear-apellidos").style.display = "none";
+      }
+      if (selectSeguro) selectSeguro.value = "";
+      if (selectServicio) selectServicio.value = "";
+      if (selectCondicion) selectCondicion.value = "Hospitalizado";
+
+      if (selectServicio && selectServicio.customDropdownUpdate) selectServicio.customDropdownUpdate();
+      if (selectSeguro && selectSeguro.customDropdownUpdate) selectSeguro.customDropdownUpdate();
+      if (selectCondicion && selectCondicion.customDropdownUpdate) selectCondicion.customDropdownUpdate();
+
+      resetPagination();
+      searchPatients();
+    });
+  }
+
+  [
+    ["clear-dni-hc", "filter-dni-hc"],
+    ["clear-apellidos", "filter-apellidos"]
+  ].forEach(([clearId, inputId]) => {
+    const clearBtn = document.getElementById(clearId);
+    const inputEl = document.getElementById(inputId);
+    if (clearBtn && inputEl) {
+      clearBtn.style.display = inputEl.value.trim() ? "" : "none";
+      inputEl.addEventListener("input", () => {
+        clearBtn.style.display = inputEl.value.trim() ? "" : "none";
+      });
+      clearBtn.addEventListener("click", () => {
+        const hasOtherFilters =
+          (selectSeguro.value || "") !== "" ||
+          (selectServicio.value || "") !== "" ||
+          (selectCondicion.value || "") !== "Hospitalizado";
+        if (hasOtherFilters) {
+          inputEl.value = "";
+          clearBtn.style.display = "none";
+          inputEl.focus();
+        } else if (btnClearInput) {
+          btnClearInput.click();
         }
       });
     }
   });
 
-  // Botón Limpiar Filtros
-  const botones = Array.from(document.querySelectorAll("button, a"));
-  const btnLimpiar = botones.find(b => b.textContent && b.textContent.toLowerCase().includes("limpiar"));
-  if (btnLimpiar) {
-    btnLimpiar.addEventListener("click", () => {
-      if (inputDniHc) inputDniHc.value = "";
-      if (inputApellidos) inputApellidos.value = "";
-      document.querySelectorAll("select").forEach(sel => {
-        const idxTodos = Array.from(sel.options).findIndex(o => o.text.toUpperCase().includes("TODOS"));
-        sel.selectedIndex = idxTodos >= 0 ? idxTodos : 0;
-      });
-      setTimeout(loadPatients, 50);
-    });
-  }
+  const cleanAltaPacientesChecks = async () => {
+    try {
+      const altaIds = JSON.parse(localStorage.getItem("alta_pacientes_ids") || "[]");
+      if (altaIds.length === 0) return;
+      const today = getLimaDate().toISOString().split("T")[0];
+      await supabase
+        .from("checks_diarios")
+        .delete()
+        .eq("usuario_id", userId)
+        .eq("fecha_check", today)
+        .in("paciente_id", altaIds);
+      altaIds.forEach(id => selectedPatientsMap.delete(id));
+      localStorage.removeItem("alta_pacientes_ids");
+    } catch (e) {}
+  };
 
-  // Carga inicial
-  loadPatients();
+  // Inicialización
+  await loadChecksDiarios();
+  await cleanAltaPacientesChecks();
+  updateSelectedCounter();
+  await searchPatients();
+
+  window.addEventListener("pageshow", async (e) => {
+    if (e.persisted) {
+      await loadChecksDiarios();
+      await cleanAltaPacientesChecks();
+      updateSelectedCounter();
+      await searchPatients();
+    }
+  });
 });
