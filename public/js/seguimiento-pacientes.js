@@ -1,27 +1,23 @@
 ﻿// =========================================================================
-// UNIDAD DE SEGUROS - SEGUIMIENTO DE PACIENTES (public/js/seguimiento-pacientes.js)
-// Con:
-// 1. Botón "Consulta EsSalud" al lado de "Limpiar Filtros"
-// 2. DNI con botón de copia
-// 3. Código de Verificación (DV) con botón de copia
-// 4. Fecha de Nacimiento con botón de copia
-// 5. Ventana emergente con rango de hospitalización y días de estancia
+// UNIDAD DE SEGUROS - SISTEMA HOSPITALARIO
+// Archivo: public/js/seguimiento-pacientes.js (Versión Completa y Definitiva)
 // =========================================================================
 
 document.addEventListener("DOMContentLoaded", async () => {
   const supabase = "undefined" != typeof supabaseClient ? supabaseClient : window.supabase;
   if (!supabase) {
-    console.error("Cliente Supabase no disponible");
+    console.error("Cliente de Supabase no disponible.");
     return;
   }
 
+  // 1. Validar sesión de usuario
   const { data: { session: currentSession } } = await supabase.auth.getSession();
   if (!currentSession) {
     window.location.href = "../../index.html";
     return;
   }
 
-  // Elementos del DOM
+  // 2. Elementos del DOM
   const inputDniHc = document.getElementById("filter-dni-hc");
   const inputApellidos = document.getElementById("filter-apellidos");
   const selectSeguro = document.getElementById("filter-seguro");
@@ -33,12 +29,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   const tablePacientes = document.getElementById("table-pacientes");
 
   // =========================================================================
-  // INSERTAR BOTÓN ESSALUD AL LADO DE "LIMPIAR FILTROS"
+  // BOTÓN "CONSULTA ESSALUD" AL LADO DE "LIMPIAR FILTROS"
   // =========================================================================
-  const colocarBotonEsSaludSuperior = () => {
+  const insertarBotonEsSalud = () => {
     if (document.getElementById("btn-essalud-top")) return;
 
-    // Buscar el botón Limpiar Filtros
+    // Localizar el botón Limpiar Filtros
     const botones = Array.from(document.querySelectorAll("button, a"));
     const btnLimpiar = botones.find(b => b.textContent && b.textContent.toLowerCase().includes("limpiar"));
 
@@ -48,15 +44,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       aEssalud.href = "https://dondemeatiendo.essalud.gob.pe/#/consulta";
       aEssalud.target = "_blank";
       aEssalud.rel = "noopener noreferrer";
-      aEssalud.className = "inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all shadow-2xs cursor-pointer";
-      aEssalud.style.cssText = "display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#2563eb;color:#fff;border-radius:12px;font-size:12px;font-weight:700;text-decoration:none;margin-left:8px;margin-right:8px;box-shadow:0 1px 2px rgba(0,0,0,0.05);";
-      aEssalud.innerHTML = `<i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> <span>Consulta EsSalud</span>`;
+      aEssalud.style.cssText = "display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:#2563eb;color:#ffffff;border-radius:12px;font-size:12px;font-weight:700;text-decoration:none;margin-right:12px;box-shadow:0 1px 3px rgba(0,0,0,0.1);cursor:pointer;";
+      aEssalud.innerHTML = `<i class="fa-solid fa-arrow-up-right-from-square" style="font-size:10px;"></i> <span>Consulta EsSalud</span>`;
 
-      // Insertar justo al lado de Limpiar Filtros
-      btnLimpiar.parentNode.insertBefore(aEssalud, btnLimpiar.nextSibling);
+      btnLimpiar.parentNode.insertBefore(aEssalud, btnLimpiar);
     }
   };
-  colocarBotonEsSaludSuperior();
+  insertarBotonEsSalud();
 
   // Fecha actual en hora Perú
   const getLocalDateLima = () => {
@@ -81,7 +75,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     return Math.max(0, Math.round(diff / (1000 * 60 * 60 * 24)));
   };
 
-  // Toast flotante de copiado
+  // Notificación flotante de copiado
   const showToast = (message) => {
     let toast = document.getElementById("toast-seguimiento");
     if (!toast) {
@@ -96,10 +90,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     setTimeout(() => {
       toast.style.opacity = "0";
       toast.style.transform = "translateY(-10px)";
-    }, 2500);
+    }, 2200);
   };
 
-  // Copiar al portapapeles
+  // Copiar al portapapeles con confirmación visual
   window.copiarDatoAlPortapapeles = (e, valor, label) => {
     e.stopPropagation();
     if (!valor || valor === "-") return;
@@ -110,12 +104,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (icon) {
         const prev = icon.className;
         icon.className = "fa-solid fa-check text-emerald-600";
-        setTimeout(() => { icon.className = prev; }, 1500);
+        setTimeout(() => { icon.className = prev; }, 1200);
       }
     });
   };
 
-  // Modal / Ventana emergente con Rango de Fechas
+  // Modal de Rango de Hospitalización
   window.mostrarModalRangoHospitalizacion = (e, pJsonStr) => {
     e.stopPropagation();
     const p = JSON.parse(decodeURIComponent(pJsonStr));
@@ -199,11 +193,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     modal.onclick = () => modal.remove();
   };
 
+  // Helper para verificar si un filtro es "TODOS" o está vacío
+  const esFiltroTodos = (val) => {
+    if (!val) return true;
+    const str = String(val).trim().toUpperCase();
+    return str === "" || str === "TODOS" || str === "ALL" || str === "SELECCIONAR";
+  };
+
   // =========================================================================
-  // CARGAR PACIENTES Y FORZAR VISIBILIDAD DE LA TABLA
+  // CARGA ROBUSTA DE PACIENTES
   // =========================================================================
   const loadPatients = async () => {
-    colocarBotonEsSaludSuperior();
+    insertarBotonEsSalud();
 
     if (loadingIndicator) {
       loadingIndicator.style.display = "block";
@@ -211,31 +212,39 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     try {
-      // 1. Consulta limpia a pacientes
       let query = supabase
         .from("pacientes")
         .select("id, dni, codigo_verificacion, fecha_nacimiento, apellidos, nombres, historia_clinica, tipo_seguro, servicio, condicion")
         .order("apellidos", { ascending: true })
         .limit(100);
 
-      const valCond = selectCondicion ? selectCondicion.value : "HOSPITALIZADO";
-      const valSeguro = selectSeguro ? selectSeguro.value : "TODOS";
-      const valServicio = selectServicio ? selectServicio.value : "TODOS";
+      const valCond = selectCondicion ? selectCondicion.value : "";
+      const valSeguro = selectSeguro ? selectSeguro.value : "";
+      const valServicio = selectServicio ? selectServicio.value : "";
       const valDniHc = inputDniHc ? inputDniHc.value.trim() : "";
       const valApellidos = inputApellidos ? inputApellidos.value.trim() : "";
 
-      if (valCond && valCond !== "TODOS") {
-        query = query.eq("condicion", valCond);
+      // Filtro de Condición insensible a mayúsculas
+      if (!esFiltroTodos(valCond)) {
+        query = query.ilike("condicion", `%${valCond.trim()}%`);
       }
-      if (valSeguro && valSeguro !== "TODOS") {
-        query = query.eq("tipo_seguro", valSeguro);
+
+      // Filtro de Seguro insensible a mayúsculas
+      if (!esFiltroTodos(valSeguro)) {
+        query = query.ilike("tipo_seguro", `%${valSeguro.trim()}%`);
       }
-      if (valServicio && valServicio !== "TODOS") {
-        query = query.eq("servicio", valServicio);
+
+      // Filtro de Servicio insensible a mayúsculas
+      if (!esFiltroTodos(valServicio)) {
+        query = query.ilike("servicio", `%${valServicio.trim()}%`);
       }
+
+      // Filtro de DNI o HC
       if (valDniHc) {
         query = query.or(`dni.ilike.%${valDniHc}%,historia_clinica.ilike.%${valDniHc}%`);
       }
+
+      // Filtro de Apellidos o Nombres
       if (valApellidos) {
         query = query.or(`apellidos.ilike.%${valApellidos}%,nombres.ilike.%${valApellidos}%`);
       }
@@ -243,7 +252,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const { data: pacientes, error } = await query;
       if (error) throw error;
 
-      // ASEGURAR QUE LA TABLA SEA VISIBLE (remover cualquier clase 'hidden')
+      // Asegurar visibilidad de la tabla en pantalla
       if (tablePacientes) {
         tablePacientes.classList.remove("hidden");
         tablePacientes.style.display = "table";
@@ -260,14 +269,14 @@ document.addEventListener("DOMContentLoaded", async () => {
               <td colspan="8" class="text-center py-10 text-slate-500">
                 <i class="fa-solid fa-filter-circle-xmark text-3xl text-slate-300 block mb-2"></i>
                 <div class="font-bold text-slate-700">No se encontraron pacientes con los filtros seleccionados</div>
-                <div class="text-xs text-slate-400 mt-1">Seleccione Tipo de Seguro: <strong>TODOS</strong> o presione "Limpiar Filtros".</div>
+                <div class="text-xs text-slate-400 mt-1">Asegúrese de seleccionar Tipo de Seguro: <strong>TODOS</strong> o presione "Limpiar Filtros".</div>
               </td>
             </tr>`;
         }
         return;
       }
 
-      // 2. Consulta segura de hospitalizaciones
+      // Consulta de hospitalizaciones para estos pacientes
       let hospMap = new Map();
       try {
         const pIds = pacientes.map(p => p.id);
@@ -282,20 +291,19 @@ document.addEventListener("DOMContentLoaded", async () => {
           }
         });
       } catch (eHosp) {
-        console.warn("Aviso no crítico al cargar hospitalizaciones:", eHosp);
+        console.warn("Aviso al consultar hospitalizaciones:", eHosp);
       }
 
-      // 3. Renderizar filas
+      // Renderizar filas
       renderTable(pacientes, hospMap);
     } catch (err) {
       console.error("Error al cargar pacientes:", err);
-      // Forzar visibilidad para mostrar el mensaje de error si existiera
       if (tablePacientes) {
         tablePacientes.classList.remove("hidden");
         tablePacientes.style.display = "table";
       }
       if (tbodyPacientes) {
-        tbodyPacientes.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-red-500 font-semibold">Error al consultar datos: ${err.message}</td></tr>`;
+        tbodyPacientes.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-red-500 font-semibold">Error al cargar pacientes: ${err.message}</td></tr>`;
       }
     } finally {
       if (loadingIndicator) {
@@ -336,6 +344,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const tr = document.createElement("tr");
       tr.className = "hover:bg-blue-50/40 transition-colors group cursor-pointer border-b border-slate-100 text-xs";
 
+      // Clic en la fila navega al detalle
       tr.addEventListener("click", () => {
         window.location.href = `detalle-paciente.html?id=${p.id}`;
       });
@@ -346,7 +355,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           <input type="checkbox" class="pac-checkbox rounded text-blue-600 cursor-pointer" data-id="${p.id}" />
         </td>
 
-        <!-- 2. DNI & Dígito Verificador (DV) -->
+        <!-- 2. DNI & Dígito Verificador (DV) con Copia -->
         <td class="py-3.5 px-3 whitespace-nowrap">
           <div class="flex items-center gap-1.5">
             <button type="button" onclick="copiarDatoAlPortapapeles(event, '${p.dni}', 'DNI')"
@@ -364,7 +373,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           </div>
         </td>
 
-        <!-- 3. Paciente + Fecha de Nacimiento -->
+        <!-- 3. Paciente + Fecha de Nacimiento con Copia -->
         <td class="py-3.5 px-3">
           <div class="font-semibold text-slate-900 uppercase">
             ${p.apellidos || ""}, ${p.nombres || ""}
@@ -432,19 +441,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   };
 
-  // Event Listeners
+  // Event Listeners para Filtros
   if (btnSearch) btnSearch.addEventListener("click", loadPatients);
 
-  // Vincular Limpiar Filtros
-  const botones = Array.from(document.querySelectorAll("button"));
+  // Vincular botón Limpiar Filtros
+  const botones = Array.from(document.querySelectorAll("button, a"));
   const btnLimpiar = botones.find(b => b.textContent && b.textContent.toLowerCase().includes("limpiar"));
   if (btnLimpiar) {
     btnLimpiar.addEventListener("click", () => {
       if (inputDniHc) inputDniHc.value = "";
       if (inputApellidos) inputApellidos.value = "";
-      if (selectSeguro) selectSeguro.value = "TODOS";
-      if (selectServicio) selectServicio.value = "TODOS";
-      if (selectCondicion) selectCondicion.value = "HOSPITALIZADO";
+      if (selectSeguro) selectSeguro.selectedIndex = 0;
+      if (selectServicio) selectServicio.selectedIndex = 0;
+      if (selectCondicion) selectCondicion.selectedIndex = 0;
       setTimeout(loadPatients, 100);
     });
   }
