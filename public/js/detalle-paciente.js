@@ -100,7 +100,184 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // =========================================================================
-  // FUNCIÓN MEJORADA: Dibuja los eventos y permite EDITAR FECHA y ELIMINAR EVENTOS
+  // MODAL MODERNO INTEGRADO PARA EDITAR FECHA Y SERVICIO
+  // =========================================================================
+  function mostrarModalEditarIngreso(ev) {
+    let modal = document.getElementById("modal-custom-editar-ingreso");
+    if (!modal) {
+      modal = document.createElement("div");
+      modal.id = "modal-custom-editar-ingreso";
+      modal.style.cssText =
+        "position: fixed; inset: 0; z-index: 99999; background: rgba(15, 23, 42, 0.65); display: flex; align-items: center; justify-content: center; padding: 16px; backdrop-filter: blur(2px);";
+      document.body.appendChild(modal);
+    }
+
+    const isIngreso = ev.tipo_evento === "Hospitalizado";
+    const listaServicios =
+      typeof SERVICIOS !== "undefined" && Array.isArray(SERVICIOS) && SERVICIOS.length > 0
+        ? SERVICIOS
+        : [
+            "UVI",
+            "Emergencia",
+            "UCI Adultos",
+            "Medicina Interna",
+            "Cirugía General",
+            "Traumatología",
+            "Pediatría",
+            "Ginecología y Obstetricia",
+            "Observación",
+          ];
+
+    // Detectar servicio actual del evento
+    let servicioActual = w ? w.servicio || "UVI" : "UVI";
+    if (ev.detalle && ev.detalle.includes("Ingreso al servicio de ")) {
+      servicioActual = ev.detalle.replace("Ingreso al servicio de ", "").trim();
+    } else if (ev.tipo_evento === "Cambio de Servicio" && ev.detalle) {
+      servicioActual = ev.detalle.trim();
+    }
+
+    modal.innerHTML = `
+      <div style="background: #ffffff; border-radius: 16px; width: 100%; max-width: 440px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow: hidden; font-family: inherit; animation: fadeIn 0.15s ease-out;">
+        <div style="padding: 16px 20px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <div style="width: 32px; height: 32px; border-radius: 8px; background: #eff6ff; color: #2563eb; display: flex; align-items: center; justify-content: center; font-size: 14px;">
+              <i class="fa-solid fa-pen-to-square"></i>
+            </div>
+            <div>
+              <h4 style="margin: 0; font-size: 15px; font-weight: 700; color: #0f172a;">
+                ${isIngreso ? "Editar Ingreso Hospitalario" : "Editar Cambio de Servicio"}
+              </h4>
+              <p style="margin: 2px 0 0 0; font-size: 11px; color: #64748b;">
+                Actualiza la fecha y el servicio por donde ingresó
+              </p>
+            </div>
+          </div>
+          <button type="button" id="btn-close-modal-editar" style="background: none; border: none; color: #94a3b8; font-size: 18px; cursor: pointer; padding: 4px;">✕</button>
+        </div>
+
+        <form id="form-editar-ingreso" style="padding: 20px; display: flex; flex-direction: column; gap: 16px;">
+          <div>
+            <label style="display: block; font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 6px;">
+              <i class="fa-regular fa-calendar" style="color: #2563eb; margin-right: 4px;"></i> Fecha de Ingreso
+            </label>
+            <input type="date" id="input-edit-fecha" value="${ev.fecha_evento || ""}" required
+              style="width: 100%; box-sizing: border-box; padding: 9px 12px; font-size: 13px; font-weight: 600; border: 1px solid #cbd5e1; border-radius: 8px; color: #0f172a; outline: none;" />
+          </div>
+
+          <div>
+            <label style="display: block; font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 6px;">
+              <i class="fa-solid fa-hospital" style="color: #2563eb; margin-right: 4px;"></i> Servicio de Ingreso
+            </label>
+            <select id="select-edit-servicio" required
+              style="width: 100%; box-sizing: border-box; padding: 9px 12px; font-size: 13px; font-weight: 600; border: 1px solid #cbd5e1; border-radius: 8px; color: #0f172a; outline: none; background: #fff;">
+              ${listaServicios
+                .map(
+                  (srv) =>
+                    `<option value="${srv}" ${
+                      srv.toUpperCase() === servicioActual.toUpperCase() ? "selected" : ""
+                    }>${srv}</option>`
+                )
+                .join("")}
+            </select>
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; padding-top: 14px; border-top: 1px solid #f1f5f9;">
+            <button type="button" id="btn-cancelar-modal-editar"
+              style="padding: 8px 14px; font-size: 12px; font-weight: 600; color: #64748b; background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer;">
+              Cancelar
+            </button>
+            <button type="submit" id="btn-guardar-modal-editar"
+              style="padding: 8px 16px; font-size: 12px; font-weight: 600; color: #ffffff; background: #2563eb; border: none; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+              <i class="fa-solid fa-check"></i> Guardar Cambios
+            </button>
+          </div>
+        </form>
+      </div>
+    `;
+
+    modal.style.display = "flex";
+
+    const cerrarModal = () => {
+      modal.style.display = "none";
+    };
+
+    document.getElementById("btn-close-modal-editar").onclick = cerrarModal;
+    document.getElementById("btn-cancelar-modal-editar").onclick = cerrarModal;
+
+    document.getElementById("form-editar-ingreso").onsubmit = async (eForm) => {
+      eForm.preventDefault();
+      const nuevaFecha = document.getElementById("input-edit-fecha").value;
+      const nuevoServicio = document.getElementById("select-edit-servicio").value;
+      const btnGuardar = document.getElementById("btn-guardar-modal-editar");
+
+      if (!nuevaFecha) return;
+
+      try {
+        btnGuardar.disabled = true;
+        btnGuardar.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Guardando...';
+
+        if (isIngreso) {
+          // 1. Actualizar hospitalizaciones (fecha y servicio)
+          const { error: errHosp } = await e
+            .from("hospitalizaciones")
+            .update({
+              fecha_ingreso: nuevaFecha,
+              servicio: nuevoServicio,
+            })
+            .eq("id", ev.hospitalizacion_id);
+
+          if (errHosp) throw errHosp;
+
+          // 2. Actualizar el evento inicial en historial_eventos
+          const { error: errEv } = await e
+            .from("historial_eventos")
+            .update({
+              fecha_evento: nuevaFecha,
+              detalle: `Ingreso al servicio de ${nuevoServicio}`,
+            })
+            .eq("id", ev.id);
+
+          if (errEv) throw errEv;
+
+          // 3. Si no hay otros cambios de servicio posteriores, actualizar el servicio del paciente
+          const eventosPosteriores = (await A(ev.hospitalizacion_id)) || [];
+          const tienePasesPosteriores = eventosPosteriores.some(
+            (item) => item.id !== ev.id && item.tipo_evento === "Cambio de Servicio"
+          );
+
+          if (!tienePasesPosteriores) {
+            await e.from("pacientes").update({ servicio: nuevoServicio }).eq("id", _);
+          }
+        } else {
+          // Si es un cambio de servicio
+          const { error: errEv } = await e
+            .from("historial_eventos")
+            .update({
+              fecha_evento: nuevaFecha,
+              detalle: nuevoServicio,
+            })
+            .eq("id", ev.id);
+
+          if (errEv) throw errEv;
+        }
+
+        cerrarModal();
+        window.showSystemTooltip &&
+          window.showSystemTooltip("Registro actualizado correctamente");
+
+        await J(); // Recalcula todo automáticamente
+      } catch (err) {
+        console.error("Error al actualizar:", err);
+        window.showSystemTooltip &&
+          window.showSystemTooltip("Error: " + err.message, true);
+        btnGuardar.disabled = false;
+        btnGuardar.innerHTML = '<i class="fa-solid fa-check"></i> Guardar Cambios';
+      }
+    };
+  }
+
+  // =========================================================================
+  // FUNCIÓN TIMELINE: Dibuja los eventos con botones bonitos
   // =========================================================================
   function $(eList, containerId, isClosed) {
     const cont = document.getElementById(containerId);
@@ -166,13 +343,9 @@ document.addEventListener("DOMContentLoaded", async () => {
               canManage
                 ? `
               <div class="event-actions" style="display: flex; gap: 4px; align-items: center;">
-                ${
-                  isIngreso
-                    ? `<button type="button" class="btn-action-edit-fecha" title="Editar fecha de ingreso" style="cursor: pointer; background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; border-radius: 6px; padding: 4px 8px; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
-                        <i class="fa-solid fa-pen-to-square"></i> Editar
-                      </button>`
-                    : ""
-                }
+                <button type="button" class="btn-action-edit-fecha" title="Editar fecha y servicio" style="cursor: pointer; background: #eff6ff; border: 1px solid #bfdbfe; color: #1d4ed8; border-radius: 6px; padding: 4px 8px; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+                  <i class="fa-solid fa-pen-to-square"></i> Editar
+                </button>
                 <button type="button" class="btn-action-delete-event" title="Eliminar este evento" style="cursor: pointer; background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; border-radius: 6px; padding: 4px 6px; font-size: 11px; display: inline-flex; align-items: center;">
                   <i class="fa-solid fa-trash-can"></i>
                 </button>
@@ -184,52 +357,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         </div>
       `;
 
-      // 1. EDITAR FECHA DE INGRESO
+      // 1. EDITAR FECHA Y SERVICIO (Abre el modal integrado)
       const btnEdit = item.querySelector(".btn-action-edit-fecha");
       if (btnEdit) {
-        btnEdit.addEventListener("click", async (eClick) => {
+        btnEdit.addEventListener("click", (eClick) => {
           eClick.stopPropagation();
-          const nuevaFecha = window.prompt(
-            "Ingrese la nueva fecha de ingreso (formato AAAA-MM-DD):",
-            ev.fecha_evento || ""
-          );
-          if (!nuevaFecha || nuevaFecha.trim() === ev.fecha_evento) return;
-
-          if (!/^\d{4}-\d{2}-\d{2}$/.test(nuevaFecha.trim())) {
-            window.showSystemTooltip &&
-              window.showSystemTooltip("Formato inválido. Use AAAA-MM-DD (ej: 2026-11-03)", true);
-            return;
-          }
-
-          try {
-            btnEdit.disabled = true;
-            // Actualizar en hospitalizaciones
-            const { error: errHosp } = await e
-              .from("hospitalizaciones")
-              .update({ fecha_ingreso: nuevaFecha.trim() })
-              .eq("id", ev.hospitalizacion_id);
-
-            if (errHosp) throw errHosp;
-
-            // Actualizar en historial_eventos
-            const { error: errEv } = await e
-              .from("historial_eventos")
-              .update({ fecha_evento: nuevaFecha.trim() })
-              .eq("id", ev.id);
-
-            if (errEv) throw errEv;
-
-            window.showSystemTooltip &&
-              window.showSystemTooltip("Fecha de ingreso actualizada correctamente");
-
-            await J(); // Recalcula días y repinta el calendario
-          } catch (err) {
-            console.error("Error al actualizar fecha de ingreso:", err);
-            window.showSystemTooltip &&
-              window.showSystemTooltip("Error: " + err.message, true);
-          } finally {
-            btnEdit.disabled = false;
-          }
+          mostrarModalEditarIngreso(ev);
         });
       }
 
@@ -276,7 +409,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
               if (errDel) throw errDel;
 
-              // Si eliminó un Cambio de Servicio, revertir al servicio anterior
+              // Revertir servicio si eliminó un Cambio de Servicio
               if (ev.tipo_evento === "Cambio de Servicio" && w) {
                 const eventosRestantes = (await A(w.id)) || [];
                 let ultimoServicio = w.servicio || "UVI";
@@ -659,7 +792,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       "prev" === e
         ? g.classList.add("cal-slide-left")
         : "next" === e && g.classList.add("cal-slide-right");
-    const v = 7 * Math.ceil((o + s) / 7),
+    const v = 7 * Math.ceil((o + s)/ 7),
       f = E.map((e) => ({
         start: S(e.fecha_ingreso),
         end: e.fecha_alta ? S(e.fecha_alta) : e.activa ? a : S(e.fecha_ingreso),
