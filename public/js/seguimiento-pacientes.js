@@ -1,13 +1,17 @@
 ﻿// =========================================================================
 // UNIDAD DE SEGUROS - SEGUIMIENTO DE PACIENTES (public/js/seguimiento-pacientes.js)
-// Versión Estable: DNI + DV copiable, F. Nacimiento copiable,
-// Enlace oficial EsSalud y Ventana Emergente de Rango de Hospitalización
+// Con:
+// 1. Botón "Consulta EsSalud" al lado de "Limpiar Filtros"
+// 2. DNI con botón de copia
+// 3. Código de Verificación (DV) con botón de copia
+// 4. Fecha de Nacimiento con botón de copia
+// 5. Ventana emergente con rango de hospitalización y días de estancia
 // =========================================================================
 
 document.addEventListener("DOMContentLoaded", async () => {
   const supabase = "undefined" != typeof supabaseClient ? supabaseClient : window.supabase;
   if (!supabase) {
-    console.error("Cliente de Supabase no encontrado");
+    console.error("Cliente Supabase no disponible");
     return;
   }
 
@@ -17,17 +21,44 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
 
+  // Elementos del DOM
   const inputDniHc = document.getElementById("filter-dni-hc");
   const inputApellidos = document.getElementById("filter-apellidos");
   const selectSeguro = document.getElementById("filter-seguro");
   const selectServicio = document.getElementById("filter-servicio");
   const selectCondicion = document.getElementById("filter-condicion");
   const btnSearch = document.getElementById("btn-search");
-  const btnClear = document.querySelector(".btn-clear, button[id*='clear'], button[onclick*='clear']");
   const tbodyPacientes = document.getElementById("tbody-pacientes");
   const loadingIndicator = document.getElementById("loading-indicator");
+  const tablePacientes = document.getElementById("table-pacientes");
 
-  // Función para obtener fecha actual en zona horaria de Perú
+  // =========================================================================
+  // INSERTAR BOTÓN ESSALUD AL LADO DE "LIMPIAR FILTROS"
+  // =========================================================================
+  const colocarBotonEsSaludSuperior = () => {
+    if (document.getElementById("btn-essalud-top")) return;
+
+    // Buscar el botón Limpiar Filtros
+    const botones = Array.from(document.querySelectorAll("button, a"));
+    const btnLimpiar = botones.find(b => b.textContent && b.textContent.toLowerCase().includes("limpiar"));
+
+    if (btnLimpiar && btnLimpiar.parentElement) {
+      const aEssalud = document.createElement("a");
+      aEssalud.id = "btn-essalud-top";
+      aEssalud.href = "https://dondemeatiendo.essalud.gob.pe/#/consulta";
+      aEssalud.target = "_blank";
+      aEssalud.rel = "noopener noreferrer";
+      aEssalud.className = "inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition-all shadow-2xs cursor-pointer";
+      aEssalud.style.cssText = "display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#2563eb;color:#fff;border-radius:12px;font-size:12px;font-weight:700;text-decoration:none;margin-left:8px;margin-right:8px;box-shadow:0 1px 2px rgba(0,0,0,0.05);";
+      aEssalud.innerHTML = `<i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> <span>Consulta EsSalud</span>`;
+
+      // Insertar justo al lado de Limpiar Filtros
+      btnLimpiar.parentNode.insertBefore(aEssalud, btnLimpiar.nextSibling);
+    }
+  };
+  colocarBotonEsSaludSuperior();
+
+  // Fecha actual en hora Perú
   const getLocalDateLima = () => {
     return new Date(new Date().toLocaleString("en-US", { timeZone: "America/Lima" }));
   };
@@ -50,7 +81,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     return Math.max(0, Math.round(diff / (1000 * 60 * 60 * 24)));
   };
 
-  // Notificación flotante de copiado
+  // Toast flotante de copiado
   const showToast = (message) => {
     let toast = document.getElementById("toast-seguimiento");
     if (!toast) {
@@ -68,7 +99,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }, 2500);
   };
 
-  // Copiar al portapapeles con confirmación visual
+  // Copiar al portapapeles
   window.copiarDatoAlPortapapeles = (e, valor, label) => {
     e.stopPropagation();
     if (!valor || valor === "-") return;
@@ -77,27 +108,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       const btn = e.currentTarget;
       const icon = btn.querySelector("i");
       if (icon) {
-        const prevClass = icon.className;
+        const prev = icon.className;
         icon.className = "fa-solid fa-check text-emerald-600";
-        setTimeout(() => { icon.className = prevClass; }, 1500);
+        setTimeout(() => { icon.className = prev; }, 1500);
       }
-    }).catch(err => {
-      console.warn("Error al copiar:", err);
     });
   };
 
-  // Abrir consulta de EsSalud y copiar DNI automáticamente
-  window.abrirConsultaEsSalud = (e, dni) => {
-    e.stopPropagation();
-    if (dni && dni !== "-") {
-      navigator.clipboard.writeText(String(dni).trim()).then(() => {
-        showToast(`DNI ${dni} copiado. Abriendo EsSalud...`);
-      });
-    }
-    window.open("https://dondemeatiendo.essalud.gob.pe/#/consulta", "_blank");
-  };
-
-  // Modal / Ventana emergente de Rango de Hospitalización
+  // Modal / Ventana emergente con Rango de Fechas
   window.mostrarModalRangoHospitalizacion = (e, pJsonStr) => {
     e.stopPropagation();
     const p = JSON.parse(decodeURIComponent(pJsonStr));
@@ -116,18 +134,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     modal.innerHTML = `
       <div style="background:#fff;border-radius:16px;max-width:480px;width:100%;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);border:1px solid #e2e8f0;overflow:hidden;font-family:inherit;" onclick="event.stopPropagation()">
-        <!-- Header -->
-        <div style="padding:14px 20px;background:#0f172a;color:#fff;display:flex;align-items:center;justify-content:between;">
+        <div style="padding:14px 20px;background:#0f172a;color:#fff;display:flex;align-items:center;justify-content:space-between;">
           <div style="display:flex;align-items:center;gap:8px;">
             <i class="fa-regular fa-calendar-days" style="color:#60a5fa;"></i>
             <span style="font-size:13px;font-weight:700;">Rango de Hospitalización y Estancia</span>
           </div>
-          <button type="button" onclick="document.getElementById('modal-rango-estancia').remove()" style="background:none;border:none;color:#94a3b8;font-size:18px;cursor:pointer;margin-left:auto;">
-            ✕
-          </button>
+          <button type="button" onclick="document.getElementById('modal-rango-estancia').remove()" style="background:none;border:none;color:#94a3b8;font-size:18px;cursor:pointer;">✕</button>
         </div>
 
-        <!-- Info Paciente -->
         <div style="padding:14px 20px;background:#f0f7ff;border-bottom:1px solid #dbeafe;display:flex;align-items:center;justify-content:space-between;gap:12px;">
           <div>
             <span style="font-size:10px;font-weight:700;color:#1d4ed8;text-transform:uppercase;">PACIENTE</span>
@@ -139,27 +153,21 @@ document.addEventListener("DOMContentLoaded", async () => {
           </span>
         </div>
 
-        <!-- Fechas e Intervalo -->
         <div style="padding:18px 20px;display:flex;flex-direction:column;gap:14px;font-size:12px;color:#334155;">
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-            <div style="padding:12px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
-              <span style="font-size:10px;font-weight:700;text-transform:uppercase;color:#047857;display:block;margin-bottom:4px;">
-                ● Fecha de Ingreso
-              </span>
+            <div style="padding:12px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;">
+              <span style="font-size:10px;font-weight:700;text-transform:uppercase;color:#047857;display:block;margin-bottom:4px;">● Fecha de Ingreso</span>
               <div style="font-size:14px;font-weight:700;font-family:monospace;color:#0f172a;">${fechaIngresoFmt}</div>
               <div style="font-size:10px;color:#94a3b8;margin-top:4px;">Servicio: <strong>${p.servicioIngreso || p.servicio}</strong></div>
             </div>
 
-            <div style="padding:12px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
-              <span style="font-size:10px;font-weight:700;text-transform:uppercase;color:#1d4ed8;display:block;margin-bottom:4px;">
-                ● ${esAlta ? 'Fecha de Alta' : 'Estado Actual'}
-              </span>
+            <div style="padding:12px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;">
+              <span style="font-size:10px;font-weight:700;text-transform:uppercase;color:#1d4ed8;display:block;margin-bottom:4px;">● ${esAlta ? 'Fecha de Alta' : 'Estado Actual'}</span>
               <div style="font-size:14px;font-weight:700;font-family:monospace;color:#0f172a;">${fechaAltaFmt}</div>
               <div style="font-size:10px;color:#94a3b8;margin-top:4px;">Servicio: <strong>${p.servicio}</strong></div>
             </div>
           </div>
 
-          <!-- Días de Estancia -->
           <div style="padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;display:flex;align-items:center;justify-content:space-between;">
             <span style="font-weight:600;color:#475569;">Tiempo de Estancia Hospitalaria:</span>
             <span style="font-size:12px;font-weight:800;color:#1e40af;background:#dbeafe;padding:4px 12px;border-radius:8px;">
@@ -167,7 +175,6 @@ document.addEventListener("DOMContentLoaded", async () => {
             </span>
           </div>
 
-          <!-- Datos EsSalud -->
           <div style="padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;">
             <span style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;display:block;margin-bottom:6px;">Datos para Consulta EsSalud:</span>
             <div style="display:grid;grid-template-columns:1fr 1fr 1.2fr;gap:6px;text-align:center;">
@@ -178,18 +185,13 @@ document.addEventListener("DOMContentLoaded", async () => {
           </div>
         </div>
 
-        <!-- Footer -->
         <div style="padding:12px 20px;background:#f8fafc;border-top:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;">
           <a href="https://dondemeatiendo.essalud.gob.pe/#/consulta" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;font-size:11px;font-weight:600;color:#1d4ed8;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;text-decoration:none;">
             <i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir EsSalud
           </a>
           <div style="display:flex;align-items:center;gap:8px;">
-            <button type="button" onclick="document.getElementById('modal-rango-estancia').remove()" style="padding:6px 14px;font-size:12px;color:#475569;background:#fff;border:1px solid #cbd5e1;border-radius:8px;cursor:pointer;">
-              Cerrar
-            </button>
-            <a href="detalle-paciente.html?id=${p.id}" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;font-size:12px;font-weight:700;color:#fff;background:#2563eb;border-radius:8px;text-decoration:none;">
-              Ver Detalle
-            </a>
+            <button type="button" onclick="document.getElementById('modal-rango-estancia').remove()" style="padding:6px 14px;font-size:12px;color:#475569;background:#fff;border:1px solid #cbd5e1;border-radius:8px;cursor:pointer;">Cerrar</button>
+            <a href="detalle-paciente.html?id=${p.id}" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;font-size:12px;font-weight:700;color:#fff;background:#2563eb;border-radius:8px;text-decoration:none;">Ver Detalle</a>
           </div>
         </div>
       </div>
@@ -197,10 +199,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     modal.onclick = () => modal.remove();
   };
 
-  // Carga robusta de pacientes y fechas de hospitalización
+  // =========================================================================
+  // CARGAR PACIENTES Y FORZAR VISIBILIDAD DE LA TABLA
+  // =========================================================================
   const loadPatients = async () => {
-    if (loadingIndicator) loadingIndicator.style.display = "block";
-    if (tbodyPacientes) tbodyPacientes.innerHTML = "";
+    colocarBotonEsSaludSuperior();
+
+    if (loadingIndicator) {
+      loadingIndicator.style.display = "block";
+      loadingIndicator.classList.remove("hidden");
+    }
 
     try {
       // 1. Consulta limpia a pacientes
@@ -213,6 +221,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       const valCond = selectCondicion ? selectCondicion.value : "HOSPITALIZADO";
       const valSeguro = selectSeguro ? selectSeguro.value : "TODOS";
       const valServicio = selectServicio ? selectServicio.value : "TODOS";
+      const valDniHc = inputDniHc ? inputDniHc.value.trim() : "";
+      const valApellidos = inputApellidos ? inputApellidos.value.trim() : "";
 
       if (valCond && valCond !== "TODOS") {
         query = query.eq("condicion", valCond);
@@ -223,9 +233,25 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (valServicio && valServicio !== "TODOS") {
         query = query.eq("servicio", valServicio);
       }
+      if (valDniHc) {
+        query = query.or(`dni.ilike.%${valDniHc}%,historia_clinica.ilike.%${valDniHc}%`);
+      }
+      if (valApellidos) {
+        query = query.or(`apellidos.ilike.%${valApellidos}%,nombres.ilike.%${valApellidos}%`);
+      }
 
       const { data: pacientes, error } = await query;
       if (error) throw error;
+
+      // ASEGURAR QUE LA TABLA SEA VISIBLE (remover cualquier clase 'hidden')
+      if (tablePacientes) {
+        tablePacientes.classList.remove("hidden");
+        tablePacientes.style.display = "table";
+        if (tablePacientes.parentElement) {
+          tablePacientes.parentElement.classList.remove("hidden");
+          tablePacientes.parentElement.style.display = "block";
+        }
+      }
 
       if (!pacientes || pacientes.length === 0) {
         if (tbodyPacientes) {
@@ -234,14 +260,14 @@ document.addEventListener("DOMContentLoaded", async () => {
               <td colspan="8" class="text-center py-10 text-slate-500">
                 <i class="fa-solid fa-filter-circle-xmark text-3xl text-slate-300 block mb-2"></i>
                 <div class="font-bold text-slate-700">No se encontraron pacientes con los filtros seleccionados</div>
-                <div class="text-xs text-slate-400 mt-1">Si filtró por <strong>${valSeguro}</strong>, cambie el Tipo de Seguro a <strong>TODOS</strong> o presione "Limpiar Filtros".</div>
+                <div class="text-xs text-slate-400 mt-1">Seleccione Tipo de Seguro: <strong>TODOS</strong> o presione "Limpiar Filtros".</div>
               </td>
             </tr>`;
         }
         return;
       }
 
-      // 2. Consulta segura de hospitalizaciones para estos pacientes (sin romper si falla)
+      // 2. Consulta segura de hospitalizaciones
       let hospMap = new Map();
       try {
         const pIds = pacientes.map(p => p.id);
@@ -259,20 +285,23 @@ document.addEventListener("DOMContentLoaded", async () => {
         console.warn("Aviso no crítico al cargar hospitalizaciones:", eHosp);
       }
 
-      // 3. Renderizar las filas con las 8 columnas exactas
+      // 3. Renderizar filas
       renderTable(pacientes, hospMap);
     } catch (err) {
       console.error("Error al cargar pacientes:", err);
+      // Forzar visibilidad para mostrar el mensaje de error si existiera
+      if (tablePacientes) {
+        tablePacientes.classList.remove("hidden");
+        tablePacientes.style.display = "table";
+      }
       if (tbodyPacientes) {
-        tbodyPacientes.innerHTML = `
-          <tr>
-            <td colspan="8" class="text-center py-8 text-red-600 font-semibold">
-              Error al consultar pacientes: ${err.message}
-            </td>
-          </tr>`;
+        tbodyPacientes.innerHTML = `<tr><td colspan="8" class="text-center py-6 text-red-500 font-semibold">Error al consultar datos: ${err.message}</td></tr>`;
       }
     } finally {
-      if (loadingIndicator) loadingIndicator.style.display = "none";
+      if (loadingIndicator) {
+        loadingIndicator.style.display = "none";
+        loadingIndicator.classList.add("hidden");
+      }
     }
   };
 
@@ -317,7 +346,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           <input type="checkbox" class="pac-checkbox rounded text-blue-600 cursor-pointer" data-id="${p.id}" />
         </td>
 
-        <!-- 2. DNI & Código de Verificación (DV) -->
+        <!-- 2. DNI & Dígito Verificador (DV) -->
         <td class="py-3.5 px-3 whitespace-nowrap">
           <div class="flex items-center gap-1.5">
             <button type="button" onclick="copiarDatoAlPortapapeles(event, '${p.dni}', 'DNI')"
@@ -335,7 +364,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           </div>
         </td>
 
-        <!-- 3. Paciente + Fecha de Nacimiento copiable -->
+        <!-- 3. Paciente + Fecha de Nacimiento -->
         <td class="py-3.5 px-3">
           <div class="font-semibold text-slate-900 uppercase">
             ${p.apellidos || ""}, ${p.nombres || ""}
@@ -389,22 +418,13 @@ document.addEventListener("DOMContentLoaded", async () => {
           </div>
         </td>
 
-        <!-- 8. Acciones (EsSalud & Detalle) -->
+        <!-- 8. Acción (Detalle) -->
         <td class="py-3.5 px-3 text-center whitespace-nowrap" onclick="event.stopPropagation()">
-          <div class="flex items-center justify-center gap-1.5">
-            <button type="button" onclick="abrirConsultaEsSalud(event, '${p.dni || ""}')"
-              class="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors shadow-2xs"
-              title="Abrir 'Dónde me atiendo' EsSalud (Copia el DNI automáticamente)">
-              <i class="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
-              <span>EsSalud</span>
-            </button>
-
-            <a href="detalle-paciente.html?id=${p.id}"
-              class="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 border border-blue-200 rounded-lg transition-colors"
-              title="Ver actualización del paciente">
-              <i class="fa-regular fa-id-badge text-sm"></i>
-            </a>
-          </div>
+          <a href="detalle-paciente.html?id=${p.id}"
+            class="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 border border-blue-200 rounded-lg transition-colors inline-block"
+            title="Ver actualización del paciente">
+            <i class="fa-regular fa-id-badge text-sm"></i>
+          </a>
         </td>
       `;
 
@@ -414,14 +434,18 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Event Listeners
   if (btnSearch) btnSearch.addEventListener("click", loadPatients);
-  if (btnClear) {
-    btnClear.addEventListener("click", () => {
+
+  // Vincular Limpiar Filtros
+  const botones = Array.from(document.querySelectorAll("button"));
+  const btnLimpiar = botones.find(b => b.textContent && b.textContent.toLowerCase().includes("limpiar"));
+  if (btnLimpiar) {
+    btnLimpiar.addEventListener("click", () => {
       if (inputDniHc) inputDniHc.value = "";
       if (inputApellidos) inputApellidos.value = "";
       if (selectSeguro) selectSeguro.value = "TODOS";
       if (selectServicio) selectServicio.value = "TODOS";
       if (selectCondicion) selectCondicion.value = "HOSPITALIZADO";
-      loadPatients();
+      setTimeout(loadPatients, 100);
     });
   }
 
