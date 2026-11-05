@@ -1,6 +1,6 @@
 ﻿// =========================================================================
 // UNIDAD DE SEGUROS - SISTEMA HOSPITALARIO
-// Archivo: public/js/seguimiento-pacientes.js (Versión Profesional + Paginación)
+// Archivo: public/js/seguimiento-pacientes.js (Soporte DNI, C.E, E- + Paginación 30)
 // =========================================================================
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -17,7 +17,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
 
-  // 2. Elementos del DOM (con respaldo por si algún selector varía en el HTML)
+  // 2. Elementos del DOM
   const inputDniHc = document.getElementById("filter-dni-hc") || document.querySelector('input[placeholder*="DNI"]');
   const inputApellidos = document.getElementById("filter-apellidos") || document.querySelector('input[placeholder*="apellidos"]');
   const selectCondicion = document.getElementById("filter-condicion");
@@ -51,7 +51,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       .copy-chip {
         display: inline-flex;
         align-items: center;
-        gap: 4px;
+        gap: 5px;
         padding: 2px 6px;
         border-radius: 5px;
         border: 1px solid transparent;
@@ -64,7 +64,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         border-color: #cbd5e1;
       }
       .copy-chip .copy-icon {
-        opacity: 0.45;
+        opacity: 0.35;
         transition: opacity 0.15s ease;
       }
       .copy-chip:hover .copy-icon {
@@ -138,6 +138,61 @@ document.addEventListener("DOMContentLoaded", async () => {
   inyectarEstilosProfesionales();
 
   // =========================================================================
+  // IDENTIFICADOR Y FORMATEADOR DE DOCUMENTOS: DNI, "C.E" y "E-"
+  // =========================================================================
+  const analizarDocumento = (rawDoc, tipoDocCol = "") => {
+    if (!rawDoc) {
+      return { display: "-", valorCopiar: "", tipo: "NONE", prefijo: "", numero: "-", permiteDV: false };
+    }
+
+    const str = String(rawDoc).trim().toUpperCase();
+    const tDoc = String(tipoDocCol || "").trim().toUpperCase();
+
+    // 1. Detectar código especial "E-" (Ej: E-001234, E001234 o tipo E)
+    if (str.startsWith("E-") || /^E\d+$/.test(str) || tDoc === "E") {
+      const numLimpio = str.replace(/^E-?/, "").trim();
+      const displayFmt = `E-${numLimpio}`;
+      return {
+        display: displayFmt,
+        valorCopiar: displayFmt,
+        tipo: "E",
+        prefijo: "E-",
+        numero: numLimpio,
+        permiteDV: false
+      };
+    }
+
+    // 2. Detectar Carnet de Extranjería "C.E"
+    // Reconoce si empieza con "C.E", "CE", si la columna tipo_documento dice CE,
+    // o si es un número de 9 dígitos o de 8 dígitos que empieza en "09" / "00" (típico de CE en SIS/GalenHos)
+    const esExplicitoCE = str.startsWith("C.E") || str.startsWith("CE") || tDoc.includes("CE") || tDoc.includes("EXTRANJERIA");
+    const soloDigitos = str.replace(/\D/g, "");
+    const esLongitudCE = /^\d{9,12}$/.test(str) || (str.length === 8 && (str.startsWith("00") || str.startsWith("09")));
+
+    if (esExplicitoCE || esLongitudCE) {
+      const numCE = soloDigitos || str.replace(/^C\.?E\.?\s*-?\s*/i, "").trim();
+      return {
+        display: `C.E ${numCE}`,
+        valorCopiar: numCE, // Copia solo los dígitos para pegado rápido en portales
+        tipo: "CE",
+        prefijo: "C.E",
+        numero: numCE,
+        permiteDV: false
+      };
+    }
+
+    // 3. DNI Estándar (8 dígitos) u otros
+    return {
+      display: str,
+      valorCopiar: str,
+      tipo: "DNI",
+      prefijo: "",
+      numero: str,
+      permiteDV: /^\d{8}$/.test(str)
+    };
+  };
+
+  // =========================================================================
   // ALINEAR BOTÓN ESSALUD JUNTO A "LIMPIAR FILTROS" Y "BUSCAR"
   // =========================================================================
   const insertarBotonEsSalud = () => {
@@ -197,22 +252,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     return Math.max(0, Math.round(diff / (1000 * 60 * 60 * 24)));
   };
 
-  // Colores armónicos por Servicio (Fiel a la segunda imagen)
+  // Colores por Servicio (Fiel a tu segunda imagen)
   const getEstiloServicio = (servicio) => {
     const s = String(servicio || "").toUpperCase();
-    if (s.includes("EMERGENCIA") || s.includes("SHOCK")) return "background:#fffbeb;color:#d97706;border:1px solid #fde68a;"; // Ámbar/Naranja
-    if (s.includes("NEONAT")) return "background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;"; // Verde
-    if (s.includes("PEDIAT")) return "background:#f0f9ff;color:#0284c7;border:1px solid #bae6fd;"; // Celeste
-    if (s.includes("PUERP")) return "background:#f5f3ff;color:#7c3aed;border:1px solid #ddd6fe;"; // Violeta
-    if (s.includes("GINECO")) return "background:#fdf2f8;color:#db2777;border:1px solid #fbcfe8;"; // Rosa
-    if (s.includes("CIRUG")) return "background:#fef2f2;color:#dc2626;border:1px solid #fecaca;"; // Rojo suave
-    if (s.includes("MEDICINA")) return "background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;"; // Azul
-    if (s.includes("SALUD MENTAL")) return "background:#eef2ff;color:#4f46e5;border:1px solid #c7d2fe;"; // Índigo
+    if (s.includes("EMERGENCIA") || s.includes("SHOCK")) return "background:#fffbeb;color:#d97706;border:1px solid #fde68a;";
+    if (s.includes("NEONAT")) return "background:#ecfdf5;color:#059669;border:1px solid #a7f3d0;";
+    if (s.includes("PEDIAT")) return "background:#f0f9ff;color:#0284c7;border:1px solid #bae6fd;";
+    if (s.includes("PUERP")) return "background:#f5f3ff;color:#7c3aed;border:1px solid #ddd6fe;";
+    if (s.includes("GINECO")) return "background:#fdf2f8;color:#db2777;border:1px solid #fbcfe8;";
+    if (s.includes("CIRUG")) return "background:#fef2f2;color:#dc2626;border:1px solid #fecaca;";
+    if (s.includes("MEDICINA")) return "background:#eff6ff;color:#2563eb;border:1px solid #bfdbfe;";
+    if (s.includes("SALUD MENTAL")) return "background:#eef2ff;color:#4f46e5;border:1px solid #c7d2fe;";
     if (s.includes("UVI") || s.includes("UCI")) return "background:#fff1f2;color:#e11d48;border:1px solid #fecdd3;";
     return "background:#f8fafc;color:#475569;border:1px solid #e2e8f0;";
   };
 
-  // Estilo de Condición (Verde para ALTA como en imagen 2, Azul para HOSPITALIZADO)
+  // Estilo de Condición (Verde para ALTA, Azul para HOSPITALIZADO)
   const getEstiloCondicion = (condicion) => {
     const c = String(condicion || "").toUpperCase();
     if (c.includes("ALTA")) {
@@ -293,7 +348,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             <span style="font-size:10px;font-weight:700;color:#2563eb;text-transform:uppercase;letter-spacing:0.04em;">PACIENTE</span>
             <div style="font-size:13px;font-weight:700;color:#0f172a;margin-top:1px;">${p.apellidos}, ${p.nombres}</div>
             <div style="font-size:11px;color:#64748b;font-family:monospace;margin-top:2px;">
-              DNI: <strong>${p.dni}</strong> ${p.codigoVerificacion ? `(DV: ${p.codigoVerificacion})` : ""} · HC: ${p.historiaClinica || "-"}
+              Doc: <strong>${p.docDisplay}</strong> ${p.codigoVerificacion ? `(DV: ${p.codigoVerificacion})` : ""} · HC: ${p.historiaClinica || "-"}
             </div>
           </div>
           <span style="font-size:10px;font-weight:700;padding:4px 10px;border-radius:6px;${getEstiloCondicion(p.condicion)}">
@@ -325,8 +380,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
           <div style="padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;">
             <span style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;display:block;margin-bottom:6px;">Datos Rápidos (Clic para copiar):</span>
-            <div style="display:grid;grid-template-columns:1fr 1fr 1.2fr;gap:6px;text-align:center;">
-              <button type="button" onclick="copiarDatoAlPortapapeles(event, '${p.dni}', 'DNI')" style="background:#fff;padding:5px;border-radius:6px;border:1px solid #e2e8f0;font-family:monospace;font-weight:700;cursor:pointer;font-size:11px;">DNI: ${p.dni}</button>
+            <div style="display:grid;grid-template-columns:1.2fr 0.8fr 1.2fr;gap:6px;text-align:center;">
+              <button type="button" onclick="copiarDatoAlPortapapeles(event, '${p.docCopiar}', 'Documento')" style="background:#fff;padding:5px;border-radius:6px;border:1px solid #e2e8f0;font-family:monospace;font-weight:700;cursor:pointer;font-size:11px;">${p.docDisplay}</button>
               <button type="button" onclick="copiarDatoAlPortapapeles(event, '${p.codigoVerificacion || ""}', 'DV')" style="background:#fff;padding:5px;border-radius:6px;border:1px solid #e2e8f0;font-family:monospace;font-weight:700;cursor:pointer;font-size:11px;">DV: ${p.codigoVerificacion || "-"}</button>
               <button type="button" onclick="copiarDatoAlPortapapeles(event, '${formatDateDisplay(p.fechaNacimiento)}', 'Fecha Nacimiento')" style="background:#fff;padding:5px;border-radius:6px;border:1px solid #e2e8f0;font-family:monospace;font-weight:700;cursor:pointer;font-size:11px;">Nac: ${formatDateDisplay(p.fechaNacimiento)}</button>
             </div>
@@ -353,7 +408,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     return str === "" || str === "TODOS" || str === "ALL" || str === "SELECCIONAR" || str.includes("TODOS");
   };
 
-  // Obtener valor real de un select (incluso si no tiene ID directo)
   const obtenerValorSelect = (el, labelKeyword) => {
     if (el) return el.value;
     const labels = Array.from(document.querySelectorAll("label"));
@@ -370,7 +424,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   // =========================================================================
   const loadPatients = async () => {
     insertarBotonEsSalud();
-    currentPage = 1; // Reiniciar siempre a la página 1 al filtrar
+    currentPage = 1;
 
     if (loadingIndicator) {
       loadingIndicator.style.display = "block";
@@ -378,16 +432,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     try {
+      // Usamos select("*") para traer también tipo_documento si existe en la tabla sin romper el query
       let query = supabase
         .from("pacientes")
-        .select("id, dni, codigo_verificacion, fecha_nacimiento, apellidos, nombres, historia_clinica, tipo_seguro, servicio, condicion")
+        .select("*")
         .order("apellidos", { ascending: true })
-        .limit(1000); // Permite paginar amplios resultados de 30 en 30
+        .limit(1000);
 
       const valCond = obtenerValorSelect(selectCondicion, "condici");
       const valSeguro = obtenerValorSelect(selectSeguro, "seguro");
       const valServicio = obtenerValorSelect(selectServicio, "servicio");
-      const valDniHc = inputDniHc ? inputDniHc.value.trim() : "";
+      const rawDniHc = inputDniHc ? inputDniHc.value.trim() : "";
       const valApellidos = inputApellidos ? inputApellidos.value.trim() : "";
 
       if (!esFiltroTodos(valCond)) {
@@ -399,8 +454,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (!esFiltroTodos(valServicio)) {
         query = query.ilike("servicio", `%${valServicio.trim()}%`);
       }
-      if (valDniHc) {
-        query = query.or(`dni.ilike.%${valDniHc}%,historia_clinica.ilike.%${valDniHc}%`);
+      if (rawDniHc) {
+        // Si el usuario busca "C.E 09187156" o "CE 09187156", extraemos también el número limpio
+        // para que coincida tanto si en la BD está con "C.E" como si está solo con los dígitos
+        const terminoLimpio = rawDniHc.replace(/^C\.?E\.?\s*/i, "").trim();
+        query = query.or(`dni.ilike.%${rawDniHc}%,dni.ilike.%${terminoLimpio}%,historia_clinica.ilike.%${terminoLimpio}%`);
       }
       if (valApellidos) {
         query = query.or(`apellidos.ilike.%${valApellidos}%,nombres.ilike.%${valApellidos}%`);
@@ -439,7 +497,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       globalHospMap = new Map();
       try {
         const pIds = allPacientesFiltered.map(p => p.id);
-        // Dividir en lotes si supera 200 IDs para evitar URLs largas
         for (let i = 0; i < pIds.length; i += 200) {
           const chunk = pIds.slice(i, i + 200);
           const { data: hosps } = await supabase
@@ -492,7 +549,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const renderPaginationControls = (totalRecords) => {
     let paginationContainer = document.getElementById("pagination-pacientes-container");
 
-    // Si hay 30 datos o menos, ocultamos la barra de paginación
     if (totalRecords <= ITEMS_PER_PAGE) {
       if (paginationContainer) paginationContainer.remove();
       return;
@@ -511,7 +567,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     const startItem = (currentPage - 1) * ITEMS_PER_PAGE + 1;
     const endItem = Math.min(currentPage * ITEMS_PER_PAGE, totalRecords);
 
-    // Generar números de página con elipsis inteligente
     let pagesHtml = "";
     const maxVisible = 5;
     let startPage = Math.max(1, currentPage - 2);
@@ -565,7 +620,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   };
 
   // =========================================================================
-  // RENDERIZAR FILAS DE LA TABLA (DISEÑO LIMPIO Y PROFESIONAL)
+  // RENDERIZAR FILAS DE LA TABLA (CON DETECCIÓN DE DNI, "C.E" Y "E-")
   // =========================================================================
   const renderTable = (list, hospMap) => {
     if (!tbodyPacientes) return;
@@ -576,11 +631,16 @@ document.addEventListener("DOMContentLoaded", async () => {
       const fechaIngreso = hosp ? hosp.fecha_ingreso : null;
       const fechaAlta = hosp ? hosp.fecha_alta : null;
       const diasHospitalizado = calculateDaysHospitalized(fechaIngreso, fechaAlta);
-      const tieneDV = p.codigo_verificacion !== null && p.codigo_verificacion !== undefined && String(p.codigo_verificacion).trim() !== "";
+
+      // Analizar documento para distinguir DNI, C.E y E-
+      const docInfo = analizarDocumento(p.dni, p.tipo_documento || p.tipo_doc);
+      const tieneDV = docInfo.permiteDV && p.codigo_verificacion !== null && p.codigo_verificacion !== undefined && String(p.codigo_verificacion).trim() !== "" && String(p.codigo_verificacion).trim() !== "-";
 
       const pacienteData = {
         id: p.id,
         dni: p.dni || "-",
+        docDisplay: docInfo.display,
+        docCopiar: docInfo.valorCopiar,
         codigoVerificacion: tieneDV ? String(p.codigo_verificacion).trim() : "",
         fechaNacimiento: p.fecha_nacimiento || "",
         apellidos: p.apellidos || "",
@@ -603,31 +663,52 @@ document.addEventListener("DOMContentLoaded", async () => {
         window.location.href = `detalle-paciente.html?id=${p.id}`;
       });
 
+      // Renderizado visual del documento según su tipo (C.E, E- o DNI)
+      let docHtml = "";
+      if (docInfo.tipo === "CE") {
+        docHtml = `
+          <button type="button" class="copy-chip" onclick="copiarDatoAlPortapapeles(event, '${docInfo.valorCopiar}', 'C.E')" title="Carnet de Extranjería · Clic para copiar">
+            <span style="font-size:12px;font-weight:600;color:#334155;">C.E ${docInfo.numero}</span>
+            <i class="fa-regular fa-copy copy-icon" style="font-size:10px;"></i>
+          </button>
+        `;
+      } else if (docInfo.tipo === "E") {
+        docHtml = `
+          <button type="button" class="copy-chip" onclick="copiarDatoAlPortapapeles(event, '${docInfo.valorCopiar}', 'Código E-')" title="Código Especial · Clic para copiar">
+            <span style="font-size:12px;font-weight:600;color:#334155;">${docInfo.display}</span>
+            <i class="fa-regular fa-copy copy-icon" style="font-size:10px;"></i>
+          </button>
+        `;
+      } else {
+        docHtml = `
+          <button type="button" class="copy-chip" onclick="copiarDatoAlPortapapeles(event, '${docInfo.valorCopiar}', 'DNI')" title="DNI · Clic para copiar">
+            <span style="font-size:12px;font-weight:600;color:#334155;">${docInfo.display}</span>
+            <i class="fa-regular fa-copy copy-icon" style="font-size:10px;"></i>
+          </button>
+          ${tieneDV ? `
+            <button type="button" class="copy-chip" onclick="copiarDatoAlPortapapeles(event, '${p.codigo_verificacion}', 'Dígito Verificador')"
+              style="background:#f8fafc;border:1px solid #e2e8f0;padding:1px 5px;border-radius:4px;"
+              title="Dígito Verificador: ${p.codigo_verificacion} · Clic para copiar">
+              <span style="font-family:monospace;font-size:10px;font-weight:700;color:#64748b;">-${String(p.codigo_verificacion).trim()}</span>
+            </button>
+          ` : ""}
+        `;
+      }
+
       tr.innerHTML = `
         <!-- 1. Checkbox -->
         <td class="py-3 px-4 text-center" onclick="event.stopPropagation()">
           <input type="checkbox" class="pac-checkbox rounded border-slate-300 text-blue-600 cursor-pointer" data-id="${p.id}" />
         </td>
 
-        <!-- 2. DNI & Dígito Verificador limpio -->
+        <!-- 2. Documento (DNI, C.E, E-) + DV (solo cuando es DNI válido) -->
         <td class="py-3 px-3 whitespace-nowrap">
           <div style="display:flex;align-items:center;gap:4px;">
-            <button type="button" class="copy-chip" onclick="copiarDatoAlPortapapeles(event, '${p.dni}', 'DNI')" title="Clic para copiar documento">
-              <span style="font-family:inherit;font-size:12px;font-weight:600;color:#334155;">${p.dni || "-"}</span>
-              <i class="fa-regular fa-copy copy-icon" style="font-size:10px;"></i>
-            </button>
-
-            ${tieneDV ? `
-              <button type="button" class="copy-chip" onclick="copiarDatoAlPortapapeles(event, '${p.codigo_verificacion}', 'Dígito Verificador')"
-                style="background:#f8fafc;border:1px solid #e2e8f0;padding:1px 5px;border-radius:4px;"
-                title="Dígito Verificador: ${p.codigo_verificacion} (Clic para copiar)">
-                <span style="font-family:monospace;font-size:10px;font-weight:700;color:#64748b;">-${p.codigo_verificacion}</span>
-              </button>
-            ` : ""}
+            ${docHtml}
           </div>
         </td>
 
-        <!-- 3. Paciente + Fecha de Nacimiento sutil -->
+        <!-- 3. Paciente + Fecha de Nacimiento discreta -->
         <td class="py-3 px-3">
           <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
             <span style="font-size:12px;font-weight:600;color:#1e293b;text-transform:uppercase;letter-spacing:0.01em;">
@@ -636,7 +717,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             ${p.fecha_nacimiento ? `
               <button type="button" class="copy-chip" onclick="copiarDatoAlPortapapeles(event, '${formatDateDisplay(p.fecha_nacimiento)}', 'Fecha Nacimiento')"
                 style="padding:1px 6px;font-size:10.5px;color:#64748b;background:#f8fafc;border:1px solid #f1f5f9;border-radius:4px;"
-                title="Fecha de Nacimiento (Clic para copiar)">
+                title="Fecha de Nacimiento · Clic para copiar">
                 <i class="fa-solid fa-cake-candles" style="font-size:9px;color:#94a3b8;"></i>
                 <span>${formatDateDisplay(p.fecha_nacimiento)}</span>
               </button>
@@ -649,7 +730,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           ${p.historia_clinica || "-"}
         </td>
 
-        <!-- 5. Tipo de Seguro (Con borde izquierdo azul igual a la 2da imagen) -->
+        <!-- 5. Tipo de Seguro (Con borde izquierdo azul igual a tu 2da imagen) -->
         <td class="py-3 px-3 whitespace-nowrap">
           <span class="badge-seguro-pro">
             ${p.tipo_seguro || "SIS"}
@@ -663,7 +744,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           </span>
         </td>
 
-        <!-- 7. Condición & Estancia compacta -->
+        <!-- 7. Condición & Estancia -->
         <td class="py-3 px-3 whitespace-nowrap">
           <div style="display:inline-flex;align-items:center;gap:6px;">
             <span style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:5px;text-transform:uppercase;letter-spacing:0.02em;${getEstiloCondicion(p.condicion)}">
@@ -680,7 +761,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           </div>
         </td>
 
-        <!-- 8. Acción (Ícono idéntico a la 2da imagen) -->
+        <!-- 8. Acción (Ícono limpio igual a la 2da imagen) -->
         <td class="py-3 px-3 text-center whitespace-nowrap" onclick="event.stopPropagation()">
           <a href="detalle-paciente.html?id=${p.id}" class="btn-accion-pro" title="Ver detalle del paciente">
             <i class="fa-solid fa-address-card" style="font-size:16px;"></i>
@@ -697,12 +778,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   // =========================================================================
   if (btnSearch) btnSearch.addEventListener("click", loadPatients);
 
-  // Filtrar inmediatamente al cambiar cualquier desplegable (Condición, Seguro, Servicio)
   document.querySelectorAll("select").forEach(sel => {
     sel.addEventListener("change", loadPatients);
   });
 
-  // Filtrar al presionar Enter en los buscadores de texto
   [inputDniHc, inputApellidos].forEach(inp => {
     if (inp) {
       inp.addEventListener("keydown", (e) => {
@@ -722,7 +801,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (inputDniHc) inputDniHc.value = "";
       if (inputApellidos) inputApellidos.value = "";
       document.querySelectorAll("select").forEach(sel => {
-        // Buscar la opción "TODOS" si existe, o volver al primer ítem
         const idxTodos = Array.from(sel.options).findIndex(o => o.text.toUpperCase().includes("TODOS"));
         sel.selectedIndex = idxTodos >= 0 ? idxTodos : 0;
       });
