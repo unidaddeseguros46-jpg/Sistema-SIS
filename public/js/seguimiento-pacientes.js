@@ -1,6 +1,6 @@
 ﻿// =========================================================================
 // UNIDAD DE SEGUROS - SISTEMA HOSPITALARIO
-// Archivo: public/js/seguimiento-pacientes.js (Versión Completa y Definitiva)
+// Archivo: public/js/seguimiento-pacientes.js (Versión Estilizada y Alineada)
 // =========================================================================
 
 document.addEventListener("DOMContentLoaded", async () => {
@@ -10,7 +10,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
 
-  // 1. Validar sesión de usuario
+  // 1. Validar sesión
   const { data: { session: currentSession } } = await supabase.auth.getSession();
   if (!currentSession) {
     window.location.href = "../../index.html";
@@ -29,25 +29,32 @@ document.addEventListener("DOMContentLoaded", async () => {
   const tablePacientes = document.getElementById("table-pacientes");
 
   // =========================================================================
-  // BOTÓN "CONSULTA ESSALUD" AL LADO DE "LIMPIAR FILTROS"
+  // ALINEAR BOTÓN ESSALUD EN LA MISMA FILA DE "LIMPIAR FILTROS" Y "BUSCAR"
   // =========================================================================
   const insertarBotonEsSalud = () => {
     if (document.getElementById("btn-essalud-top")) return;
 
-    // Localizar el botón Limpiar Filtros
     const botones = Array.from(document.querySelectorAll("button, a"));
     const btnLimpiar = botones.find(b => b.textContent && b.textContent.toLowerCase().includes("limpiar"));
 
     if (btnLimpiar && btnLimpiar.parentElement) {
+      const parent = btnLimpiar.parentElement;
+      parent.style.display = "flex";
+      parent.style.alignItems = "center";
+      parent.style.gap = "8px";
+
       const aEssalud = document.createElement("a");
       aEssalud.id = "btn-essalud-top";
       aEssalud.href = "https://dondemeatiendo.essalud.gob.pe/#/consulta";
       aEssalud.target = "_blank";
       aEssalud.rel = "noopener noreferrer";
-      aEssalud.style.cssText = "display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:#2563eb;color:#ffffff;border-radius:12px;font-size:12px;font-weight:700;text-decoration:none;margin-right:12px;box-shadow:0 1px 3px rgba(0,0,0,0.1);cursor:pointer;";
-      aEssalud.innerHTML = `<i class="fa-solid fa-arrow-up-right-from-square" style="font-size:10px;"></i> <span>Consulta EsSalud</span>`;
+      aEssalud.style.cssText = "display:inline-flex;align-items:center;gap:6px;height:38px;padding:0 14px;background:#2563eb;color:#ffffff;border-radius:10px;font-size:12px;font-weight:700;text-decoration:none;box-shadow:0 1px 2px rgba(0,0,0,0.08);transition:background 0.2s;white-space:nowrap;";
+      aEssalud.innerHTML = `<i class="fa-solid fa-arrow-up-right-from-square" style="font-size:11px;"></i> <span>Consulta EsSalud</span>`;
+      aEssalud.onmouseenter = () => { aEssalud.style.background = "#1d4ed8"; };
+      aEssalud.onmouseleave = () => { aEssalud.style.background = "#2563eb"; };
 
-      btnLimpiar.parentNode.insertBefore(aEssalud, btnLimpiar);
+      // Insertar a la izquierda de Limpiar Filtros
+      parent.insertBefore(aEssalud, btnLimpiar);
     }
   };
   insertarBotonEsSalud();
@@ -75,7 +82,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     return Math.max(0, Math.round(diff / (1000 * 60 * 60 * 24)));
   };
 
-  // Notificación flotante de copiado
+  // Estilos de colores originales para cada servicio
+  const getEstiloServicio = (servicio) => {
+    const s = String(servicio || "").toUpperCase();
+    if (s.includes("SHOCK")) return "background:#fff7ed;color:#c2410c;border:1px solid #ffedd5;"; // Naranja
+    if (s.includes("NEONAT")) return "background:#ecfdf5;color:#047857;border:1px solid #d1fae5;"; // Verde
+    if (s.includes("PEDIAT")) return "background:#f0f9ff;color:#0369a1;border:1px solid #e0f2fe;"; // Celeste
+    if (s.includes("PUERP")) return "background:#faf5ff;color:#7e22ce;border:1px solid #f3e8ff;"; // Morado
+    if (s.includes("GINECO")) return "background:#fdf2f8;color:#be185d;border:1px solid #fce7f3;"; // Rosado
+    if (s.includes("CIRUG")) return "background:#fff1f2;color:#be123c;border:1px solid #ffe4e6;"; // Rojo
+    if (s.includes("MEDICINA")) return "background:#eff6ff;color:#1d4ed8;border:1px solid #dbeafe;"; // Azul
+    if (s.includes("SALUD MENTAL")) return "background:#eef2ff;color:#4338ca;border:1px solid #e0e7ff;"; // Índigo
+    if (s.includes("UVI")) return "background:#fef2f2;color:#b91c1c;border:1px solid #fee2e2;"; // Rojo suave
+    return "background:#f8fafc;color:#475569;border:1px solid #e2e8f0;";
+  };
+
+  // Toast flotante de copiado
   const showToast = (message) => {
     let toast = document.getElementById("toast-seguimiento");
     if (!toast) {
@@ -90,10 +112,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     setTimeout(() => {
       toast.style.opacity = "0";
       toast.style.transform = "translateY(-10px)";
-    }, 2200);
+    }, 2000);
   };
 
-  // Copiar al portapapeles con confirmación visual
+  // Copiar al portapapeles
   window.copiarDatoAlPortapapeles = (e, valor, label) => {
     e.stopPropagation();
     if (!valor || valor === "-") return;
@@ -193,7 +215,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     modal.onclick = () => modal.remove();
   };
 
-  // Helper para verificar si un filtro es "TODOS" o está vacío
   const esFiltroTodos = (val) => {
     if (!val) return true;
     const str = String(val).trim().toUpperCase();
@@ -201,7 +222,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   };
 
   // =========================================================================
-  // CARGA ROBUSTA DE PACIENTES
+  // CARGAR PACIENTES
   // =========================================================================
   const loadPatients = async () => {
     insertarBotonEsSalud();
@@ -224,27 +245,18 @@ document.addEventListener("DOMContentLoaded", async () => {
       const valDniHc = inputDniHc ? inputDniHc.value.trim() : "";
       const valApellidos = inputApellidos ? inputApellidos.value.trim() : "";
 
-      // Filtro de Condición insensible a mayúsculas
       if (!esFiltroTodos(valCond)) {
         query = query.ilike("condicion", `%${valCond.trim()}%`);
       }
-
-      // Filtro de Seguro insensible a mayúsculas
       if (!esFiltroTodos(valSeguro)) {
         query = query.ilike("tipo_seguro", `%${valSeguro.trim()}%`);
       }
-
-      // Filtro de Servicio insensible a mayúsculas
       if (!esFiltroTodos(valServicio)) {
         query = query.ilike("servicio", `%${valServicio.trim()}%`);
       }
-
-      // Filtro de DNI o HC
       if (valDniHc) {
         query = query.or(`dni.ilike.%${valDniHc}%,historia_clinica.ilike.%${valDniHc}%`);
       }
-
-      // Filtro de Apellidos o Nombres
       if (valApellidos) {
         query = query.or(`apellidos.ilike.%${valApellidos}%,nombres.ilike.%${valApellidos}%`);
       }
@@ -252,7 +264,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       const { data: pacientes, error } = await query;
       if (error) throw error;
 
-      // Asegurar visibilidad de la tabla en pantalla
       if (tablePacientes) {
         tablePacientes.classList.remove("hidden");
         tablePacientes.style.display = "table";
@@ -269,14 +280,14 @@ document.addEventListener("DOMContentLoaded", async () => {
               <td colspan="8" class="text-center py-10 text-slate-500">
                 <i class="fa-solid fa-filter-circle-xmark text-3xl text-slate-300 block mb-2"></i>
                 <div class="font-bold text-slate-700">No se encontraron pacientes con los filtros seleccionados</div>
-                <div class="text-xs text-slate-400 mt-1">Asegúrese de seleccionar Tipo de Seguro: <strong>TODOS</strong> o presione "Limpiar Filtros".</div>
+                <div class="text-xs text-slate-400 mt-1">Seleccione Tipo de Seguro: <strong>TODOS</strong> o presione "Limpiar Filtros".</div>
               </td>
             </tr>`;
         }
         return;
       }
 
-      // Consulta de hospitalizaciones para estos pacientes
+      // Hospitalizaciones
       let hospMap = new Map();
       try {
         const pIds = pacientes.map(p => p.id);
@@ -294,7 +305,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         console.warn("Aviso al consultar hospitalizaciones:", eHosp);
       }
 
-      // Renderizar filas
       renderTable(pacientes, hospMap);
     } catch (err) {
       console.error("Error al cargar pacientes:", err);
@@ -344,7 +354,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       const tr = document.createElement("tr");
       tr.className = "hover:bg-blue-50/40 transition-colors group cursor-pointer border-b border-slate-100 text-xs";
 
-      // Clic en la fila navega al detalle
       tr.addEventListener("click", () => {
         window.location.href = `detalle-paciente.html?id=${p.id}`;
       });
@@ -355,36 +364,37 @@ document.addEventListener("DOMContentLoaded", async () => {
           <input type="checkbox" class="pac-checkbox rounded text-blue-600 cursor-pointer" data-id="${p.id}" />
         </td>
 
-        <!-- 2. DNI & Dígito Verificador (DV) con Copia -->
+        <!-- 2. DNI & Dígito Verificador (DV) -->
         <td class="py-3.5 px-3 whitespace-nowrap">
-          <div class="flex items-center gap-1.5">
+          <div style="display:flex;align-items:center;gap:6px;">
             <button type="button" onclick="copiarDatoAlPortapapeles(event, '${p.dni}', 'DNI')"
-              class="inline-flex items-center gap-1 font-mono font-bold text-slate-800 hover:text-blue-600 hover:bg-blue-50 px-1.5 py-0.5 rounded transition-colors"
+              style="display:inline-flex;align-items:center;gap:4px;font-family:monospace;font-weight:700;color:#1e293b;padding:2px 6px;border-radius:6px;border:none;background:transparent;cursor:pointer;"
               title="Clic para copiar DNI">
               <span>${p.dni || "-"}</span>
-              <i class="fa-regular fa-copy text-slate-400 text-[11px]"></i>
+              <i class="fa-regular fa-copy text-slate-400" style="font-size:11px;"></i>
             </button>
+
             <button type="button" onclick="copiarDatoAlPortapapeles(event, '${p.codigo_verificacion || ""}', 'Dígito Verificador')"
-              class="inline-flex items-center gap-1 font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border border-slate-200 bg-slate-100 text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
+              style="display:inline-flex;align-items:center;gap:3px;font-family:monospace;font-size:10px;font-weight:700;padding:2px 6px;border-radius:6px;background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;cursor:pointer;"
               title="Dígito Verificador (DV) - Clic para copiar">
               <span>DV: ${p.codigo_verificacion || "-"}</span>
-              <i class="fa-regular fa-copy text-slate-400 text-[9px]"></i>
+              <i class="fa-regular fa-copy text-slate-400" style="font-size:9px;"></i>
             </button>
           </div>
         </td>
 
-        <!-- 3. Paciente + Fecha de Nacimiento con Copia -->
+        <!-- 3. Paciente + Fecha de Nacimiento -->
         <td class="py-3.5 px-3">
-          <div class="font-semibold text-slate-900 uppercase">
+          <div style="font-weight:600;color:#0f172a;text-transform:uppercase;">
             ${p.apellidos || ""}, ${p.nombres || ""}
           </div>
           ${p.fecha_nacimiento ? `
-            <div class="mt-0.5">
+            <div style="margin-top:3px;">
               <button type="button" onclick="copiarDatoAlPortapapeles(event, '${p.fecha_nacimiento}', 'Fecha Nacimiento')"
-                class="inline-flex items-center gap-1 font-mono text-[11px] text-slate-500 hover:text-blue-600 hover:bg-blue-50 px-1 py-0.2 rounded transition-colors"
+                style="display:inline-flex;align-items:center;gap:4px;font-family:monospace;font-size:11px;color:#64748b;background:#f8fafc;border:1px solid #e2e8f0;padding:1px 6px;border-radius:6px;cursor:pointer;"
                 title="Fecha de Nacimiento - Clic para copiar">
                 <span>🎂 F. Nac: ${formatDateDisplay(p.fecha_nacimiento)}</span>
-                <i class="fa-regular fa-copy text-slate-400 text-[9px]"></i>
+                <i class="fa-regular fa-copy text-slate-400" style="font-size:9px;"></i>
               </button>
             </div>
           ` : ""}
@@ -395,33 +405,33 @@ document.addEventListener("DOMContentLoaded", async () => {
           ${p.historia_clinica || "-"}
         </td>
 
-        <!-- 5. Tipo de Seguro -->
+        <!-- 5. Tipo de Seguro (Badge Azul) -->
         <td class="py-3.5 px-3 whitespace-nowrap">
-          <span class="text-[11px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded">
+          <span style="font-size:11px;font-weight:700;color:#1d4ed8;background:#eff6ff;border:1px solid #bfdbfe;padding:2px 8px;border-radius:6px;">
             ${p.tipo_seguro || "SIS"}
           </span>
         </td>
 
-        <!-- 6. Servicio -->
+        <!-- 6. Servicio (Badges de Colores Oficiales) -->
         <td class="py-3.5 px-3 whitespace-nowrap">
-          <span class="text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200 px-2 py-0.5 rounded">
+          <span style="font-size:10px;font-weight:700;padding:3px 8px;border-radius:6px;text-transform:uppercase;${getEstiloServicio(p.servicio)}">
             ${p.servicio || "-"}
           </span>
         </td>
 
-        <!-- 7. Condición / Estancia (Con Popup de Rango) -->
+        <!-- 7. Condición & Estancia (En 2 líneas limpias) -->
         <td class="py-3.5 px-3 whitespace-nowrap">
-          <div class="flex flex-col gap-1">
-            <span class="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded w-fit">
+          <div style="display:flex;flex-direction:column;gap:3px;align-items:flex-start;">
+            <span style="font-size:10px;font-weight:700;color:#1d4ed8;background:#eff6ff;border:1px solid #bfdbfe;padding:2px 8px;border-radius:6px;">
               ${p.condicion || "HOSPITALIZADO"}
             </span>
             ${fechaIngreso ? `
               <button type="button" onclick="mostrarModalRangoHospitalizacion(event, '${pJsonStr}')"
-                class="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-1.5 py-0.5 rounded transition-colors w-fit"
+                style="display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:600;color:#047857;background:#ecfdf5;border:1px solid #a7f3d0;padding:2px 6px;border-radius:6px;cursor:pointer;"
                 title="Ver rango de hospitalización y días de estancia">
-                <i class="fa-regular fa-calendar-days text-emerald-600 text-[10px]"></i>
+                <i class="fa-regular fa-calendar-days" style="color:#059669;font-size:10px;"></i>
                 <span>Ingreso: ${formatDateDisplay(fechaIngreso)}</span>
-                <span class="text-[10px] font-bold bg-emerald-200/70 px-1 rounded">${diasHospitalizado}d</span>
+                <span style="font-size:10px;font-weight:800;background:#a7f3d0;padding:0 4px;border-radius:4px;">${diasHospitalizado}d</span>
               </button>
             ` : ""}
           </div>
@@ -430,9 +440,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         <!-- 8. Acción (Detalle) -->
         <td class="py-3.5 px-3 text-center whitespace-nowrap" onclick="event.stopPropagation()">
           <a href="detalle-paciente.html?id=${p.id}"
-            class="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 border border-blue-200 rounded-lg transition-colors inline-block"
+            style="display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;color:#2563eb;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;text-decoration:none;"
             title="Ver actualización del paciente">
-            <i class="fa-regular fa-id-badge text-sm"></i>
+            <i class="fa-regular fa-id-badge" style="font-size:14px;"></i>
           </a>
         </td>
       `;
@@ -441,10 +451,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   };
 
-  // Event Listeners para Filtros
+  // Event Listeners
   if (btnSearch) btnSearch.addEventListener("click", loadPatients);
 
-  // Vincular botón Limpiar Filtros
   const botones = Array.from(document.querySelectorAll("button, a"));
   const btnLimpiar = botones.find(b => b.textContent && b.textContent.toLowerCase().includes("limpiar"));
   if (btnLimpiar) {
