@@ -1,81 +1,65 @@
 ﻿// =========================================================================
-// UNIDAD DE SEGUROS - BÚSQUEDA / VERIFICACIÓN (seguimiento-pacientes.js)
-// Con DNI, Código de Verificación (DV), F. Nacimiento, Enlace EsSalud
-// y Ventana Emergente con Rango de Fechas de Hospitalización
+// UNIDAD DE SEGUROS - SEGUIMIENTO DE PACIENTES (public/js/seguimiento-pacientes.js)
+// Versión Estable: DNI + DV copiable, F. Nacimiento copiable,
+// Enlace oficial EsSalud y Ventana Emergente de Rango de Hospitalización
 // =========================================================================
 
 document.addEventListener("DOMContentLoaded", async () => {
   const supabase = "undefined" != typeof supabaseClient ? supabaseClient : window.supabase;
+  if (!supabase) {
+    console.error("Cliente de Supabase no encontrado");
+    return;
+  }
+
   const { data: { session: currentSession } } = await supabase.auth.getSession();
   if (!currentSession) {
     window.location.href = "../../index.html";
     return;
   }
 
-  const currentUserId = currentSession.user.id;
   const inputDniHc = document.getElementById("filter-dni-hc");
   const inputApellidos = document.getElementById("filter-apellidos");
   const selectSeguro = document.getElementById("filter-seguro");
   const selectServicio = document.getElementById("filter-servicio");
   const selectCondicion = document.getElementById("filter-condicion");
   const btnSearch = document.getElementById("btn-search");
-  const btnClear = document.getElementById("btn-clear");
+  const btnClear = document.querySelector(".btn-clear, button[id*='clear'], button[onclick*='clear']");
   const tbodyPacientes = document.getElementById("tbody-pacientes");
   const loadingIndicator = document.getElementById("loading-indicator");
-  const tablePacientes = document.getElementById("table-pacientes");
-  const altaCount = document.getElementById("alta-count");
 
-  // Ajustar cabecera de la tabla dinámicamente si falta la columna de F. Nacimiento
-  const thead = tablePacientes ? tablePacientes.querySelector("thead tr") : null;
-  if (thead && !document.getElementById("th-fnac")) {
-    const ths = Array.from(thead.children);
-    if (ths.length >= 4) {
-      const thFnac = document.createElement("th");
-      thFnac.id = "th-fnac";
-      thFnac.className = "py-3 px-3 text-[11px] font-bold text-slate-500 uppercase";
-      thFnac.textContent = "F. NACIMIENTO";
-      thead.insertBefore(thFnac, ths[3]); // Después de Paciente
-    }
-  }
-
-  // Mapa de checks diarios
-  const checksMap = new Map();
-
+  // Función para obtener fecha actual en zona horaria de Perú
   const getLocalDateLima = () => {
     return new Date(new Date().toLocaleString("en-US", { timeZone: "America/Lima" }));
   };
 
-  const normalizeText = (text) => {
-    return text ? text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase() : "";
-  };
-
+  // Formato dd/mm/aaaa
   const formatDateDisplay = (dateStr) => {
     if (!dateStr) return "-";
-    if (dateStr.includes("-")) {
-      const parts = dateStr.split("T")[0].split("-");
-      if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
-    }
-    return dateStr;
+    const clean = String(dateStr).split("T")[0];
+    const parts = clean.split("-");
+    if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    return clean;
   };
 
+  // Cálculo de días hospitalizado
   const calculateDaysHospitalized = (fechaIngreso, fechaAlta) => {
     if (!fechaIngreso) return 0;
-    const start = new Date(fechaIngreso.split("T")[0] + "T00:00:00");
-    const end = fechaAlta ? new Date(fechaAlta.split("T")[0] + "T00:00:00") : getLocalDateLima();
+    const start = new Date(String(fechaIngreso).split("T")[0] + "T00:00:00");
+    const end = fechaAlta ? new Date(String(fechaAlta).split("T")[0] + "T00:00:00") : getLocalDateLima();
     const diff = end.getTime() - start.getTime();
     return Math.max(0, Math.round(diff / (1000 * 60 * 60 * 24)));
   };
 
-  // Toast flotante de confirmación de copia
+  // Notificación flotante de copiado
   const showToast = (message) => {
     let toast = document.getElementById("toast-seguimiento");
     if (!toast) {
       toast = document.createElement("div");
       toast.id = "toast-seguimiento";
-      toast.className = "fixed top-6 right-6 z-50 bg-slate-900 text-white px-4 py-2.5 rounded-xl shadow-xl text-xs font-semibold flex items-center gap-2 transition-all duration-300 opacity-0 pointer-events-none";
+      toast.style.cssText = "position:fixed;top:20px;right:20px;z-index:9999;background:#0f172a;color:#fff;padding:10px 16px;border-radius:12px;font-size:12px;font-weight:600;box-shadow:0 10px 25px rgba(0,0,0,0.2);display:flex;align-items:center;gap:8px;transition:all 0.3s ease;opacity:0;transform:translateY(-10px);pointer-events:none;";
       document.body.appendChild(toast);
     }
-    toast.innerHTML = `<i class="fa-solid fa-check text-emerald-400"></i> <span>${message}</span>`;
+    toast.innerHTML = `<i class="fa-solid fa-check" style="color:#34d399;"></i> <span>${message}</span>`;
     toast.style.opacity = "1";
     toast.style.transform = "translateY(0)";
     setTimeout(() => {
@@ -84,36 +68,39 @@ document.addEventListener("DOMContentLoaded", async () => {
     }, 2500);
   };
 
-  // Copiar texto genérico al portapapeles
+  // Copiar al portapapeles con confirmación visual
   window.copiarDatoAlPortapapeles = (e, valor, label) => {
     e.stopPropagation();
     if (!valor || valor === "-") return;
-    navigator.clipboard.writeText(valor).then(() => {
+    navigator.clipboard.writeText(String(valor).trim()).then(() => {
       showToast(`${label} copiado: ${valor}`);
       const btn = e.currentTarget;
-      const originalHtml = btn.innerHTML;
-      btn.innerHTML = `<i class="fa-solid fa-check text-emerald-600"></i>`;
-      setTimeout(() => {
-        btn.innerHTML = originalHtml;
-      }, 1500);
+      const icon = btn.querySelector("i");
+      if (icon) {
+        const prevClass = icon.className;
+        icon.className = "fa-solid fa-check text-emerald-600";
+        setTimeout(() => { icon.className = prevClass; }, 1500);
+      }
     }).catch(err => {
-      console.error("Error al copiar:", err);
+      console.warn("Error al copiar:", err);
     });
   };
 
-  // Abrir EsSalud con copiado de DNI previo
+  // Abrir consulta de EsSalud y copiar DNI automáticamente
   window.abrirConsultaEsSalud = (e, dni) => {
     e.stopPropagation();
-    navigator.clipboard.writeText(dni).then(() => {
-      showToast(`DNI ${dni} copiado. Abriendo Consulta EsSalud...`);
-    });
+    if (dni && dni !== "-") {
+      navigator.clipboard.writeText(String(dni).trim()).then(() => {
+        showToast(`DNI ${dni} copiado. Abriendo EsSalud...`);
+      });
+    }
     window.open("https://dondemeatiendo.essalud.gob.pe/#/consulta", "_blank");
   };
 
   // Modal / Ventana emergente de Rango de Hospitalización
-  window.mostrarModalRangoHospitalizacion = (e, pacienteJson) => {
+  window.mostrarModalRangoHospitalizacion = (e, pJsonStr) => {
     e.stopPropagation();
-    const p = typeof pacienteJson === "string" ? JSON.parse(decodeURIComponent(pacienteJson)) : pacienteJson;
+    const p = JSON.parse(decodeURIComponent(pJsonStr));
 
     const fechaIngresoFmt = formatDateDisplay(p.fechaIngreso);
     const fechaAltaFmt = p.fechaAlta ? formatDateDisplay(p.fechaAlta) : "En Curso (Hospitalizado)";
@@ -123,84 +110,84 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!modal) {
       modal = document.createElement("div");
       modal.id = "modal-rango-estancia";
-      modal.className = "fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4";
+      modal.style.cssText = "position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,0.6);backdrop-filter:blur(3px);padding:16px;";
       document.body.appendChild(modal);
     }
 
     modal.innerHTML = `
-      <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full border border-slate-200 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-150" onclick="event.stopPropagation()">
+      <div style="background:#fff;border-radius:16px;max-width:480px;width:100%;box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);border:1px solid #e2e8f0;overflow:hidden;font-family:inherit;" onclick="event.stopPropagation()">
         <!-- Header -->
-        <div class="px-5 py-3.5 bg-slate-900 text-white flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <i class="fa-regular fa-calendar-days text-blue-400"></i>
-            <h4 class="text-sm font-bold">Rango de Hospitalización y Estancia</h4>
+        <div style="padding:14px 20px;background:#0f172a;color:#fff;display:flex;align-items:center;justify-content:between;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <i class="fa-regular fa-calendar-days" style="color:#60a5fa;"></i>
+            <span style="font-size:13px;font-weight:700;">Rango de Hospitalización y Estancia</span>
           </div>
-          <button type="button" onclick="document.getElementById('modal-rango-estancia').remove()" class="text-slate-400 hover:text-white p-1 rounded-lg">
-            <i class="fa-solid fa-xmark text-base"></i>
+          <button type="button" onclick="document.getElementById('modal-rango-estancia').remove()" style="background:none;border:none;color:#94a3b8;font-size:18px;cursor:pointer;margin-left:auto;">
+            ✕
           </button>
         </div>
 
-        <!-- Paciente -->
-        <div class="p-4 bg-blue-50/70 border-b border-blue-100 flex items-center justify-between gap-3">
+        <!-- Info Paciente -->
+        <div style="padding:14px 20px;background:#f0f7ff;border-bottom:1px solid #dbeafe;display:flex;align-items:center;justify-content:space-between;gap:12px;">
           <div>
-            <span class="text-[10px] font-bold text-blue-700 uppercase">PACIENTE</span>
-            <div class="text-xs font-bold text-slate-900">${p.apellidos}, ${p.nombres}</div>
-            <div class="text-[11px] text-slate-500 font-mono">DNI: <strong>${p.dni}</strong> (DV: ${p.codigoVerificacion || "-"}) · HC: ${p.historiaClinica || "-"}</div>
+            <span style="font-size:10px;font-weight:700;color:#1d4ed8;text-transform:uppercase;">PACIENTE</span>
+            <div style="font-size:13px;font-weight:700;color:#0f172a;">${p.apellidos}, ${p.nombres}</div>
+            <div style="font-size:11px;color:#64748b;font-family:monospace;">DNI: <strong>${p.dni}</strong> (DV: ${p.codigoVerificacion || "-"}) · HC: ${p.historiaClinica || "-"}</div>
           </div>
-          <span class="text-[10px] font-bold px-2.5 py-1 rounded-full ${p.condicion === 'HOSPITALIZADO' ? 'bg-blue-100 text-blue-800' : 'bg-emerald-100 text-emerald-800'}">
+          <span style="font-size:10px;font-weight:700;padding:4px 10px;border-radius:9999px;background:${p.condicion === 'HOSPITALIZADO' ? '#dbeafe;color:#1e40af' : '#d1fae5;color:#065f46'};">
             ${p.condicion}
           </span>
         </div>
 
         <!-- Fechas e Intervalo -->
-        <div class="p-5 space-y-4 text-xs text-slate-800">
-          <div class="grid grid-cols-2 gap-3">
-            <div class="p-3 bg-white border border-slate-200 rounded-xl shadow-2xs">
-              <span class="text-[10px] font-bold uppercase text-emerald-700 block mb-1">
-                <i class="fa-solid fa-circle text-[7px] text-emerald-500 mr-1"></i>Fecha de Ingreso
+        <div style="padding:18px 20px;display:flex;flex-direction:column;gap:14px;font-size:12px;color:#334155;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+            <div style="padding:12px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+              <span style="font-size:10px;font-weight:700;text-transform:uppercase;color:#047857;display:block;margin-bottom:4px;">
+                ● Fecha de Ingreso
               </span>
-              <div class="text-sm font-bold font-mono text-slate-900">${fechaIngresoFmt}</div>
-              <div class="text-[10px] text-slate-400 mt-1">Servicio: <strong>${p.servicioIngreso || p.servicio}</strong></div>
+              <div style="font-size:14px;font-weight:700;font-family:monospace;color:#0f172a;">${fechaIngresoFmt}</div>
+              <div style="font-size:10px;color:#94a3b8;margin-top:4px;">Servicio: <strong>${p.servicioIngreso || p.servicio}</strong></div>
             </div>
 
-            <div class="p-3 bg-white border border-slate-200 rounded-xl shadow-2xs">
-              <span class="text-[10px] font-bold uppercase text-blue-700 block mb-1">
-                <i class="fa-solid fa-circle text-[7px] ${esAlta ? 'text-amber-500' : 'text-blue-500'} mr-1"></i>${esAlta ? 'Fecha de Alta' : 'Estado Actual'}
+            <div style="padding:12px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.05);">
+              <span style="font-size:10px;font-weight:700;text-transform:uppercase;color:#1d4ed8;display:block;margin-bottom:4px;">
+                ● ${esAlta ? 'Fecha de Alta' : 'Estado Actual'}
               </span>
-              <div class="text-sm font-bold font-mono text-slate-900">${fechaAltaFmt}</div>
-              <div class="text-[10px] text-slate-400 mt-1">Servicio: <strong>${p.servicio}</strong></div>
+              <div style="font-size:14px;font-weight:700;font-family:monospace;color:#0f172a;">${fechaAltaFmt}</div>
+              <div style="font-size:10px;color:#94a3b8;margin-top:4px;">Servicio: <strong>${p.servicio}</strong></div>
             </div>
           </div>
 
           <!-- Días de Estancia -->
-          <div class="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between">
-            <span class="font-semibold text-slate-700">Tiempo de Estancia Hospitalaria:</span>
-            <span class="text-xs font-extrabold text-blue-800 bg-blue-100 px-3 py-1 rounded-lg">
+          <div style="padding:12px 14px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;display:flex;align-items:center;justify-content:space-between;">
+            <span style="font-weight:600;color:#475569;">Tiempo de Estancia Hospitalaria:</span>
+            <span style="font-size:12px;font-weight:800;color:#1e40af;background:#dbeafe;padding:4px 12px;border-radius:8px;">
               ${p.diasHospitalizado} ${p.diasHospitalizado === 1 ? 'día' : 'días'}
             </span>
           </div>
 
           <!-- Datos EsSalud -->
-          <div class="p-3 bg-slate-50 border border-slate-200 rounded-xl">
-            <span class="text-[10px] font-bold text-slate-500 uppercase block mb-1.5">Datos para verificación en EsSalud:</span>
-            <div class="grid grid-cols-3 gap-2 text-center">
-              <div class="bg-white p-1.5 rounded border border-slate-200 font-mono font-bold text-slate-800">${p.dni}</div>
-              <div class="bg-white p-1.5 rounded border border-slate-200 font-mono font-bold text-slate-800">DV: ${p.codigoVerificacion || "-"}</div>
-              <div class="bg-white p-1.5 rounded border border-slate-200 font-mono font-bold text-slate-800">${formatDateDisplay(p.fechaNacimiento)}</div>
+          <div style="padding:10px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;">
+            <span style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;display:block;margin-bottom:6px;">Datos para Consulta EsSalud:</span>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1.2fr;gap:6px;text-align:center;">
+              <div style="background:#fff;padding:4px;border-radius:6px;border:1px solid #e2e8f0;font-family:monospace;font-weight:700;">${p.dni}</div>
+              <div style="background:#fff;padding:4px;border-radius:6px;border:1px solid #e2e8f0;font-family:monospace;font-weight:700;">DV: ${p.codigoVerificacion || "-"}</div>
+              <div style="background:#fff;padding:4px;border-radius:6px;border:1px solid #e2e8f0;font-family:monospace;font-weight:700;">${formatDateDisplay(p.fechaNacimiento)}</div>
             </div>
           </div>
         </div>
 
         <!-- Footer -->
-        <div class="px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between">
-          <a href="https://dondemeatiendo.essalud.gob.pe/#/consulta" target="_blank" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg">
-            <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> EsSalud
+        <div style="padding:12px 20px;background:#f8fafc;border-top:1px solid #e2e8f0;display:flex;align-items:center;justify-content:space-between;">
+          <a href="https://dondemeatiendo.essalud.gob.pe/#/consulta" target="_blank" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;font-size:11px;font-weight:600;color:#1d4ed8;background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;text-decoration:none;">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i> Abrir EsSalud
           </a>
-          <div class="flex items-center gap-2">
-            <button type="button" onclick="document.getElementById('modal-rango-estancia').remove()" class="px-3 py-1.5 text-xs text-slate-600 hover:text-slate-900 bg-white border border-slate-300 rounded-lg">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <button type="button" onclick="document.getElementById('modal-rango-estancia').remove()" style="padding:6px 14px;font-size:12px;color:#475569;background:#fff;border:1px solid #cbd5e1;border-radius:8px;cursor:pointer;">
               Cerrar
             </button>
-            <a href="detalle-paciente.html?id=${p.id}" class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 rounded-lg">
+            <a href="detalle-paciente.html?id=${p.id}" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;font-size:12px;font-weight:700;color:#fff;background:#2563eb;border-radius:8px;text-decoration:none;">
               Ver Detalle
             </a>
           </div>
@@ -210,77 +197,93 @@ document.addEventListener("DOMContentLoaded", async () => {
     modal.onclick = () => modal.remove();
   };
 
-  // Cargar pacientes desde Supabase con hospitalizaciones
+  // Carga robusta de pacientes y fechas de hospitalización
   const loadPatients = async () => {
     if (loadingIndicator) loadingIndicator.style.display = "block";
     if (tbodyPacientes) tbodyPacientes.innerHTML = "";
 
     try {
+      // 1. Consulta limpia a pacientes
       let query = supabase
         .from("pacientes")
-        .select(`
-          id,
-          dni,
-          codigo_verificacion,
-          fecha_nacimiento,
-          apellidos,
-          nombres,
-          historia_clinica,
-          tipo_seguro,
-          servicio,
-          condicion,
-          hospitalizaciones (
-            id,
-            fecha_ingreso,
-            fecha_alta,
-            servicio,
-            activa
-          )
-        `)
+        .select("id, dni, codigo_verificacion, fecha_nacimiento, apellidos, nombres, historia_clinica, tipo_seguro, servicio, condicion")
         .order("apellidos", { ascending: true })
         .limit(100);
 
-      if (selectCondicion && selectCondicion.value !== "TODOS") {
-        query = query.eq("condicion", selectCondicion.value);
+      const valCond = selectCondicion ? selectCondicion.value : "HOSPITALIZADO";
+      const valSeguro = selectSeguro ? selectSeguro.value : "TODOS";
+      const valServicio = selectServicio ? selectServicio.value : "TODOS";
+
+      if (valCond && valCond !== "TODOS") {
+        query = query.eq("condicion", valCond);
       }
-      if (selectSeguro && selectSeguro.value !== "TODOS") {
-        query = query.eq("tipo_seguro", selectSeguro.value);
+      if (valSeguro && valSeguro !== "TODOS") {
+        query = query.eq("tipo_seguro", valSeguro);
       }
-      if (selectServicio && selectServicio.value !== "TODOS") {
-        query = query.eq("servicio", selectServicio.value);
+      if (valServicio && valServicio !== "TODOS") {
+        query = query.eq("servicio", valServicio);
       }
 
       const { data: pacientes, error } = await query;
       if (error) throw error;
 
-      renderTable(pacientes || []);
+      if (!pacientes || pacientes.length === 0) {
+        if (tbodyPacientes) {
+          tbodyPacientes.innerHTML = `
+            <tr>
+              <td colspan="8" class="text-center py-10 text-slate-500">
+                <i class="fa-solid fa-filter-circle-xmark text-3xl text-slate-300 block mb-2"></i>
+                <div class="font-bold text-slate-700">No se encontraron pacientes con los filtros seleccionados</div>
+                <div class="text-xs text-slate-400 mt-1">Si filtró por <strong>${valSeguro}</strong>, cambie el Tipo de Seguro a <strong>TODOS</strong> o presione "Limpiar Filtros".</div>
+              </td>
+            </tr>`;
+        }
+        return;
+      }
+
+      // 2. Consulta segura de hospitalizaciones para estos pacientes (sin romper si falla)
+      let hospMap = new Map();
+      try {
+        const pIds = pacientes.map(p => p.id);
+        const { data: hosps } = await supabase
+          .from("hospitalizaciones")
+          .select("id, paciente_id, fecha_ingreso, fecha_alta, servicio, activa")
+          .in("paciente_id", pIds);
+
+        (hosps || []).forEach(h => {
+          if (!hospMap.has(h.paciente_id) || h.activa) {
+            hospMap.set(h.paciente_id, h);
+          }
+        });
+      } catch (eHosp) {
+        console.warn("Aviso no crítico al cargar hospitalizaciones:", eHosp);
+      }
+
+      // 3. Renderizar las filas con las 8 columnas exactas
+      renderTable(pacientes, hospMap);
     } catch (err) {
       console.error("Error al cargar pacientes:", err);
       if (tbodyPacientes) {
-        tbodyPacientes.innerHTML = `<tr><td colspan="9" class="text-center py-6 text-red-500 font-semibold">Error al cargar datos de pacientes: ${err.message}</td></tr>`;
+        tbodyPacientes.innerHTML = `
+          <tr>
+            <td colspan="8" class="text-center py-8 text-red-600 font-semibold">
+              Error al consultar pacientes: ${err.message}
+            </td>
+          </tr>`;
       }
     } finally {
       if (loadingIndicator) loadingIndicator.style.display = "none";
     }
   };
 
-  // Renderizar filas de la tabla
-  const renderTable = (list) => {
+  const renderTable = (list, hospMap) => {
     if (!tbodyPacientes) return;
     tbodyPacientes.innerHTML = "";
 
-    if (list.length === 0) {
-      tbodyPacientes.innerHTML = `<tr><td colspan="9" class="text-center py-8 text-slate-500 font-semibold">No se encontraron pacientes con los filtros seleccionados</td></tr>`;
-      return;
-    }
-
-    list.forEach((p) => {
-      // Obtener hospitalización activa o la más reciente
-      const hospList = p.hospitalizaciones || [];
-      const activeHosp = hospList.find(h => h.activa === true) || hospList[0] || null;
-
-      const fechaIngreso = activeHosp ? activeHosp.fecha_ingreso : null;
-      const fechaAlta = activeHosp ? activeHosp.fecha_alta : null;
+    list.forEach(p => {
+      const hosp = hospMap.get(p.id) || null;
+      const fechaIngreso = hosp ? hosp.fecha_ingreso : null;
+      const fechaAlta = hosp ? hosp.fecha_alta : null;
       const diasHospitalizado = calculateDaysHospitalized(fechaIngreso, fechaAlta);
 
       const pacienteData = {
@@ -293,18 +296,17 @@ document.addEventListener("DOMContentLoaded", async () => {
         historiaClinica: p.historia_clinica || "-",
         tipoSeguro: p.tipo_seguro || "SIS",
         servicio: p.servicio || "EMERGENCIA",
-        servicioIngreso: activeHosp ? activeHosp.servicio : p.servicio,
+        servicioIngreso: hosp ? hosp.servicio : p.servicio,
         condicion: p.condicion || "HOSPITALIZADO",
         fechaIngreso: fechaIngreso,
         fechaAlta: fechaAlta,
         diasHospitalizado: diasHospitalizado
       };
 
-      const pacienteDataJson = encodeURIComponent(JSON.stringify(pacienteData));
+      const pJsonStr = encodeURIComponent(JSON.stringify(pacienteData));
       const tr = document.createElement("tr");
-      tr.className = "hover:bg-blue-50/50 transition-colors group cursor-pointer border-b border-slate-100";
+      tr.className = "hover:bg-blue-50/40 transition-colors group cursor-pointer border-b border-slate-100 text-xs";
 
-      // Redirigir a detalle al hacer clic en la fila
       tr.addEventListener("click", () => {
         window.location.href = `detalle-paciente.html?id=${p.id}`;
       });
@@ -315,7 +317,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           <input type="checkbox" class="pac-checkbox rounded text-blue-600 cursor-pointer" data-id="${p.id}" />
         </td>
 
-        <!-- 2. DNI & Dígito Verificador (DV) -->
+        <!-- 2. DNI & Código de Verificación (DV) -->
         <td class="py-3.5 px-3 whitespace-nowrap">
           <div class="flex items-center gap-1.5">
             <button type="button" onclick="copiarDatoAlPortapapeles(event, '${p.dni}', 'DNI')"
@@ -325,7 +327,7 @@ document.addEventListener("DOMContentLoaded", async () => {
               <i class="fa-regular fa-copy text-slate-400 text-[11px]"></i>
             </button>
             <button type="button" onclick="copiarDatoAlPortapapeles(event, '${p.codigo_verificacion || ""}', 'Dígito Verificador')"
-              class="inline-flex items-center gap-1 font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border border-slate-200 bg-slate-100 text-slate-700 hover:bg-blue-50 hover:text-blue-700 hover:border-blue-200 transition-colors"
+              class="inline-flex items-center gap-1 font-mono text-[10px] font-bold px-1.5 py-0.5 rounded border border-slate-200 bg-slate-100 text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors"
               title="Dígito Verificador (DV) - Clic para copiar">
               <span>DV: ${p.codigo_verificacion || "-"}</span>
               <i class="fa-regular fa-copy text-slate-400 text-[9px]"></i>
@@ -333,48 +335,50 @@ document.addEventListener("DOMContentLoaded", async () => {
           </div>
         </td>
 
-        <!-- 3. Paciente -->
-        <td class="py-3.5 px-3 font-semibold text-slate-900 uppercase">
-          ${p.apellidos || ""}, ${p.nombres || ""}
+        <!-- 3. Paciente + Fecha de Nacimiento copiable -->
+        <td class="py-3.5 px-3">
+          <div class="font-semibold text-slate-900 uppercase">
+            ${p.apellidos || ""}, ${p.nombres || ""}
+          </div>
+          ${p.fecha_nacimiento ? `
+            <div class="mt-0.5">
+              <button type="button" onclick="copiarDatoAlPortapapeles(event, '${p.fecha_nacimiento}', 'Fecha Nacimiento')"
+                class="inline-flex items-center gap-1 font-mono text-[11px] text-slate-500 hover:text-blue-600 hover:bg-blue-50 px-1 py-0.2 rounded transition-colors"
+                title="Fecha de Nacimiento - Clic para copiar">
+                <span>🎂 F. Nac: ${formatDateDisplay(p.fecha_nacimiento)}</span>
+                <i class="fa-regular fa-copy text-slate-400 text-[9px]"></i>
+              </button>
+            </div>
+          ` : ""}
         </td>
 
-        <!-- 4. Fecha de Nacimiento -->
-        <td class="py-3.5 px-3 whitespace-nowrap">
-          <button type="button" onclick="copiarDatoAlPortapapeles(event, '${p.fecha_nacimiento || ""}', 'Fecha Nacimiento')"
-            class="inline-flex items-center gap-1 font-mono text-xs text-slate-700 hover:text-blue-600 hover:bg-blue-50 px-1.5 py-0.5 rounded transition-colors"
-            title="Clic para copiar Fecha de Nacimiento">
-            <span>${formatDateDisplay(p.fecha_nacimiento)}</span>
-            <i class="fa-regular fa-copy text-slate-400 text-[10px]"></i>
-          </button>
-        </td>
-
-        <!-- 5. Nº Historia -->
+        <!-- 4. Nº Historia -->
         <td class="py-3.5 px-3 font-mono text-slate-600">
           ${p.historia_clinica || "-"}
         </td>
 
-        <!-- 6. Tipo de Seguro -->
+        <!-- 5. Tipo de Seguro -->
         <td class="py-3.5 px-3 whitespace-nowrap">
           <span class="text-[11px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded">
             ${p.tipo_seguro || "SIS"}
           </span>
         </td>
 
-        <!-- 7. Servicio -->
+        <!-- 6. Servicio -->
         <td class="py-3.5 px-3 whitespace-nowrap">
           <span class="text-[10px] font-bold bg-slate-100 text-slate-700 border border-slate-200 px-2 py-0.5 rounded">
             ${p.servicio || "-"}
           </span>
         </td>
 
-        <!-- 8. Condición / Estancia (Con Popup de fechas) -->
+        <!-- 7. Condición / Estancia (Con Popup de Rango) -->
         <td class="py-3.5 px-3 whitespace-nowrap">
           <div class="flex flex-col gap-1">
             <span class="text-[10px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded w-fit">
               ${p.condicion || "HOSPITALIZADO"}
             </span>
             ${fechaIngreso ? `
-              <button type="button" onclick="mostrarModalRangoHospitalizacion(event, '${pacienteDataJson}')"
+              <button type="button" onclick="mostrarModalRangoHospitalizacion(event, '${pJsonStr}')"
                 class="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 hover:text-emerald-900 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-1.5 py-0.5 rounded transition-colors w-fit"
                 title="Ver rango de hospitalización y días de estancia">
                 <i class="fa-regular fa-calendar-days text-emerald-600 text-[10px]"></i>
@@ -385,7 +389,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           </div>
         </td>
 
-        <!-- 9. Acciones (EsSalud & Detalle) -->
+        <!-- 8. Acciones (EsSalud & Detalle) -->
         <td class="py-3.5 px-3 text-center whitespace-nowrap" onclick="event.stopPropagation()">
           <div class="flex items-center justify-center gap-1.5">
             <button type="button" onclick="abrirConsultaEsSalud(event, '${p.dni || ""}')"
@@ -408,7 +412,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   };
 
-  // Event Listeners para Filtros
+  // Event Listeners
   if (btnSearch) btnSearch.addEventListener("click", loadPatients);
   if (btnClear) {
     btnClear.addEventListener("click", () => {
