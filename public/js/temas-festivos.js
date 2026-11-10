@@ -1,6 +1,6 @@
 // =========================================================================
 // UNIDAD DE SEGUROS - TEMAS ESTACIONALES SUTILES (public/js/temas-festivos.js)
-// - Navidad: 10/11 al 31/12 (fondo invierno medio + copos + guirnalda superior)
+// - Navidad: 10/11 al 31/12 (fondo invierno, copos, guirnalda y Papá Noel)
 // - Febrero: Mes del Amor
 // - Julio: Mes Patrio (Perú)
 // - Setiembre: Mes de la Primavera
@@ -156,6 +156,76 @@
           filter: brightness(1.25);
         }
       }
+
+      /* Papá Noel con trineo */
+      #santa-trineo-navidad {
+        position: fixed;
+        top: 68px;
+        left: -240px;
+        width: 190px;
+        height: 62px;
+        pointer-events: none;
+        z-index: 9997;
+        opacity: 0;
+        will-change: transform, left, opacity;
+        filter: drop-shadow(0 4px 8px rgba(15, 23, 42, 0.18));
+      }
+
+      @keyframes vueloSantaIda {
+        0% {
+          left: -220px;
+          transform: translateY(0px) scaleX(1);
+          opacity: 0;
+        }
+        6% {
+          opacity: 0.92;
+        }
+        25% {
+          transform: translateY(-8px) scaleX(1);
+        }
+        50% {
+          transform: translateY(4px) scaleX(1);
+        }
+        75% {
+          transform: translateY(-6px) scaleX(1);
+        }
+        94% {
+          opacity: 0.92;
+        }
+        100% {
+          left: calc(100vw + 220px);
+          transform: translateY(0px) scaleX(1);
+          opacity: 0;
+        }
+      }
+
+      @keyframes vueloSantaVuelta {
+        0% {
+          left: calc(100vw + 220px);
+          transform: translateY(0px) scaleX(-1);
+          opacity: 0;
+        }
+        6% {
+          opacity: 0.92;
+        }
+        25% {
+          transform: translateY(-8px) scaleX(-1);
+        }
+        50% {
+          transform: translateY(4px) scaleX(-1);
+        }
+        75% {
+          transform: translateY(-6px) scaleX(-1);
+        }
+        94% {
+          opacity: 0.92;
+        }
+        100% {
+          left: -220px;
+          transform: translateY(0px) scaleX(-1);
+          opacity: 0;
+        }
+      }
     `;
     document.head.appendChild(style);
   };
@@ -167,7 +237,6 @@
     const contenedor = document.createElement("div");
     contenedor.id = "guirnalda-navidad-top";
 
-    // Cable verde oscuro sutil en arcos repetitivos
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     svg.setAttribute("class", "guirnalda-svg");
     svg.setAttribute("preserveAspectRatio", "none");
@@ -185,12 +254,11 @@
     svg.appendChild(path);
     contenedor.appendChild(svg);
 
-    // Foquitos distribuidos a lo ancho de la pantalla
     const coloresLuces = [
-      { bg: "#ef4444", shadow: "0 0 8px rgba(239, 68, 68, 0.75)" },   // Rojo
-      { bg: "#f59e0b", shadow: "0 0 8px rgba(245, 158, 11, 0.75)" },  // Dorado
-      { bg: "#10b981", shadow: "0 0 8px rgba(16, 185, 129, 0.75)" },  // Verde
-      { bg: "#3b82f6", shadow: "0 0 8px rgba(59, 130, 246, 0.75)" }   // Azul
+      { bg: "#ef4444", shadow: "0 0 8px rgba(239, 68, 68, 0.75)" },
+      { bg: "#f59e0b", shadow: "0 0 8px rgba(245, 158, 11, 0.75)" },
+      { bg: "#10b981", shadow: "0 0 8px rgba(16, 185, 129, 0.75)" },
+      { bg: "#3b82f6", shadow: "0 0 8px rgba(59, 130, 246, 0.75)" }
     ];
 
     const totalLuces = Math.max(18, Math.floor(window.innerWidth / 48));
@@ -201,7 +269,6 @@
       luz.style.background = c.bg;
       luz.style.boxShadow = c.shadow;
       luz.style.animationDelay = `${(i % 4) * 0.45}s`;
-      // Pequeña variación de altura para acompañar la curva del cable
       luz.style.marginTop = i % 2 === 0 ? "5px" : "8px";
       contenedor.appendChild(luz);
     }
@@ -209,9 +276,96 @@
     document.body.appendChild(contenedor);
   };
 
+  // =========================================================================
+  // PAPÁ NOEL EN TRINEO (IZQUIERDA <-> DERECHA CADA 1 MINUTO)
+  // =========================================================================
+  const iniciarTrineoSanta = () => {
+    if (tema !== "navidad") return;
+    if (document.getElementById("santa-trineo-navidad")) return;
+
+    const santaEl = document.createElement("div");
+    santaEl.id = "santa-trineo-navidad";
+
+    // Ilustración SVG orientada hacia la derecha (para vueloSantaIda)
+    santaEl.innerHTML = `
+      <svg viewBox="0 0 260 80" width="190" height="62" xmlns="http://www.w3.org/2000/svg">
+        <!-- Estela de estrellitas doradas -->
+        <circle cx="10" cy="48" r="2" fill="#fde047" opacity="0.85"/>
+        <circle cx="22" cy="42" r="1.5" fill="#fef08a" opacity="0.7"/>
+        <circle cx="18" cy="54" r="1.8" fill="#ffffff" opacity="0.8"/>
+        <circle cx="34" cy="49" r="2.2" fill="#fde047" opacity="0.9"/>
+
+        <!-- Patines dorados del trineo -->
+        <path d="M 38 62 Q 65 66 96 61 Q 108 59 112 52" fill="none" stroke="#eab308" stroke-width="2.5" stroke-linecap="round"/>
+        <line x1="50" y1="53" x2="50" y2="62" stroke="#ca8a04" stroke-width="2"/>
+        <line x1="84" y1="53" x2="84" y2="62" stroke="#ca8a04" stroke-width="2"/>
+
+        <!-- Saco de regalos -->
+        <ellipse cx="52" cy="41" rx="11" ry="12" fill="#15803d"/>
+        <rect x="46" y="31" width="12" height="5" rx="2" fill="#dc2626"/>
+
+        <!-- Papá Noel -->
+        <circle cx="72" cy="37" r="8" fill="#dc2626"/> <!-- Cuerpo -->
+        <circle cx="74" cy="27" r="5.5" fill="#fed7aa"/> <!-- Cara -->
+        <path d="M 70 28 Q 75 36 80 28 Z" fill="#ffffff"/> <!-- Barba -->
+        <path d="M 68 24 Q 74 14 81 24 Z" fill="#dc2626"/> <!-- Gorro -->
+        <circle cx="67" cy="22" r="2.2" fill="#ffffff"/> <!-- Pompón -->
+
+        <!-- Cuerpo del trineo rojo -->
+        <path d="M 40 42 L 92 42 Q 100 42 102 52 L 44 54 Q 36 52 40 42 Z" fill="#dc2626" stroke="#991b1b" stroke-width="1.2"/>
+        <path d="M 42 44 L 94 44" stroke="#facc15" stroke-width="1.8"/>
+
+        <!-- Riendas -->
+        <path d="M 80 36 Q 115 44 195 36" fill="none" stroke="#ca8a04" stroke-width="1" stroke-dasharray="3,2"/>
+
+        <!-- Reno 1 (trasero) -->
+        <g transform="translate(132, 26)">
+          <ellipse cx="18" cy="18" rx="11" ry="6" fill="#92400e"/>
+          <path d="M 25 16 L 31 8 L 37 10 L 34 15 Z" fill="#92400e"/>
+          <path d="M 29 8 L 26 2 M 29 8 L 32 2" stroke="#78350f" stroke-width="1.4" stroke-linecap="round"/>
+          <line x1="11" y1="22" x2="7" y2="33" stroke="#78350f" stroke-width="2" stroke-linecap="round"/>
+          <line x1="23" y1="22" x2="29" y2="31" stroke="#78350f" stroke-width="2" stroke-linecap="round"/>
+        </g>
+
+        <!-- Reno 2 (delantero - Rodolfo) -->
+        <g transform="translate(185, 20)">
+          <ellipse cx="18" cy="18" rx="12" ry="6.5" fill="#b45309"/>
+          <path d="M 26 16 L 32 7 L 39 10 L 35 15 Z" fill="#b45309"/>
+          <circle cx="39" cy="10" r="2.2" fill="#ef4444"/> <!-- Nariz roja -->
+          <path d="M 30 7 L 27 0 M 30 7 L 34 1" stroke="#78350f" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="10" y1="22" x2="5" y2="33" stroke="#92400e" stroke-width="2" stroke-linecap="round"/>
+          <line x1="24" y1="22" x2="31" y2="31" stroke="#92400e" stroke-width="2" stroke-linecap="round"/>
+        </g>
+      </svg>
+    `;
+
+    document.body.appendChild(santaEl);
+
+    let haciaDerecha = true;
+
+    const lanzarPase = () => {
+      if (document.hidden) return;
+      santaEl.style.animation = "none";
+      // Forzar reflow para reiniciar la animación limpia
+      void santaEl.offsetWidth;
+
+      if (haciaDerecha) {
+        santaEl.style.animation = "vueloSantaIda 9.5s linear forwards";
+      } else {
+        santaEl.style.animation = "vueloSantaVuelta 9.5s linear forwards";
+      }
+      haciaDerecha = !haciaDerecha;
+    };
+
+    // Primer pase a los 3 segundos de cargar y luego cada 1 minuto (60000 ms)
+    setTimeout(lanzarPase, 3000);
+    setInterval(lanzarPase, 60000);
+  };
+
   const iniciarLluvia = () => {
     aplicarFondoEstacional();
     crearGuirnaldaNavidena();
+    iniciarTrineoSanta();
 
     if (document.getElementById("canvas-tema-festivo")) return;
 
