@@ -1,6 +1,6 @@
 // =========================================================================
 // UNIDAD DE SEGUROS - TEMAS ESTACIONALES SUTILES (public/js/temas-festivos.js)
-// - Navidad: 10/11 al 31/12 (copos de nieve sutiles)
+// - Navidad: 10/11 al 31/12 (fondo invierno medio + copos de nieve nítidos)
 // - Febrero: Mes del Amor
 // - Julio: Mes Patrio (Perú)
 // - Setiembre: Mes de la Primavera
@@ -38,42 +38,75 @@
   };
 
   const tema = obtenerTemaActual();
-  if (!tema) return; // Fuera de fechas festivas no renderiza nada
+  if (!tema) return; // Fuera de fechas festivas no aplica cambios
 
   const CONFIG_TEMAS = {
     navidad: {
-      cantidad: 32,
-      colores: ["rgba(186, 230, 253, 0.75)", "rgba(255, 255, 255, 0.85)", "rgba(147, 197, 253, 0.55)"],
+      fondoCss: "linear-gradient(135deg, #bfcfe2 0%, #cddbe9 50%, #b8c9de 100%)",
+      cantidad: 38,
+      colores: [
+        "rgba(255, 255, 255, 0.95)",
+        "rgba(255, 255, 255, 0.85)",
+        "rgba(224, 242, 254, 0.90)"
+      ],
       forma: "copo",
-      velocidadMin: 0.45,
-      velocidadMax: 1.15
+      radioMin: 3.0,
+      radioMax: 6.2,
+      velocidadMin: 0.5,
+      velocidadMax: 1.25
     },
     amor: {
-      cantidad: 20,
-      colores: ["rgba(244, 114, 182, 0.35)", "rgba(251, 113, 133, 0.35)", "rgba(253, 164, 175, 0.4)"],
+      fondoCss: "linear-gradient(135deg, #e5d0dc 0%, #eddce5 50%, #dec5d3 100%)",
+      cantidad: 24,
+      colores: ["rgba(225, 29, 72, 0.45)", "rgba(244, 63, 94, 0.45)", "rgba(255, 255, 255, 0.75)"],
       forma: "corazon",
-      velocidadMin: 0.4,
-      velocidadMax: 0.9
+      radioMin: 3.0,
+      radioMax: 5.5,
+      velocidadMin: 0.45,
+      velocidadMax: 0.95
     },
     patrio: {
-      cantidad: 24,
-      colores: ["rgba(220, 38, 38, 0.32)", "rgba(255, 255, 255, 0.65)"],
+      fondoCss: "linear-gradient(135deg, #d6d3d1 0%, #e2e0de 50%, #cbc7c4 100%)",
+      cantidad: 28,
+      colores: ["rgba(220, 38, 38, 0.55)", "rgba(255, 255, 255, 0.9)"],
       forma: "punto",
+      radioMin: 2.8,
+      radioMax: 5.0,
       velocidadMin: 0.45,
-      velocidadMax: 1.0
+      velocidadMax: 1.05
     },
     primavera: {
-      cantidad: 24,
-      colores: ["rgba(244, 114, 182, 0.35)", "rgba(250, 204, 21, 0.35)", "rgba(74, 222, 128, 0.35)"],
+      fondoCss: "linear-gradient(135deg, #c6ddd0 0%, #d4e6dc 50%, #b9d4c5 100%)",
+      cantidad: 26,
+      colores: ["rgba(236, 72, 153, 0.5)", "rgba(234, 179, 8, 0.5)", "rgba(255, 255, 255, 0.8)"],
       forma: "petalo",
-      velocidadMin: 0.4,
-      velocidadMax: 0.95
+      radioMin: 3.0,
+      radioMax: 5.5,
+      velocidadMin: 0.45,
+      velocidadMax: 1.0
     }
   };
 
   const cfg = CONFIG_TEMAS[tema];
 
+  const aplicarFondoEstacional = () => {
+    if (document.getElementById("estilo-fondo-estacional")) return;
+    const style = document.createElement("style");
+    style.id = "estilo-fondo-estacional";
+    style.innerHTML = `
+      body,
+      .main-wrapper,
+      .main-content {
+        background: ${cfg.fondoCss} !important;
+        background-attachment: fixed !important;
+      }
+    `;
+    document.head.appendChild(style);
+  };
+
   const iniciarLluvia = () => {
+    aplicarFondoEstacional();
+
     if (document.getElementById("canvas-tema-festivo")) return;
 
     const canvas = document.createElement("canvas");
@@ -84,7 +117,7 @@
       "left: 0",
       "width: 100vw",
       "height: 100vh",
-      "pointer-events: none", // Clave: nunca bloquea clics ni scroll
+      "pointer-events: none",
       "z-index: 9998"
     ].join(";");
 
@@ -102,7 +135,7 @@
     const crearParticula = (inicioAleatorioY = false) => ({
       x: Math.random() * width,
       y: inicioAleatorioY ? Math.random() * height : -15,
-      radio: 2.2 + Math.random() * 3.2,
+      radio: cfg.radioMin + Math.random() * (cfg.radioMax - cfg.radioMin),
       vy: cfg.velocidadMin + Math.random() * (cfg.velocidadMax - cfg.velocidadMin),
       vx: (Math.random() - 0.5) * 0.45,
       oscilacion: Math.random() * Math.PI * 2,
@@ -119,14 +152,16 @@
       ctx.rotate(p.rotacion);
       ctx.strokeStyle = p.color;
       ctx.fillStyle = p.color;
-      ctx.lineWidth = 1.1;
+      ctx.shadowColor = "rgba(15, 23, 42, 0.12)";
+      ctx.shadowBlur = 2;
+      ctx.lineWidth = 1.4;
 
-      if (p.radio < 3.5) {
+      if (p.radio < 4.0) {
         ctx.beginPath();
-        ctx.arc(0, 0, p.radio * 0.65, 0, Math.PI * 2);
+        ctx.arc(0, 0, p.radio * 0.6, 0, Math.PI * 2);
         ctx.fill();
       } else {
-        const r = p.radio * 1.1;
+        const r = p.radio * 1.15;
         for (let i = 0; i < 3; i++) {
           ctx.rotate(Math.PI / 3);
           ctx.beginPath();
