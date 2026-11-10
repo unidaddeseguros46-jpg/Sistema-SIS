@@ -1,6 +1,6 @@
 // =========================================================================
 // UNIDAD DE SEGUROS - TEMAS ESTACIONALES SUTILES (public/js/temas-festivos.js)
-// - Navidad: 10/11 al 31/12 (fondo invierno medio + copos de nieve nítidos)
+// - Navidad: 10/11 al 31/12 (fondo invierno medio + copos + guirnalda superior)
 // - Febrero: Mes del Amor
 // - Julio: Mes Patrio (Perú)
 // - Setiembre: Mes de la Primavera
@@ -100,12 +100,118 @@
         background: ${cfg.fondoCss} !important;
         background-attachment: fixed !important;
       }
+
+      /* Guirnalda superior navideña */
+      #guirnalda-navidad-top {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 24px;
+        pointer-events: none;
+        z-index: 9999;
+        overflow: hidden;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+      }
+
+      .guirnalda-svg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 22px;
+      }
+
+      .luz-item {
+        position: relative;
+        width: 8px;
+        height: 11px;
+        border-radius: 50% 50% 45% 45%;
+        margin-top: 6px;
+        animation: brilloNavidad 2.2s infinite ease-in-out;
+      }
+
+      .luz-item::before {
+        content: "";
+        position: absolute;
+        top: -4px;
+        left: 1.5px;
+        width: 5px;
+        height: 4px;
+        background: #334155;
+        border-radius: 2px 2px 0 0;
+      }
+
+      @keyframes brilloNavidad {
+        0%, 100% {
+          opacity: 0.45;
+          transform: scale(0.94);
+          filter: brightness(0.9);
+        }
+        50% {
+          opacity: 1;
+          transform: scale(1.06);
+          filter: brightness(1.25);
+        }
+      }
     `;
     document.head.appendChild(style);
   };
 
+  const crearGuirnaldaNavidena = () => {
+    if (tema !== "navidad") return;
+    if (document.getElementById("guirnalda-navidad-top")) return;
+
+    const contenedor = document.createElement("div");
+    contenedor.id = "guirnalda-navidad-top";
+
+    // Cable verde oscuro sutil en arcos repetitivos
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("class", "guirnalda-svg");
+    svg.setAttribute("preserveAspectRatio", "none");
+    svg.setAttribute("viewBox", "0 0 1200 22");
+
+    let pathD = "M 0 2";
+    for (let x = 0; x < 1200; x += 60) {
+      pathD += ` Q ${x + 30} 14 ${x + 60} 2`;
+    }
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", pathD);
+    path.setAttribute("fill", "none");
+    path.setAttribute("stroke", "rgba(22, 101, 52, 0.55)");
+    path.setAttribute("stroke-width", "1.6");
+    svg.appendChild(path);
+    contenedor.appendChild(svg);
+
+    // Foquitos distribuidos a lo ancho de la pantalla
+    const coloresLuces = [
+      { bg: "#ef4444", shadow: "0 0 8px rgba(239, 68, 68, 0.75)" },   // Rojo
+      { bg: "#f59e0b", shadow: "0 0 8px rgba(245, 158, 11, 0.75)" },  // Dorado
+      { bg: "#10b981", shadow: "0 0 8px rgba(16, 185, 129, 0.75)" },  // Verde
+      { bg: "#3b82f6", shadow: "0 0 8px rgba(59, 130, 246, 0.75)" }   // Azul
+    ];
+
+    const totalLuces = Math.max(18, Math.floor(window.innerWidth / 48));
+    for (let i = 0; i < totalLuces; i++) {
+      const luz = document.createElement("span");
+      const c = coloresLuces[i % coloresLuces.length];
+      luz.className = "luz-item";
+      luz.style.background = c.bg;
+      luz.style.boxShadow = c.shadow;
+      luz.style.animationDelay = `${(i % 4) * 0.45}s`;
+      // Pequeña variación de altura para acompañar la curva del cable
+      luz.style.marginTop = i % 2 === 0 ? "5px" : "8px";
+      contenedor.appendChild(luz);
+    }
+
+    document.body.appendChild(contenedor);
+  };
+
   const iniciarLluvia = () => {
     aplicarFondoEstacional();
+    crearGuirnaldaNavidena();
 
     if (document.getElementById("canvas-tema-festivo")) return;
 
